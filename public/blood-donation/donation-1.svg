@@ -1,0 +1,25 @@
+<svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bgGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fff5f5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ffe0e0;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="400" fill="url(#bgGrad1)"/>
+  
+  <!-- Heart shape -->
+  <path d="M300,350 C300,350 150,250 150,150 C150,100 180,70 220,70 C250,70 280,90 300,110 C320,90 350,70 380,70 C420,70 450,100 450,150 C450,250 300,350 300,350 Z" fill="#e63946" opacity="0.8"/>
+  
+  <!-- Donor hand -->
+  <circle cx="100" cy="80" r="25" fill="#f4a460"/>
+  <rect x="75" y="105" width="50" height="80" rx="25" fill="#f4a460"/>
+  
+  <!-- Blood drop -->
+  <path d="M100,200 C90,210 85,220 85,230 C85,245 92,255 100,255 C108,255 115,245 115,230 C115,220 110,210 100,200 Z" fill="#dc143c"/>
+  
+  <!-- Text -->
+  <text x="300" y="380" font-size="24" font-weight="bold" text-anchor="middle" fill="#333">
+    Save Lives Through Donation
+  </text>
+</svg>

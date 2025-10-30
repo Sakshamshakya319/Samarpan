@@ -1,0 +1,33 @@
+<svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bgGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fef3c7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fef0d9;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="400" fill="url(#bgGrad3)"/>
+  
+  <!-- Medical staff -->
+  <circle cx="150" cy="100" r="30" fill="#f4a460"/>
+  <rect x="120" y="130" width="60" height="80" fill="#fff" stroke="#333" stroke-width="2"/>
+  <rect x="115" y="140" width="70" height="50" fill="#00aa00"/>
+  
+  <!-- Patient on bed -->
+  <rect x="350" y="120" width="150" height="80" fill="#ddd" rx="5"/>
+  <circle cx="380" cy="100" r="25" fill="#f4a460"/>
+  
+  <!-- IV stand -->
+  <rect x="520" y="60" width="8" height="150" fill="#666"/>
+  <circle cx="524" cy="60" r="12" fill="#00aa00"/>
+  <line x1="524" y1="75" x2="450" y2="130" stroke="#dc143c" stroke-width="3"/>
+  
+  <!-- Checkmark -->
+  <circle cx="300" cy="300" r="50" fill="none" stroke="#4CAF50" stroke-width="4"/>
+  <path d="M280 300 L295 315 L320 285" stroke="#4CAF50" stroke-width="4" fill="none" stroke-linecap="round"/>
+  
+  <!-- Text -->
+  <text x="300" y="380" font-size="24" font-weight="bold" text-anchor="middle" fill="#333">
+    Hospital & Emergency Care
+  </text>
+</svg>
