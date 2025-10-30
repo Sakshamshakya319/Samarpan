@@ -1,5 +1,8 @@
 "use client"
 
+// Mark as dynamic to handle admin authentication and redirects
+export const dynamic = "force-dynamic"
+
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"

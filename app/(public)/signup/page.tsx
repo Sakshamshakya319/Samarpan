@@ -1,5 +1,8 @@
 "use client"
 
+// Mark as dynamic to handle authentication state and redirects
+export const dynamic = "force-dynamic"
+
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
