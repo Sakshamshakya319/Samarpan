@@ -55,16 +55,10 @@ Added experimental settings to skip ISR caching for dynamic routes.
 ```json
 {
   "buildCommand": "npm install --legacy-peer-deps && npm run build",
-  "devCommand": "npm run dev",
-  "env": {
-    "MONGODB_URL": "@mongodb_url",
-    "GOOGLE_CLIENT_ID": "@google_client_id",
-    "GOOGLE_CLIENT_SECRET": "@google_client_secret",
-    "NEXT_PUBLIC_GOOGLE_CLIENT_ID": "@next_public_google_client_id",
-    "NEXT_PUBLIC_APP_URL": "@next_public_app_url"
-  }
+  "devCommand": "npm run dev"
 }
 ```
+Environment variables are configured through the Vercel Dashboard (Settings → Environment Variables), not in this file. This file only specifies the build command.
 
 ## Deployment Steps
 
@@ -76,21 +70,27 @@ git push origin main
 ```
 
 ### Step 2: Configure Vercel Environment Variables
-1. Go to Vercel Project Settings → Environment Variables
-2. Add these variables:
+**See detailed guide:** `VERCEL_ENV_SETUP.md`
 
-| Variable | Value | Example |
-|----------|-------|---------|
-| `MONGODB_URL` | Your MongoDB connection string | `mongodb+srv://user:pass@cluster.mongodb.net/...` |
-| `GOOGLE_CLIENT_ID` | Google OAuth Client ID | `[your-client-id].apps.googleusercontent.com` |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret | `GOCSPX-...` |
-| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Same as GOOGLE_CLIENT_ID | `[your-client-id].apps.googleusercontent.com` |
-| `NEXT_PUBLIC_APP_URL` | Your Vercel deployment URL | `https://yourapp.vercel.app` |
+Quick summary:
+1. Go to Vercel Dashboard → Project → Settings → Environment Variables
+2. Add 5 variables (see table below)
+3. For each variable, ensure all three environments are checked: Production, Preview, Development
+
+| Variable | Value |
+|----------|-------|
+| `MONGODB_URL` | `mongodb+srv://saksham:phmbjkvjOzw37KhZ@samarpan.j05aoqs.mongodb.net/?appName=Samarpan` |
+| `GOOGLE_CLIENT_ID` | `1000323711355-g1dkc8ktb0mqecst47m65v9upkus4f6c.apps.googleusercontent.com` |
+| `GOOGLE_CLIENT_SECRET` | `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` |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | `1000323711355-g1dkc8ktb0mqecst47m65v9upkus4f6c.apps.googleusercontent.com` |
+| `NEXT_PUBLIC_APP_URL` | `https://samarpan.vercel.app` |
 
 ### Step 3: Redeploy
-1. Vercel will automatically redeploy when you push to GitHub
-2. The build should now complete successfully (2-3 minutes)
-3. Verify the deployment works
+1. After adding environment variables, trigger a redeploy:
+   - Option A: Push a code change to GitHub (Vercel auto-redeploys)
+   - Option B: Manually redeploy from Vercel Dashboard → Deployments → Latest → Redeploy
+2. The build should complete successfully (2-3 minutes)
+3. Verify at your Vercel URL
 
 ## What Changed and Why
 

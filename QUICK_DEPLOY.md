@@ -1,5 +1,7 @@
 # Quick Deployment Guide (5 Minutes)
 
+> **Error Fixed:** The previous `vercel.json` was causing the "references Secret" error. It's now simplified. Follow these steps for a clean deployment.
+
 ## Files Changed
 ✅ `/package.json` - Pinned dependency versions
 ✅ `/.npmrc` - Added npm configuration  
@@ -24,15 +26,21 @@ git push origin main
 ```
 
 ### 3. Set Vercel Environment Variables
-Go to **Vercel Project Settings → Environment Variables** and add:
 
-```
-MONGODB_URL = mongodb+srv://saksham:phmbjkvjOzw37KhZ@samarpan.j05aoqs.mongodb.net/?appName=Samarpan
-GOOGLE_CLIENT_ID = 1000323711355-g1dkc8ktb0mqecst47m65v9upkus4f6c.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET = 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
-NEXT_PUBLIC_GOOGLE_CLIENT_ID = 1000323711355-g1dkc8ktb0mqecst47m65v9upkus4f6c.apps.googleusercontent.com
-NEXT_PUBLIC_APP_URL = https://[your-vercel-url].vercel.app
-```
+**📚 Detailed Step-by-Step Guide:** See `VERCEL_ENV_SETUP.md` for complete instructions with screenshots guidance.
+
+**Quick Summary:**
+1. Go to Vercel Dashboard → Your Project → Settings → Environment Variables
+2. Add each variable below
+3. ✅ Check all three environments: Production, Preview, Development
+
+| Name | Value |
+|------|-------|
+| MONGODB_URL | `mongodb+srv://saksham:phmbjkvjOzw37KhZ@samarpan.j05aoqs.mongodb.net/?appName=Samarpan` |
+| GOOGLE_CLIENT_ID | `1000323711355-g1dkc8ktb0mqecst47m65v9upkus4f6c.apps.googleusercontent.com` |
+| GOOGLE_CLIENT_SECRET | `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` |
+| NEXT_PUBLIC_GOOGLE_CLIENT_ID | `1000323711355-g1dkc8ktb0mqecst47m65v9upkus4f6c.apps.googleusercontent.com` |
+| NEXT_PUBLIC_APP_URL | `https://samarpan.vercel.app` |
 
 ### 4. Redeploy
 - Vercel auto-redeploys on GitHub push
