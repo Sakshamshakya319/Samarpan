@@ -6,8 +6,10 @@ import { useAppDispatch } from "@/lib/hooks"
 import { loginSuccess } from "@/lib/slices/authSlice"
 import { setUser } from "@/lib/slices/userSlice"
 
-// Mark as dynamic to prevent prerendering at build time
+// Prevent static generation and prerendering
 export const dynamic = "force-dynamic"
+export const revalidate = 0
+export const fetchCache = "force-no-store"
 
 export default function GoogleCallbackHandlerPage() {
   const router = useRouter()
