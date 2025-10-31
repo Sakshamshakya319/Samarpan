@@ -11,11 +11,13 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { GoogleLoginButton } from "@/components/google-login-button"
+import { ForgotPasswordDialog } from "@/components/forgot-password-dialog"
 import Link from "next/link"
 
 export function LoginForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false)
   const router = useRouter()
   const dispatch = useAppDispatch()
   const { isLoading, error, isAuthenticated } = useAppSelector((state) => state.auth)
@@ -61,9 +63,18 @@ export function LoginForm() {
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium">
-              Password
-            </label>
+            <div className="flex justify-between items-center">
+              <label htmlFor="password" className="text-sm font-medium">
+                Password
+              </label>
+              <button
+                type="button"
+                onClick={() => setForgotPasswordOpen(true)}
+                className="text-sm text-primary hover:text-primary/80 hover:underline font-medium transition-colors"
+              >
+                Forgot Password?
+              </button>
+            </div>
             <Input
               id="password"
               type="password"
@@ -84,6 +95,8 @@ export function LoginForm() {
           </Link>
         </p>
       </CardContent>
+
+      <ForgotPasswordDialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen} />
     </Card>
   )
 }
