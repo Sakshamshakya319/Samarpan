@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Bell, LogOut, User, Calendar } from "lucide-react"
+import { Bell, LogOut, User, Calendar, Trash2 } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/lib/hooks"
 import { fetchUserProfile, updateUserProfile } from "@/lib/slices/userSlice"
 import { logout } from "@/lib/slices/authSlice"
@@ -17,6 +17,7 @@ import { BloodDonationRequests } from "@/components/blood-donation-requests"
 import { DonationImageUpload } from "@/components/donation-image-upload"
 import { DriverDetailsDisplay } from "@/components/driver-details-display"
 import { UserCertificatesDisplay } from "@/components/user-certificates-display"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
 interface Notification {
   _id: string
@@ -34,6 +35,8 @@ export default function DashboardPage() {
   const [editMode, setEditMode] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     bloodGroup: "",
@@ -107,6 +110,36 @@ export default function DashboardPage() {
     }
   }
 
+  const handleDeleteAccount = async () => {
+    if (!token) return
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch("/api/users/profile", {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        // Logout and redirect to home
+        dispatch(logout())
+        setShowDeleteDialog(false)
+        router.push("/")
+      } else {
+        const data = await response.json()
+        setErrorMessage(data.error || "Failed to delete account")
+        setShowDeleteDialog(false)
+      }
+    } catch (err) {
+      setErrorMessage("Error deleting account")
+      setShowDeleteDialog(false)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
@@ -125,6 +158,10 @@ export default function DashboardPage() {
             <p className="text-gray-600">Manage your profile and donations</p>
           </div>
           <div className="flex gap-4">
+            <Button onClick={() => setShowDeleteDialog(true)} variant="destructive" className="bg-red-600 hover:bg-red-700">
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Account
+            </Button>
             <Button onClick={handleLogout} variant="destructive">
               <LogOut className="w-4 h-4 mr-2" />
               Logout
@@ -325,6 +362,44 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Delete Account Confirmation Dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-destructive">Delete Account</AlertDialogTitle>
+              <AlertDialogDescription className="space-y-3">
+                <div>
+                  <p className="font-semibold text-foreground mb-2">⚠️ Warning: This action cannot be undone</p>
+                  <p>By deleting your account, you will permanently lose:</p>
+                  <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+                    <li>Your profile information</li>
+                    <li>All donation records</li>
+                    <li>Blood request history</li>
+                    <li>Certificates</li>
+                    <li>All associated data</li>
+                  </ul>
+                </div>
+                <p className="text-sm font-medium">
+                  This action will <span className="text-destructive font-bold">permanently delete</span> your account and cannot be recovered.
+                </p>
+                <p className="text-sm">Are you absolutely sure you want to proceed?</p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="flex gap-2 justify-end mt-4">
+              <AlertDialogCancel disabled={isDeleting}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteAccount}
+                disabled={isDeleting}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                {isDeleting ? "Deleting..." : "Yes, Delete My Account"}
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   )
