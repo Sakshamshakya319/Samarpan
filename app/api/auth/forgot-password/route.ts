@@ -51,12 +51,19 @@ export async function POST(request: NextRequest) {
       },
     )
 
-    // Get the app URL
-    const origin = request.headers.get("x-forwarded-proto")
-      ? `${request.headers.get("x-forwarded-proto")}://${request.headers.get("x-forwarded-host")}`
-      : request.nextUrl.origin
+    // Get the app URL - prioritize NEXT_PUBLIC_APP_URL for consistency
+    let appUrl = process.env.NEXT_PUBLIC_APP_URL
+    
+    if (!appUrl) {
+      // Fallback to request headers if env var not set
+      appUrl = request.headers.get("x-forwarded-proto")
+        ? `${request.headers.get("x-forwarded-proto")}://${request.headers.get("x-forwarded-host")}`
+        : request.nextUrl.origin
+    }
 
-    const resetLink = `${origin}/reset-password?token=${resetToken}`
+    const resetLink = `${appUrl}/reset-password?token=${resetToken}`
+    
+    console.log(`[Password Reset] Reset link: ${resetLink} (using appUrl: ${appUrl})`)
 
     // Send reset email
     const emailHTML = generatePasswordResetEmailHTML({
