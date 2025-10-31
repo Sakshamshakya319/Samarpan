@@ -42,12 +42,14 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
 
       if (response.ok) {
         setSubmitted(true)
-        toast.success("Password reset email sent!")
+        toast.success("Password reset email sent successfully! Check your inbox for the reset link.", {
+          duration: 5000,
+        })
         setTimeout(() => {
           setEmail("")
           setSubmitted(false)
           onOpenChange(false)
-        }, 3000)
+        }, 4000)
       } else {
         toast.error(data.error || "Failed to send reset email")
       }
@@ -71,12 +73,19 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
 
         {submitted ? (
           <div className="text-center py-8 space-y-4">
-            <div className="text-5xl">✓</div>
-            <div className="space-y-2">
-              <h3 className="font-semibold text-lg">Email Sent!</h3>
-              <p className="text-sm text-muted-foreground">
-                Check your email for a link to reset your password. The link will expire in 1 hour.
-              </p>
+            <div className="text-6xl font-bold text-green-600">✓</div>
+            <div className="space-y-3">
+              <h3 className="font-semibold text-lg text-foreground">Password Reset Email Sent!</h3>
+              <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-4 text-left space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  We've sent a password reset link to <span className="font-semibold text-foreground">{email}</span>
+                </p>
+                <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                  <li>The reset link will expire in 1 hour</li>
+                  <li>Check your spam folder if you don't see the email</li>
+                  <li>Click the link in the email to set a new password</li>
+                </ul>
+              </div>
             </div>
           </div>
         ) : (
