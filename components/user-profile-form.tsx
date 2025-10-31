@@ -2,10 +2,13 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { useAppSelector } from "@/lib/hooks"
+import { useRouter } from "next/navigation"
+import { useAppSelector, useAppDispatch } from "@/lib/hooks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { logout } from "@/lib/slices/authSlice"
 
 interface UserProfile {
   id: string
@@ -21,10 +24,15 @@ interface UserProfile {
 }
 
 export function UserProfileForm() {
+  const router = useRouter()
+  const dispatch = useAppDispatch()
+  
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     bloodGroup: "",
@@ -91,6 +99,36 @@ export function UserProfileForm() {
     }
   }
 
+  const handleDeleteAccount = async () => {
+    if (!token) return
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch("/api/users/profile", {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        // Logout and redirect to home
+        dispatch(logout())
+        setShowDeleteDialog(false)
+        router.push("/")
+      } else {
+        const data = await response.json()
+        setError(data.error || "Failed to delete account")
+        setShowDeleteDialog(false)
+      }
+    } catch (err) {
+      setError("Error deleting account")
+      setShowDeleteDialog(false)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   if (isLoading) {
     return <div className="text-center">Loading profile...</div>
   }
@@ -106,49 +144,58 @@ export function UserProfileForm() {
 
         {!isEditing ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Name</p>
-                <p className="font-medium">{profile?.name}</p>
+                <p className="font-medium truncate">{profile?.name}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Email</p>
-                <p className="font-medium">{profile?.email}</p>
+                <p className="font-medium truncate">{profile?.email}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Blood Group</p>
-                <p className="font-medium">{profile?.bloodGroup || "Not set"}</p>
+                <p className="font-medium truncate">{profile?.bloodGroup || "Not set"}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Phone</p>
-                <p className="font-medium">{profile?.phone || "Not set"}</p>
+                <p className="font-medium truncate">{profile?.phone || "Not set"}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Location</p>
-                <p className="font-medium">{profile?.location || "Not set"}</p>
+                <p className="font-medium truncate">{profile?.location || "Not set"}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Donations</p>
-                <p className="font-medium">{profile?.totalDonations || 0}</p>
+                <p className="font-medium truncate">{profile?.totalDonations || 0}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Last Donation Date</p>
-                <p className="font-medium">{profile?.lastDonationDate || "Not recorded"}</p>
+                <p className="font-medium truncate">{profile?.lastDonationDate || "Not recorded"}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Has Disease</p>
-                <p className="font-medium">{profile?.hasDisease ? "Yes" : "No"}</p>
+                <p className="font-medium truncate">{profile?.hasDisease ? "Yes" : "No"}</p>
               </div>
               {profile?.hasDisease && (
-                <div className="col-span-2">
+                <div className="col-span-1 md:col-span-2">
                   <p className="text-sm text-muted-foreground">Disease Description</p>
-                  <p className="font-medium">{profile?.diseaseDescription || "No description"}</p>
+                  <p className="font-medium truncate">{profile?.diseaseDescription || "No description"}</p>
                 </div>
               )}
             </div>
-            <Button onClick={() => setIsEditing(true)} className="w-full">
-              Edit Profile
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setIsEditing(true)} className="flex-1">
+                Edit Profile
+              </Button>
+              <Button 
+                onClick={() => setShowDeleteDialog(true)} 
+                variant="destructive"
+                className="flex-1"
+              >
+                Delete Account
+              </Button>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -231,6 +278,44 @@ export function UserProfileForm() {
             </div>
           </form>
         )}
+        
+        {/* Delete Account Confirmation Dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-destructive">Delete Account</AlertDialogTitle>
+              <AlertDialogDescription className="space-y-3">
+                <div>
+                  <p className="font-semibold text-foreground mb-2">⚠️ Warning: This action cannot be undone</p>
+                  <p>By deleting your account, you will permanently lose:</p>
+                  <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+                    <li>Your profile information</li>
+                    <li>All donation records</li>
+                    <li>Blood request history</li>
+                    <li>Certificates</li>
+                    <li>All associated data</li>
+                  </ul>
+                </div>
+                <p className="text-sm font-medium">
+                  This action will <span className="text-destructive font-bold">permanently delete</span> your account and cannot be recovered.
+                </p>
+                <p className="text-sm">Are you absolutely sure you want to proceed?</p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="flex gap-2 justify-end mt-4">
+              <AlertDialogCancel disabled={isDeleting}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteAccount}
+                disabled={isDeleting}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                {isDeleting ? "Deleting..." : "Yes, Delete My Account"}
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   )

@@ -111,3 +111,49 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const token = request.headers.get("authorization")?.split(" ")[1]
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const decoded = verifyToken(token)
+    if (!decoded) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    }
+
+    const db = await getDatabase()
+    const usersCollection = db.collection("users")
+
+    // Delete the user document from MongoDB
+    const result = await usersCollection.deleteOne({
+      _id: new ObjectId(decoded.userId),
+    })
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
+    // Also delete related data (donations, blood requests, etc.)
+    const donationsCollection = db.collection("donations")
+    const bloodRequestsCollection = db.collection("bloodRequests")
+    const certificatesCollection = db.collection("certificates")
+
+    await Promise.all([
+      donationsCollection.deleteMany({ userId: decoded.userId }),
+      bloodRequestsCollection.deleteMany({ userId: decoded.userId }),
+      certificatesCollection.deleteMany({ userId: decoded.userId }),
+    ])
+
+    console.log(`User account deleted: ${decoded.userId}`)
+
+    return NextResponse.json({
+      message: "Account deleted successfully. All associated data has been removed.",
+    })
+  } catch (error) {
+    console.error("Delete account error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
