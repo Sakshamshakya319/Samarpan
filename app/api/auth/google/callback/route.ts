@@ -39,6 +39,7 @@ async function getGoogleUserInfo(accessToken: string): Promise<GoogleUserInfo> {
 async function handleGoogleCallback(
   code: string,
   state: string | null,
+  redirectUri?: string,
 ): Promise<{ token: string; user: any; error?: string }> {
   try {
     console.log("[Google Auth] Processing authorization code...")
@@ -55,6 +56,10 @@ async function handleGoogleCallback(
 
     console.log("[Google Auth] Exchanging authorization code for tokens...")
 
+    // Use provided redirectUri or fallback to localhost
+    const finalRedirectUri = redirectUri || "http://localhost:3000/api/auth/google/callback"
+    console.log("[Google Auth] Redirect URI:", finalRedirectUri)
+
     // Exchange authorization code for access token
     const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
@@ -65,14 +70,19 @@ async function handleGoogleCallback(
         code,
         client_id: process.env.GOOGLE_CLIENT_ID || "",
         client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
-        redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/auth/google/callback`,
+        redirect_uri: finalRedirectUri,
         grant_type: "authorization_code",
       }).toString(),
     })
 
     if (!tokenResponse.ok) {
       const error = await tokenResponse.text()
-      console.error("[Google Auth] Token exchange failed:", error)
+      console.error("[Google Auth] Token exchange failed:")
+      console.error("  Status:", tokenResponse.status)
+      console.error("  Response:", error)
+      console.error("  Used redirect_uri:", finalRedirectUri)
+      console.error("  Client ID:", process.env.GOOGLE_CLIENT_ID ? "SET" : "MISSING")
+      console.error("  Client Secret:", process.env.GOOGLE_CLIENT_SECRET ? "SET" : "MISSING")
       throw new Error("Failed to exchange authorization code")
     }
 
@@ -191,32 +201,38 @@ export async function GET(request: NextRequest) {
 
     console.log("[Google Auth] GET callback received")
 
+    // Get the origin from the request headers for dynamic domain support
+    const origin = request.headers.get("x-forwarded-proto")
+      ? `${request.headers.get("x-forwarded-proto")}://${request.headers.get("x-forwarded-host")}`
+      : request.nextUrl.origin
+
     if (error) {
       console.error("[Google Auth] OAuth error:", error)
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/login?error=${encodeURIComponent(error)}&google_error=true`,
+        `${origin}/login?error=${encodeURIComponent(error)}&google_error=true`,
       )
     }
 
     if (!code) {
       console.log("[Google Auth] No authorization code in callback")
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/login?error=${encodeURIComponent("No authorization code received")}&google_error=true`,
+        `${origin}/login?error=${encodeURIComponent("No authorization code received")}&google_error=true`,
       )
     }
 
-    const result = await handleGoogleCallback(code, state)
+    const redirectUri = `${origin}/api/auth/google/callback`
+    const result = await handleGoogleCallback(code, state, redirectUri)
 
     if (result.error) {
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/login?error=${encodeURIComponent(result.error)}&google_error=true`,
+        `${origin}/login?error=${encodeURIComponent(result.error)}&google_error=true`,
       )
     }
 
     // Redirect to handler page with token and user data as query params
     // The handler page will store in localStorage and then redirect to dashboard
     const userData = encodeURIComponent(JSON.stringify(result.user))
-    const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/google-callback-handler?token=${encodeURIComponent(result.token)}&user=${userData}`
+    const redirectUrl = `${origin}/auth/google-callback-handler?token=${encodeURIComponent(result.token)}&user=${userData}`
 
     // Create response with redirect
     const response = NextResponse.redirect(redirectUrl)
@@ -234,8 +250,14 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("[Google Auth] Callback error:", error)
     const errorMessage = error instanceof Error ? error.message : "Authentication failed"
+    
+    // Get the origin from the request headers
+    const origin = request.headers.get("x-forwarded-proto")
+      ? `${request.headers.get("x-forwarded-proto")}://${request.headers.get("x-forwarded-host")}`
+      : request.nextUrl.origin
+    
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/login?error=${encodeURIComponent(errorMessage)}&google_error=true`,
+      `${origin}/login?error=${encodeURIComponent(errorMessage)}&google_error=true`,
     )
   }
 }
@@ -250,7 +272,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Authorization code is required" }, { status: 400 })
     }
 
-    const result = await handleGoogleCallback(code, null)
+    // Get the origin from the request headers for dynamic domain support
+    const origin = request.headers.get("x-forwarded-proto")
+      ? `${request.headers.get("x-forwarded-proto")}://${request.headers.get("x-forwarded-host")}`
+      : request.nextUrl.origin
+    
+    const redirectUri = `${origin}/api/auth/google/callback`
+    const result = await handleGoogleCallback(code, null, redirectUri)
 
     const response = NextResponse.json(
       {
