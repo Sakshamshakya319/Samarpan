@@ -9,6 +9,35 @@ interface ResetPasswordRequest {
   confirmPassword: string
 }
 
+// Validate password strength
+function validatePassword(password: string): { valid: boolean; error?: string } {
+  if (!password || typeof password !== "string") {
+    return { valid: false, error: "Password is required" }
+  }
+
+  if (password.length < 8) {
+    return { valid: false, error: "Password must be at least 8 characters long" }
+  }
+
+  if (password.length > 128) {
+    return { valid: false, error: "Password is too long (max 128 characters)" }
+  }
+
+  // Check for at least one uppercase, one lowercase, and one number
+  const hasUppercase = /[A-Z]/.test(password)
+  const hasLowercase = /[a-z]/.test(password)
+  const hasNumber = /\d/.test(password)
+
+  if (!hasUppercase || !hasLowercase || !hasNumber) {
+    return {
+      valid: false,
+      error: "Password must contain uppercase letters, lowercase letters, and numbers",
+    }
+  }
+
+  return { valid: true }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body: ResetPasswordRequest = await request.json()
@@ -21,15 +50,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (password !== confirmPassword) {
-      return NextResponse.json({ error: "Passwords do not match" }, { status: 400 })
-    }
-
-    if (password.length < 6) {
+    // Validate password format
+    const passwordValidation = validatePassword(password)
+    if (!passwordValidation.valid) {
       return NextResponse.json(
-        { error: "Password must be at least 6 characters long" },
+        { error: passwordValidation.error || "Invalid password" },
         { status: 400 },
       )
+    }
+
+    if (password !== confirmPassword) {
+      return NextResponse.json({ error: "Passwords do not match" }, { status: 400 })
     }
 
     console.log("[Password Reset] Processing password reset with token")
@@ -60,19 +91,29 @@ export async function POST(request: NextRequest) {
 
     // Update user password and clear reset token
     console.log(`[Password Reset] Resetting password for user: ${user._id}`)
-    await usersCollection.updateOne(
+    const updateResult = await usersCollection.updateOne(
       { _id: user._id },
       {
         $set: {
           password: hashedPassword,
           updatedAt: new Date(),
+          passwordResetCompletedAt: new Date(),
         },
         $unset: {
           passwordResetToken: "",
           passwordResetExpiry: "",
+          passwordResetRequestedAt: "",
         },
       },
     )
+
+    if (updateResult.modifiedCount === 0) {
+      console.error("[Password Reset] Failed to update user password")
+      return NextResponse.json(
+        { error: "Failed to reset password. Please try again." },
+        { status: 500 },
+      )
+    }
 
     console.log(`[Password Reset] Password successfully reset for user: ${user.email}`)
     return NextResponse.json(
@@ -81,8 +122,9 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     console.error("[Password Reset] Error:", error)
+    // Don't expose internal error details
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
+      { error: "Failed to reset password. Please try again later." },
       { status: 500 },
     )
   }

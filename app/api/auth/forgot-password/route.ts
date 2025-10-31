@@ -7,6 +7,46 @@ interface ForgotPasswordRequest {
   email: string
 }
 
+// Validate email format
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email) && email.length <= 254
+}
+
+// Get application URL safely
+function getAppUrl(request: NextRequest): string | null {
+  // 1. First priority: NEXT_PUBLIC_APP_URL env variable
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    try {
+      new URL(process.env.NEXT_PUBLIC_APP_URL)
+      return process.env.NEXT_PUBLIC_APP_URL
+    } catch {
+      console.warn("[Password Reset] NEXT_PUBLIC_APP_URL is invalid:", process.env.NEXT_PUBLIC_APP_URL)
+    }
+  }
+
+  // 2. Second priority: Try to construct from request headers (for proxied requests)
+  const proto = request.headers.get("x-forwarded-proto")
+  const host = request.headers.get("x-forwarded-host")
+  if (proto && host) {
+    try {
+      const url = `${proto}://${host}`
+      new URL(url)
+      return url
+    } catch {
+      console.warn("[Password Reset] Failed to construct URL from headers")
+    }
+  }
+
+  // 3. Third priority: Use request origin
+  try {
+    return request.nextUrl.origin
+  } catch {
+    console.error("[Password Reset] Failed to get request origin")
+    return null
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body: ForgotPasswordRequest = await request.json()
@@ -16,14 +56,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 })
     }
 
+    // Validate email format
+    if (!isValidEmail(email)) {
+      return NextResponse.json({ error: "Invalid email address" }, { status: 400 })
+    }
+
     console.log(`[Password Reset] Forgot password request for email: ${email}`)
+
+    // Get application URL
+    const appUrl = getAppUrl(request)
+    if (!appUrl) {
+      console.error("[Password Reset] Could not determine application URL")
+      return NextResponse.json(
+        { message: "If an account with this email exists, a password reset link has been sent" },
+        { status: 200 },
+      )
+    }
 
     // Connect to database
     const db = await getDatabase()
     const usersCollection = db.collection("users")
 
     // Check if user exists
-    const user = await usersCollection.findOne({ email })
+    const user = await usersCollection.findOne({ email: email.toLowerCase() })
 
     if (!user) {
       // Don't reveal if email exists (security best practice)
@@ -47,23 +102,14 @@ export async function POST(request: NextRequest) {
         $set: {
           passwordResetToken: resetTokenHash,
           passwordResetExpiry: resetTokenExpiry,
+          passwordResetRequestedAt: new Date(),
         },
       },
     )
 
-    // Get the app URL - prioritize NEXT_PUBLIC_APP_URL for consistency
-    let appUrl = process.env.NEXT_PUBLIC_APP_URL
-    
-    if (!appUrl) {
-      // Fallback to request headers if env var not set
-      appUrl = request.headers.get("x-forwarded-proto")
-        ? `${request.headers.get("x-forwarded-proto")}://${request.headers.get("x-forwarded-host")}`
-        : request.nextUrl.origin
-    }
-
     const resetLink = `${appUrl}/reset-password?token=${resetToken}`
-    
-    console.log(`[Password Reset] Reset link: ${resetLink} (using appUrl: ${appUrl})`)
+
+    console.log(`[Password Reset] Generated reset link (appUrl: ${appUrl})`)
 
     // Send reset email
     const emailHTML = generatePasswordResetEmailHTML({
@@ -79,9 +125,10 @@ export async function POST(request: NextRequest) {
 
     if (!emailSent) {
       console.error(`[Password Reset] Failed to send email to: ${email}`)
+      // Don't reveal that email sending failed in production
       return NextResponse.json(
-        { error: "Failed to send password reset email. Please try again." },
-        { status: 500 },
+        { message: "If an account with this email exists, a password reset link has been sent" },
+        { status: 200 },
       )
     }
 
@@ -92,9 +139,10 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     console.error("[Password Reset] Error:", error)
+    // Don't expose internal error details in production
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
-      { status: 500 },
+      { message: "If an account with this email exists, a password reset link has been sent" },
+      { status: 200 },
     )
   }
 }

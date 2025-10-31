@@ -236,56 +236,80 @@ export function generateNotificationEmailHTML(data: {
   `
 }
 
+// Helper function to escape HTML special characters
+function escapeHtml(text: string): string {
+  const map: Record<string, string> = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  }
+  return text.replace(/[&<>"']/g, (char) => map[char])
+}
+
 export function generatePasswordResetEmailHTML(data: {
   userName: string
   resetLink: string
 }): string {
+  const escapedUserName = escapeHtml(data.userName)
+  const escapedResetLink = escapeHtml(data.resetLink)
+
   return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <title>Password Reset Request</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Password Reset Request - Samarpan</title>
     </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-      <div style="max-width: 600px; margin: 0 auto; padding: 20px; background: #f9fafb; border-radius: 8px;">
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; background: #f9fafb;">
         <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
           
           <!-- Header -->
           <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #dc2626; margin: 0; font-size: 24px;">🔐 Password Reset</h1>
+            <h1 style="color: #dc2626; margin: 0; font-size: 24px; font-weight: 700;">🔐 Password Reset Request</h1>
           </div>
 
           <!-- Greeting -->
-          <p style="color: #6b7280; margin-bottom: 20px;">Hi ${data.userName},</p>
+          <p style="color: #6b7280; margin-bottom: 20px; font-size: 16px;">Hello ${escapedUserName},</p>
 
           <!-- Main Content -->
           <div style="background: #f3f4f6; padding: 20px; border-radius: 6px; margin-bottom: 20px;">
-            <p style="color: #374151; margin: 0 0 15px 0;">
-              We received a request to reset your Samarpan account password. Click the button below to reset it. This link will expire in 1 hour.
+            <p style="color: #374151; margin: 0 0 15px 0; font-size: 14px;">
+              We received a request to reset your Samarpan account password. Click the button below to reset it. This link will expire in <strong>1 hour</strong>.
             </p>
-            <p style="color: #dc2626; font-weight: 600; margin: 15px 0 0 0;">
-              If you did not request this, please ignore this email or contact support.
+            <p style="color: #6b7280; font-size: 13px; margin: 15px 0 0 0; font-style: italic;">
+              If you did not request this, please ignore this email or contact support immediately.
             </p>
           </div>
 
           <!-- CTA -->
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${data.resetLink}" style="background: #dc2626; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">
+            <a href="${data.resetLink}" style="background: #dc2626; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px; border: 1px solid #dc2626;">
               Reset Password
             </a>
           </div>
 
-          <!-- Alternative Link -->
-          <div style="background: #f3f4f6; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-            <p style="color: #6b7280; font-size: 12px; margin: 0 0 8px 0;">Or copy and paste this link:</p>
-            <p style="color: #374151; font-size: 11px; word-break: break-all; margin: 0;">${data.resetLink}</p>
+          <!-- Alternative Link Section -->
+          <div style="background: #f3f4f6; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+            <p style="color: #6b7280; font-size: 12px; margin: 0 0 8px 0; font-weight: 600;">If the button doesn't work, copy and paste this link:</p>
+            <p style="color: #374151; font-size: 12px; word-break: break-all; margin: 0; font-family: monospace; background: white; padding: 10px; border-radius: 4px; overflow-wrap: break-word;">${escapedResetLink}</p>
+          </div>
+
+          <!-- Security Notice -->
+          <div style="background: #fef3c7; padding: 12px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
+            <p style="color: #78350f; font-size: 12px; margin: 0; font-weight: 600;">🔒 Security Tip: Never share this link with anyone. Samarpan staff will never ask for your reset link.</p>
           </div>
 
           <!-- Footer -->
           <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; text-align: center; color: #6b7280; font-size: 12px;">
-            <p style="margin: 5px 0;">Samarpan Blood Donation Network</p>
+            <p style="margin: 5px 0; font-weight: 600;">Samarpan Blood Donation Network</p>
             <p style="margin: 5px 0;">This is an automated email. Please do not reply directly.</p>
+            <p style="margin: 8px 0 0 0; font-size: 11px;">
+              © 2024 Samarpan. All rights reserved.
+            </p>
           </div>
         </div>
       </div>

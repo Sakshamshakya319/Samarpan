@@ -56,14 +56,36 @@ export function ResetPasswordForm() {
   }, [token])
 
   const validatePassword = () => {
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters long")
+    if (!password || !confirmPassword) {
+      toast.error("Password and confirmation are required")
       return false
     }
+
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters long")
+      return false
+    }
+
+    if (password.length > 128) {
+      toast.error("Password is too long (maximum 128 characters)")
+      return false
+    }
+
     if (password !== confirmPassword) {
       toast.error("Passwords do not match")
       return false
     }
+
+    // Check for password strength (uppercase, lowercase, number)
+    const hasUppercase = /[A-Z]/.test(password)
+    const hasLowercase = /[a-z]/.test(password)
+    const hasNumber = /\d/.test(password)
+
+    if (!hasUppercase || !hasLowercase || !hasNumber) {
+      toast.error("Password must contain uppercase letters, lowercase letters, and numbers")
+      return false
+    }
+
     return true
   }
 
@@ -75,6 +97,9 @@ export function ResetPasswordForm() {
     }
 
     setLoading(true)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+
     try {
       const response = await fetch("/api/auth/reset-password", {
         method: "POST",
@@ -84,22 +109,36 @@ export function ResetPasswordForm() {
           password,
           confirmPassword,
         }),
+        signal: controller.signal,
       })
+
+      clearTimeout(timeoutId)
 
       const data = await response.json()
 
       if (response.ok) {
         setSubmitted(true)
-        toast.success("Password reset successfully!")
+        toast.success("Password reset successfully! Redirecting to login...")
         setTimeout(() => {
           router.push("/login")
         }, 2000)
       } else {
-        toast.error(data.error || "Failed to reset password")
+        const errorMsg = data.error || "Failed to reset password. Please try again."
+        toast.error(errorMsg)
       }
     } catch (error) {
-      console.error("Error:", error)
-      toast.error("An error occurred. Please try again.")
+      clearTimeout(timeoutId)
+      let errorMsg = "An error occurred. Please try again."
+
+      if (error instanceof Error) {
+        if (error.name === "AbortError") {
+          errorMsg = "Request timed out. Please check your connection and try again."
+        } else {
+          console.error("Error:", error)
+        }
+      }
+
+      toast.error(errorMsg)
     } finally {
       setLoading(false)
     }
@@ -193,7 +232,7 @@ export function ResetPasswordForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
                 required
-                minLength={6}
+                minLength={8}
               />
               <button
                 type="button"
@@ -203,7 +242,9 @@ export function ResetPasswordForm() {
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            <p className="text-xs text-muted-foreground">Minimum 6 characters</p>
+            <p className="text-xs text-muted-foreground">
+              At least 8 characters with uppercase, lowercase, and numbers
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -219,7 +260,7 @@ export function ResetPasswordForm() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={loading}
                 required
-                minLength={6}
+                minLength={8}
               />
               <button
                 type="button"
