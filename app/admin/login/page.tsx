@@ -129,11 +129,7 @@ export default function AdminLogin() {
           </p>
         </div>
 
-        <div className="mt-4 p-4 bg-secondary/50 rounded-lg text-xs text-muted-foreground">
-          <p className="font-semibold mb-2">Demo Credentials:</p>
-          <p>Email: admin@samarpan.com</p>
-          <p>Password: admin@123</p>
-        </div>
+        
       </Card>
     </div>
   )
