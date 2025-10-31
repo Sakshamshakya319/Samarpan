@@ -14,7 +14,8 @@ import { AdminEventsManager } from "@/components/admin-events-manager"
 import { AdminDonationImagesViewer } from "@/components/admin-donation-images-viewer"
 import { AdminBloodRequestsManager } from "@/components/admin-blood-requests-manager"
 import { AdminTransportationManager } from "@/components/admin-transportation-manager"
-import { LogOut, LayoutDashboard, Calendar, Truck } from "lucide-react"
+import { AdminContactSubmissionsManager } from "@/components/admin-contact-submissions-manager"
+import { LogOut, LayoutDashboard, Calendar, Truck, Mail } from "lucide-react"
 
 interface Admin {
   id: string
@@ -214,6 +215,17 @@ export default function AdminPage() {
             <Truck className="w-4 h-4" />
             Transportation
           </button>
+          <button
+            onClick={() => setActiveTab("contacts")}
+            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "contacts"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Mail className="w-4 h-4" />
+            Contact Submissions
+          </button>
         </div>
 
         {/* Tab Content */}
@@ -262,6 +274,12 @@ export default function AdminPage() {
         {activeTab === "transportation" && (
           <div className="grid grid-cols-1 gap-6">
             {token && <AdminTransportationManager token={token} />}
+          </div>
+        )}
+
+        {activeTab === "contacts" && (
+          <div className="grid grid-cols-1 gap-6">
+            {token && <AdminContactSubmissionsManager token={token} />}
           </div>
         )}
       </div>

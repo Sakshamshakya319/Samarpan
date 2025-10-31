@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyToken } from "@/lib/auth"
+import { sendEmail, generateNotificationEmailHTML } from "@/lib/email"
 import { ObjectId } from "mongodb"
 
 export async function GET(request: NextRequest) {
@@ -52,21 +53,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Only admins can send notifications" }, { status: 403 })
     }
 
-    const { userId, title, message } = await request.json()
+    const { userId, title, message, sendEmail: shouldSendEmail } = await request.json()
+
+    // Fetch recipient user
+    const recipientUser = await usersCollection.findOne({
+      _id: new ObjectId(userId),
+    })
+
+    if (!recipientUser) {
+      return NextResponse.json({ error: "Recipient user not found" }, { status: 404 })
+    }
 
     const notificationsCollection = db.collection("notifications")
     const result = await notificationsCollection.insertOne({
       userId: new ObjectId(userId),
       title,
       message,
+      type: "admin_notification",
       read: false,
       createdAt: new Date(),
     })
+
+    // Send email if requested and user has email
+    if (shouldSendEmail && recipientUser.email) {
+      console.log(`[Notification] Sending email to ${recipientUser.email}`)
+
+      const emailHTML = generateNotificationEmailHTML({
+        title,
+        message,
+        userName: recipientUser.name,
+      })
+
+      // Send email asynchronously
+      sendEmail({
+        to: recipientUser.email,
+        subject: title,
+        html: emailHTML,
+      }).catch((err) => {
+        console.error("[Notification] Error sending email:", err)
+      })
+    }
 
     return NextResponse.json(
       {
         message: "Notification sent successfully",
         notificationId: result.insertedId,
+        emailSent: shouldSendEmail && !!recipientUser.email,
       },
       { status: 201 },
     )

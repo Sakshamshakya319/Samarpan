@@ -13,26 +13,51 @@ export default function Contact() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
     subject: "",
     message: "",
   })
   const [submitted, setSubmitted] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     })
+    setError("")
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Form submitted:", formData)
-    setSubmitted(true)
-    setTimeout(() => {
-      setFormData({ name: "", email: "", subject: "", message: "" })
-      setSubmitted(false)
-    }, 3000)
+    setIsLoading(true)
+    setError("")
+
+    try {
+      const response = await fetch("/api/contact-submissions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to submit form")
+      }
+
+      setSubmitted(true)
+      setFormData({ name: "", email: "", phone: "", subject: "", message: "" })
+      setTimeout(() => {
+        setSubmitted(false)
+      }, 3000)
+    } catch (err: any) {
+      setError(err.message || "Failed to submit contact form. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -75,6 +100,16 @@ export default function Contact() {
           {/* Contact Form */}
           <Card className="max-w-2xl mx-auto p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
+              {error && (
+                <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-lg">
+                  {error}
+                </div>
+              )}
+              {submitted && (
+                <div className="bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded-lg">
+                  Thank you! Your message has been sent successfully. We'll get back to you soon.
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium mb-2">Name</label>
                 <Input
@@ -95,6 +130,16 @@ export default function Contact() {
                   onChange={handleChange}
                   placeholder="your@email.com"
                   required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Phone (Optional)</label>
+                <Input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="+91 98765 43210"
                 />
               </div>
               <div>
@@ -119,8 +164,8 @@ export default function Contact() {
                   required
                 />
               </div>
-              <Button type="submit" className="w-full">
-                {submitted ? "Message Sent!" : "Send Message"}
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Sending..." : submitted ? "Message Sent!" : "Send Message"}
               </Button>
             </form>
           </Card>

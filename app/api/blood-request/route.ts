@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyToken } from "@/lib/auth"
+import { sendEmail, generateBloodRequestEmailHTML } from "@/lib/email"
 import { ObjectId } from "mongodb"
 
 export async function POST(request: NextRequest) {
@@ -49,10 +50,60 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date(),
     })
 
+    // Send email notifications to users with the same blood group
+    console.log(`[Blood Request] Finding users with blood group ${bloodGroup}...`)
+    const matchingUsers = await usersCollection
+      .find({ bloodGroup: bloodGroup, _id: { $ne: new ObjectId(decoded.userId) } })
+      .toArray()
+
+    if (matchingUsers.length > 0) {
+      const emailAddresses = matchingUsers.map((u) => u.email).filter((email) => email)
+      console.log(`[Blood Request] Sending emails to ${emailAddresses.length} users with ${bloodGroup} blood group`)
+
+      // Generate email HTML
+      const emailHTML = generateBloodRequestEmailHTML({
+        bloodGroup,
+        quantity,
+        urgency: urgency || "normal",
+        reason: reason || "",
+        hospitalLocation,
+        userName: user.name || "Unknown",
+        userPhone: user.phone || "",
+        userEmail: user.email,
+      })
+
+      // Send emails asynchronously (don't block the response)
+      sendEmail({
+        to: emailAddresses,
+        subject: `🩸 Blood Request - ${bloodGroup} Needed (${urgency?.toUpperCase() || "NORMAL"} URGENCY)`,
+        html: emailHTML,
+      }).catch((err) => {
+        console.error("[Blood Request] Error sending emails:", err)
+      })
+
+      // Create database notifications for matching users
+      const notificationsCollection = db.collection("notifications")
+      const notifications = matchingUsers.map((u) => ({
+        userId: u._id,
+        title: `Blood Request - ${bloodGroup} Needed`,
+        message: `A blood donation request for ${bloodGroup} blood type has been posted for ${hospitalLocation}. Urgency: ${urgency || "Normal"}`,
+        type: "blood_request",
+        relatedRequestId: result.insertedId,
+        read: false,
+        createdAt: new Date(),
+      }))
+
+      if (notifications.length > 0) {
+        await notificationsCollection.insertMany(notifications)
+        console.log(`[Blood Request] Created ${notifications.length} in-app notifications`)
+      }
+    }
+
     return NextResponse.json(
       {
         message: "Blood request created successfully",
         requestId: result.insertedId,
+        notificationsCount: matchingUsers.length,
       },
       { status: 201 },
     )
