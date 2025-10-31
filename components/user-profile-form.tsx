@@ -144,54 +144,54 @@ export function UserProfileForm() {
 
         {!isEditing ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">Name</p>
-                <p className="font-medium truncate">{profile?.name}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Name</p>
+                <p className="font-medium truncate text-sm sm:text-base">{profile?.name}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Email</p>
-                <p className="font-medium truncate">{profile?.email}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Email</p>
+                <p className="font-medium truncate text-sm sm:text-base">{profile?.email}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Blood Group</p>
-                <p className="font-medium truncate">{profile?.bloodGroup || "Not set"}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Blood Group</p>
+                <p className="font-medium truncate text-sm sm:text-base">{profile?.bloodGroup || "Not set"}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Phone</p>
-                <p className="font-medium truncate">{profile?.phone || "Not set"}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Phone</p>
+                <p className="font-medium truncate text-sm sm:text-base">{profile?.phone || "Not set"}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Location</p>
-                <p className="font-medium truncate">{profile?.location || "Not set"}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Location</p>
+                <p className="font-medium truncate text-sm sm:text-base">{profile?.location || "Not set"}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Donations</p>
-                <p className="font-medium truncate">{profile?.totalDonations || 0}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total Donations</p>
+                <p className="font-medium truncate text-sm sm:text-base">{profile?.totalDonations || 0}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Last Donation Date</p>
-                <p className="font-medium truncate">{profile?.lastDonationDate || "Not recorded"}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Last Donation Date</p>
+                <p className="font-medium truncate text-sm sm:text-base">{profile?.lastDonationDate || "Not recorded"}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Has Disease</p>
-                <p className="font-medium truncate">{profile?.hasDisease ? "Yes" : "No"}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Has Disease</p>
+                <p className="font-medium truncate text-sm sm:text-base">{profile?.hasDisease ? "Yes" : "No"}</p>
               </div>
               {profile?.hasDisease && (
-                <div className="col-span-1 md:col-span-2">
-                  <p className="text-sm text-muted-foreground">Disease Description</p>
-                  <p className="font-medium truncate">{profile?.diseaseDescription || "No description"}</p>
+                <div className="col-span-1 sm:col-span-2">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Disease Description</p>
+                  <p className="font-medium text-sm sm:text-base">{profile?.diseaseDescription || "No description"}</p>
                 </div>
               )}
             </div>
-            <div className="flex gap-2">
-              <Button onClick={() => setIsEditing(true)} className="flex-1">
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <Button onClick={() => setIsEditing(true)} className="flex-1 w-full sm:w-auto">
                 Edit Profile
               </Button>
               <Button 
                 onClick={() => setShowDeleteDialog(true)} 
                 variant="destructive"
-                className="flex-1"
+                className="flex-1 w-full sm:w-auto"
               >
                 Delete Account
               </Button>

@@ -152,26 +152,26 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 p-4">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 md:mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Welcome, {user.name}</h1>
-            <p className="text-gray-600">Manage your profile and donations</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Welcome, {user.name}</h1>
+            <p className="text-sm md:text-base text-gray-600">Manage your profile and donations</p>
           </div>
-          <div className="flex gap-4">
-            <Button onClick={() => setShowDeleteDialog(true)} variant="destructive" className="bg-red-600 hover:bg-red-700">
+          <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+            <Button onClick={() => setShowDeleteDialog(true)} variant="destructive" className="bg-red-600 hover:bg-red-700 flex-1 sm:flex-none">
               <Trash2 className="w-4 h-4 mr-2" />
               Delete Account
             </Button>
-            <Button onClick={handleLogout} variant="destructive">
+            <Button onClick={handleLogout} variant="destructive" className="flex-1 sm:flex-none">
               <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Profile Card */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 md:space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -272,7 +272,7 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-gray-600">Name</p>
                         <p className="font-semibold">{user.name}</p>
