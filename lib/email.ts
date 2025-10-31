@@ -1,21 +1,87 @@
 import nodemailer from "nodemailer"
+import type SMTPTransport from "nodemailer/lib/smtp-transport"
 
 // Create SMTP transporter
 let transporter: nodemailer.Transporter | null = null
+let transporterReady = false
 
-function getTransporter() {
-  if (!transporter) {
+// Validate SMTP configuration
+function validateSMTPConfig(): { valid: boolean; errors: string[] } {
+  const errors: string[] = []
+
+  if (!process.env.SMTP_HOST) errors.push("SMTP_HOST not configured")
+  if (!process.env.SMTP_PORT) errors.push("SMTP_PORT not configured")
+  if (!process.env.SMTP_USER) errors.push("SMTP_USER not configured")
+  if (!process.env.SMTP_PASS) errors.push("SMTP_PASS not configured")
+  if (!process.env.SMTP_FROM) errors.push("SMTP_FROM not configured")
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  }
+}
+
+async function getTransporter(): Promise<nodemailer.Transporter | null> {
+  if (transporter && transporterReady) {
+    return transporter
+  }
+
+  try {
+    const config = validateSMTPConfig()
+    if (!config.valid) {
+      console.error("[Email] ❌ SMTP Configuration errors:")
+      config.errors.forEach((err) => console.error(`[Email]    - ${err}`))
+      return null
+    }
+
+    const port = parseInt(process.env.SMTP_PORT || "587")
+
     transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || "587"),
-      secure: process.env.SMTP_PORT === "465", // true for 465, false for other ports
+      port: port,
+      secure: port === 465, // true for 465, false for other ports
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      // Add connection timeout
+      connectionTimeout: 10000, // 10 seconds
+      socketTimeout: 10000, // 10 seconds
+      // Add TLS configuration for better compatibility
+      tls: {
+        rejectUnauthorized: false,
+      },
     })
+
+    // Verify connection (only once, don't repeat on every email)
+    if (!transporterReady) {
+      console.log("[Email] 🔍 Verifying SMTP connection...")
+      await transporter.verify()
+      transporterReady = true
+      console.log("[Email] ✅ SMTP connection verified successfully")
+    }
+
+    return transporter
+  } catch (error) {
+    console.error("[Email] ❌ Failed to initialize transporter:", error)
+    transporter = null
+    transporterReady = false
+
+    if (error instanceof Error) {
+      // Provide specific error guidance
+      if (error.message.includes("535") || error.message.includes("Authentication failed")) {
+        console.error("[Email] 🔑 SendGrid authentication failed. Check your API key in SMTP_PASS")
+        console.error("[Email] 📝 Update SMTP_PASS in .env.local with a valid SendGrid API key")
+        console.error("[Email] 🔗 Get a new key at: https://app.sendgrid.com/settings/api_keys")
+      } else if (error.message.includes("ECONNREFUSED")) {
+        console.error("[Email] 🌐 Cannot connect to SMTP server. Check SMTP_HOST and SMTP_PORT")
+      } else if (error.message.includes("ETIMEDOUT")) {
+        console.error("[Email] ⏱️  Connection timeout. SMTP server may be unreachable")
+      }
+    }
+
+    return null
   }
-  return transporter
 }
 
 interface EmailOptions {
@@ -23,58 +89,112 @@ interface EmailOptions {
   subject: string
   html: string
   text?: string
+  replyTo?: string
 }
 
-export async function sendEmail(options: EmailOptions): Promise<boolean> {
+export async function sendEmail(options: EmailOptions, retryCount = 0): Promise<boolean> {
+  const MAX_RETRIES = 2
+  const RETRY_DELAY = 1000 // 1 second
+
   try {
     // In development without valid SMTP, log to console
     const isDevelopment = process.env.NODE_ENV !== "production"
-    const smtpConfigured = process.env.SMTP_HOST && process.env.SMTP_PASS && process.env.SMTP_USER
+    const config = validateSMTPConfig()
 
-    if (!smtpConfigured) {
+    if (!config.valid) {
       if (isDevelopment) {
-        console.warn("[Email] ⚠️  SMTP not configured. Email logged to console (development mode)")
-        console.log(`[Email] EMAIL TO: ${Array.isArray(options.to) ? options.to.join(", ") : options.to}`)
+        console.warn("[Email] ⚠️  SMTP not fully configured. Email logged to console (development mode)")
+        console.log(`[Email] TO: ${Array.isArray(options.to) ? options.to.join(", ") : options.to}`)
         console.log(`[Email] SUBJECT: ${options.subject}`)
-        console.log(`[Email] BODY: ${options.html}`)
-        return true
+        console.log(`[Email] HTML: ${options.html.substring(0, 200)}...`)
+        console.warn("[Email] Configuration issues:")
+        config.errors.forEach((err) => console.warn(`[Email]    - ${err}`))
+        return true // Return true in dev mode to prevent user-facing errors
       }
-      console.error("[Email] ❌ SMTP configuration missing in production")
+      console.error("[Email] ❌ SMTP configuration incomplete in production")
       return false
     }
 
-    const transporter = getTransporter()
+    const transporter = await getTransporter()
+    if (!transporter) {
+      console.error("[Email] ❌ Failed to get email transporter")
+      return false
+    }
 
-    // Parse SMTP_FROM for name and email
+    // Parse SMTP_FROM - handle both "Name <email>" and plain email formats
     const smtpFrom = process.env.SMTP_FROM || "Samarpan <noreply@samarpan.com>"
+    const recipientEmails = Array.isArray(options.to) ? options.to.join(", ") : options.to
 
-    const mailOptions = {
+    // Validate recipient emails
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const emails = Array.isArray(options.to) ? options.to : [options.to]
+    for (const email of emails) {
+      if (!emailRegex.test(email)) {
+        console.error(`[Email] ❌ Invalid recipient email: ${email}`)
+        return false
+      }
+    }
+
+    const mailOptions: SMTPTransport.MailOptions = {
       from: smtpFrom,
-      to: Array.isArray(options.to) ? options.to.join(", ") : options.to,
+      to: recipientEmails,
       subject: options.subject,
       html: options.html,
       text: options.text || options.html.replace(/<[^>]*>/g, ""),
+      // Add headers for better deliverability
+      headers: {
+        "X-Mailer": "Samarpan/1.0",
+        "X-Priority": "3",
+        "Importance": "normal",
+        "List-Unsubscribe": "<mailto:noreply@samarpan.com>",
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+      // Add replyTo if specified
+      ...(options.replyTo && { replyTo: options.replyTo }),
     }
 
-    console.log(`[Email] 📧 Sending email to ${mailOptions.to}`)
-    await transporter.sendMail(mailOptions)
-    console.log(`[Email] ✅ Email sent successfully to ${mailOptions.to}`)
+    console.log(`[Email] 📧 Sending email to ${recipientEmails} (Subject: "${options.subject}")`)
+
+    // Send email with error handling
+    const result = await transporter.sendMail(mailOptions)
+
+    console.log(`[Email] ✅ Email sent successfully`)
+    console.log(`[Email]    - MessageID: ${result.messageId}`)
+    console.log(`[Email]    - To: ${recipientEmails}`)
+
     return true
   } catch (error) {
-    console.error("[Email] ❌ Error sending email:", error)
-    
-    // If it's an auth error in development, provide guidance
-    if (error instanceof Error && error.message.includes("535")) {
-      console.error("[Email] 🔑 SendGrid API key is invalid or expired")
-      console.error("[Email] 📝 To fix: Update SMTP_PASS in .env.local with a valid SendGrid API key")
-      console.error("[Email] 🔗 Get a new key at: https://app.sendgrid.com/settings/api_keys")
-      
-      if (process.env.NODE_ENV !== "production") {
-        console.warn("[Email] 🔄 Falling back to console logging (development mode)")
-        return true
+    console.error(`[Email] ❌ Error sending email (Attempt ${retryCount + 1}/${MAX_RETRIES + 1}):`, error)
+
+    // Retry logic for transient errors
+    if (retryCount < MAX_RETRIES) {
+      const isTransientError =
+        error instanceof Error &&
+        (error.message.includes("ETIMEDOUT") ||
+          error.message.includes("ECONNREFUSED") ||
+          error.message.includes("EHOSTUNREACH") ||
+          error.message.includes("ENOTFOUND"))
+
+      if (isTransientError) {
+        console.log(`[Email] 🔄 Retrying in ${RETRY_DELAY}ms...`)
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY))
+        return sendEmail(options, retryCount + 1)
       }
     }
-    
+
+    // Log specific error types for debugging
+    if (error instanceof Error) {
+      if (error.message.includes("535") || error.message.includes("Authentication failed")) {
+        console.error("[Email] 🔑 Authentication error: Invalid SendGrid API key")
+      } else if (error.message.includes("Invalid email")) {
+        console.error("[Email] ✉️  Invalid email format detected")
+      } else if (error.message.includes("ECONNREFUSED")) {
+        console.error("[Email] 🌐 Connection refused: SMTP server unreachable")
+      } else if (error.message.includes("ETIMEDOUT")) {
+        console.error("[Email] ⏱️  Connection timeout")
+      }
+    }
+
     return false
   }
 }

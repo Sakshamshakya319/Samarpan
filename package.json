@@ -9,7 +9,8 @@
     "dev": "next dev",
     "lint": "eslint .",
     "setup": "npm install && npm run create-admin",
-    "start": "next start"
+    "start": "next start",
+    "test:email": "tsx scripts/test-email.ts"
   },
   "dependencies": {
     "@aws-sdk/credential-providers": "latest",

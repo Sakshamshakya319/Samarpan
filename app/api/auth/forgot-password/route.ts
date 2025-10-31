@@ -109,7 +109,10 @@ export async function POST(request: NextRequest) {
 
     const resetLink = `${appUrl}/reset-password?token=${resetToken}`
 
-    console.log(`[Password Reset] Generated reset link (appUrl: ${appUrl})`)
+    console.log(`[Password Reset] Generated reset link`)
+    console.log(`[Password Reset]    - App URL: ${appUrl}`)
+    console.log(`[Password Reset]    - Token expires at: ${resetTokenExpiry.toISOString()}`)
+    console.log(`[Password Reset]    - Reset link: ${resetLink.substring(0, 50)}...`)
 
     // Send reset email
     const emailHTML = generatePasswordResetEmailHTML({
@@ -117,14 +120,22 @@ export async function POST(request: NextRequest) {
       resetLink,
     })
 
+    console.log(`[Password Reset] Attempting to send password reset email...`)
+    console.log(`[Password Reset]    - Recipient: ${email}`)
+    console.log(`[Password Reset]    - User: ${user.name || "Unknown"}`)
+
     const emailSent = await sendEmail({
       to: email,
       subject: "Password Reset Request - Samarpan",
       html: emailHTML,
+      replyTo: process.env.SMTP_FROM || "noreply@samarpan.com",
     })
 
     if (!emailSent) {
-      console.error(`[Password Reset] Failed to send email to: ${email}`)
+      console.error(`[Password Reset] ❌ Failed to send password reset email to: ${email}`)
+      console.error(`[Password Reset] The reset token has been stored but email delivery failed`)
+      console.error(`[Password Reset] Token Hash: ${resetTokenHash.substring(0, 20)}...`)
+      console.error(`[Password Reset] User ID: ${user._id}`)
       // Don't reveal that email sending failed in production
       return NextResponse.json(
         { message: "If an account with this email exists, a password reset link has been sent" },
@@ -132,7 +143,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`[Password Reset] Password reset email sent to: ${email}`)
+    console.log(`[Password Reset] ✅ Password reset email sent successfully`)
+    console.log(`[Password Reset]    - Email to: ${email}`)
+    console.log(`[Password Reset]    - Token expires in 1 hour`)
     return NextResponse.json(
       { message: "If an account with this email exists, a password reset link has been sent" },
       { status: 200 },
