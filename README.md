@@ -375,8 +375,24 @@ import { Input } from "@/components/ui/input"
 
 1. Push your repository to GitHub
 2. Connect to Vercel: https://vercel.com/new
-3. Set environment variables in Vercel dashboard
+3. Set environment variables in Vercel dashboard:
+   - **CRITICAL FOR PASSWORD RESET:** Set `NEXT_PUBLIC_APP_URL` to your production domain (e.g., `https://yourdomain.com`)
+     - Without this, password reset links will not work correctly
+     - If not set, the app will try to auto-detect using `VERCEL_URL`, but explicitly setting it is recommended
+   - Include all other required variables: `MONGODB_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SMTP_*` settings
 4. Deploy!
+
+**⚠️ Password Reset Configuration:**
+Password reset emails contain a link to `/reset-password`. This URL must be accessible from the internet. The app constructs it using:
+- Priority 1: `NEXT_PUBLIC_APP_URL` environment variable
+- Priority 2: Vercel's automatic `VERCEL_URL` (if not set in Priority 1)
+- Priority 3: Request headers (x-forwarded-proto, x-forwarded-host)
+- Priority 4: Request origin
+
+To ensure password reset works on production:
+```
+NEXT_PUBLIC_APP_URL=https://your-production-domain.com
+```
 
 ### Docker
 

@@ -15,32 +15,59 @@ function isValidEmail(email: string): boolean {
 
 // Get application URL safely
 function getAppUrl(request: NextRequest): string | null {
-  // 1. First priority: NEXT_PUBLIC_APP_URL env variable
+  const isProduction = process.env.NODE_ENV === "production"
+
+  // 1. First priority: NEXT_PUBLIC_APP_URL env variable (if explicitly set and not localhost)
   if (process.env.NEXT_PUBLIC_APP_URL) {
     try {
-      new URL(process.env.NEXT_PUBLIC_APP_URL)
-      return process.env.NEXT_PUBLIC_APP_URL
+      const url = new URL(process.env.NEXT_PUBLIC_APP_URL)
+      // Prevent using localhost in production
+      if (isProduction && (url.hostname === "localhost" || url.hostname === "127.0.0.1")) {
+        console.warn(
+          "[Password Reset] ⚠️  NEXT_PUBLIC_APP_URL is localhost but running in production. Trying alternatives...",
+        )
+      } else {
+        console.log("[Password Reset] Using NEXT_PUBLIC_APP_URL:", process.env.NEXT_PUBLIC_APP_URL)
+        return process.env.NEXT_PUBLIC_APP_URL
+      }
     } catch {
       console.warn("[Password Reset] NEXT_PUBLIC_APP_URL is invalid:", process.env.NEXT_PUBLIC_APP_URL)
     }
   }
 
-  // 2. Second priority: Try to construct from request headers (for proxied requests)
-  const proto = request.headers.get("x-forwarded-proto")
-  const host = request.headers.get("x-forwarded-host")
-  if (proto && host) {
+  // 2. Second priority: Use Vercel's VERCEL_URL (automatic on Vercel deployment)
+  if (isProduction && process.env.VERCEL_URL) {
     try {
-      const url = `${proto}://${host}`
-      new URL(url)
+      const url = `https://${process.env.VERCEL_URL}`
+      new URL(url) // Validate URL format
+      console.log("[Password Reset] Using Vercel URL:", url)
       return url
     } catch {
-      console.warn("[Password Reset] Failed to construct URL from headers")
+      console.warn("[Password Reset] VERCEL_URL is invalid:", process.env.VERCEL_URL)
     }
   }
 
-  // 3. Third priority: Use request origin
+  // 3. Third priority: Try to construct from request headers (for Vercel & proxied requests)
+  // Vercel sets x-forwarded-proto and x-forwarded-host headers
+  const proto = request.headers.get("x-forwarded-proto") || request.headers.get("x-proto")
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("x-host")
+
+  if (proto && host) {
+    try {
+      const url = `${proto}://${host}`
+      new URL(url) // Validate URL format
+      console.log("[Password Reset] Using URL from forwarded headers:", url)
+      return url
+    } catch {
+      console.warn("[Password Reset] Failed to construct URL from headers. Proto:", proto, "Host:", host)
+    }
+  }
+
+  // 4. Fourth priority: Use request origin (as fallback)
   try {
-    return request.nextUrl.origin
+    const origin = request.nextUrl.origin
+    console.log("[Password Reset] Using request origin:", origin)
+    return origin
   } catch {
     console.error("[Password Reset] Failed to get request origin")
     return null
