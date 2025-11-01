@@ -7,7 +7,6 @@
 **Connect Donors, Save Lives** – A real-time blood and platelet donor connection platform that brings donors and patients together.
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.0.0-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19.2.0-61DAFB?style=for-the-badge&logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-6.20.0-13AA52?style=for-the-badge&logo=mongodb)](https://www.mongodb.com/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
