@@ -185,7 +185,13 @@ export function UserProfileForm() {
               )}
             </div>
             <div className="flex flex-col sm:flex-row gap-2 pt-2">
-              <Button onClick={() => setIsEditing(true)} className="flex-1 w-full sm:w-auto">
+              <Button 
+                onClick={() => {
+                  setIsEditing(true)
+                  setError("")
+                }} 
+                className="flex-1 w-full sm:w-auto"
+              >
                 Edit Profile
               </Button>
               <Button 
@@ -271,7 +277,21 @@ export function UserProfileForm() {
                 type="button"
                 variant="outline"
                 className="flex-1 bg-transparent"
-                onClick={() => setIsEditing(false)}
+                onClick={() => {
+                  setIsEditing(false)
+                  setError("")
+                  if (profile) {
+                    setFormData({
+                      name: profile.name,
+                      bloodGroup: profile.bloodGroup,
+                      location: profile.location,
+                      phone: profile.phone,
+                      lastDonationDate: profile.lastDonationDate || "",
+                      hasDisease: profile.hasDisease || false,
+                      diseaseDescription: profile.diseaseDescription || "",
+                    })
+                  }
+                }}
               >
                 Cancel
               </Button>
