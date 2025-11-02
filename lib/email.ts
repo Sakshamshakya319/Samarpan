@@ -368,6 +368,90 @@ function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (char) => map[char])
 }
 
+export function generateWelcomeEmailHTML(data: {
+  userName: string
+  email: string
+  authType?: "password" | "oauth" // "password" for traditional signup, "oauth" for OAuth
+}): string {
+  const escapedUserName = escapeHtml(data.userName)
+  const isOAuth = data.authType === "oauth"
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Welcome to Samarpan</title>
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; background: #f9fafb;">
+        <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #dc2626; margin: 0; font-size: 28px; font-weight: 700;">🩸 Welcome to Samarpan!</h1>
+          </div>
+
+          <!-- Greeting -->
+          <p style="color: #6b7280; margin-bottom: 20px; font-size: 16px;">Hello ${escapedUserName},</p>
+
+          <!-- Main Content -->
+          <div style="background: #f3f4f6; padding: 20px; border-radius: 6px; margin-bottom: 20px;">
+            <p style="color: #374151; margin: 0 0 15px 0; font-size: 14px;">
+              Thank you for joining Samarpan! Your account has been successfully created and you're now part of our blood donation network.
+            </p>
+            ${
+              isOAuth
+                ? `<p style="color: #374151; margin: 15px 0 0 0; font-size: 14px;">
+                  Your account is secured with your ${data.authType === "oauth" ? "Google" : "social media"} login credentials.
+                </p>`
+                : `<p style="color: #374151; margin: 15px 0 0 0; font-size: 14px;">
+                  You can update your account details, set your blood group, and start participating in our donation community.
+                </p>`
+            }
+          </div>
+
+          <!-- Features Section -->
+          <div style="margin-bottom: 20px;">
+            <h3 style="color: #1f2937; font-size: 16px; margin-top: 0; margin-bottom: 12px;">What you can do now:</h3>
+            <ul style="color: #374151; font-size: 14px; padding-left: 20px; margin: 0; line-height: 1.8;">
+              <li>Complete your profile with blood group and location</li>
+              <li>Browse and respond to blood donation requests</li>
+              <li>Request blood when needed</li>
+              <li>Track your donation history</li>
+              <li>Earn certificates for your donations</li>
+              <li>Get notifications for matching requests</li>
+            </ul>
+          </div>
+
+          <!-- CTA -->
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" style="background: #dc2626; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px; border: 1px solid #dc2626;">
+              Go to Dashboard
+            </a>
+          </div>
+
+          <!-- Security Notice -->
+          <div style="background: #eff6ff; padding: 12px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+            <p style="color: #1e40af; font-size: 12px; margin: 0; font-weight: 600;">💡 Tip: Keep your account information up to date to receive relevant donation requests.</p>
+          </div>
+
+          <!-- Footer -->
+          <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; text-align: center; color: #6b7280; font-size: 12px;">
+            <p style="margin: 5px 0; font-weight: 600;">Samarpan Blood Donation Network</p>
+            <p style="margin: 5px 0;">Together, we save lives through blood donation.</p>
+            <p style="margin: 8px 0 0 0; font-size: 11px;">
+              © 2024 Samarpan. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+}
+
 export function generatePasswordResetEmailHTML(data: {
   userName: string
   resetLink: string

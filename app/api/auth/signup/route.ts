@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { hashPassword, generateToken } from "@/lib/auth"
+import { sendEmail, generateWelcomeEmailHTML } from "@/lib/email"
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,6 +64,28 @@ export async function POST(request: NextRequest) {
     console.log("[v0] User created successfully:", result.insertedId)
 
     const token = generateToken(result.insertedId.toString())
+
+    // Send welcome email
+    console.log("[v0] Sending welcome email to:", email)
+    const welcomeEmailHTML = generateWelcomeEmailHTML({
+      userName: name,
+      email: email,
+      authType: "password",
+    })
+
+    const emailSent = await sendEmail({
+      to: email,
+      subject: "Welcome to Samarpan - Your Blood Donation Journey Starts Here!",
+      html: welcomeEmailHTML,
+      replyTo: process.env.SMTP_FROM || "noreply@samarpan.com",
+    })
+
+    if (emailSent) {
+      console.log("[v0] ✅ Welcome email sent successfully to:", email)
+    } else {
+      console.warn("[v0] ⚠️  Failed to send welcome email to:", email)
+      // Don't fail the signup if email sending fails - user account is created
+    }
 
     const response = NextResponse.json(
       {

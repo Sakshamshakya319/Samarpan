@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { generateToken } from "@/lib/auth"
+import { sendEmail, generateWelcomeEmailHTML } from "@/lib/email"
 
 interface GoogleTokenResponse {
   access_token: string
@@ -141,6 +142,28 @@ async function handleGoogleCallback(
         phone: "",
       }
       console.log("[Google Auth] New user created:", result.insertedId)
+
+      // Send welcome email to new OAuth user
+      console.log("[Google Auth] Sending welcome email to:", email)
+      const welcomeEmailHTML = generateWelcomeEmailHTML({
+        userName: name,
+        email: email,
+        authType: "oauth",
+      })
+
+      const emailSent = await sendEmail({
+        to: email,
+        subject: "Welcome to Samarpan - Your Blood Donation Journey Starts Here!",
+        html: welcomeEmailHTML,
+        replyTo: process.env.SMTP_FROM || "noreply@samarpan.com",
+      })
+
+      if (emailSent) {
+        console.log("[Google Auth] ✅ Welcome email sent successfully to:", email)
+      } else {
+        console.warn("[Google Auth] ⚠️  Failed to send welcome email to:", email)
+        // Don't fail the auth if email sending fails - user account is created
+      }
     } else if (!user.googleId) {
       // Link Google account to existing user
       console.log("[Google Auth] Linking Google account to existing user...")
