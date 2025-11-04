@@ -37,6 +37,7 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
   const streamRef = useRef<MediaStream | null>(null)
   const scanLoopRef = useRef<number | null>(null)
   const lastScannedRef = useRef<{ qr: string; time: number } | null>(null)
+  const isProcessingRef = useRef(false)
 
   // Initialize available cameras
   useEffect(() => {
@@ -69,35 +70,15 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
     setPermissionDenied(false)
 
     try {
-      // Try with strict constraints first
       const constraints: MediaStreamConstraints = {
         video: {
           facingMode: "environment",
-          width: { ideal: 1280, min: 320 },
-          height: { ideal: 720, min: 240 },
           ...(cameraId ? { deviceId: { exact: cameraId } } : {}),
         },
         audio: false,
       }
 
-      let stream: MediaStream
-      try {
-        stream = await navigator.mediaDevices.getUserMedia(constraints)
-      } catch (err: any) {
-        if (err.name === "OverconstrainedError") {
-          // Retry with relaxed constraints
-          console.log("Retrying with relaxed constraints...")
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: "environment",
-              ...(cameraId ? { deviceId: { exact: cameraId } } : {}),
-            },
-            audio: false,
-          })
-        } else {
-          throw err
-        }
-      }
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream
@@ -106,32 +87,32 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
         setShowCameraSelector(false)
         setError("")
 
-        // Wait for video to be loaded before starting scan
-        const loadListener = () => {
-          console.log("Video loaded, video dimensions:", videoRef.current?.videoWidth, "x", videoRef.current?.videoHeight)
-          scanQRCode()
-          videoRef.current?.removeEventListener("loadedmetadata", loadListener)
+        // Start scanning once video is ready
+        videoRef.current.onloadedmetadata = () => {
+          console.log("Video stream started")
+          startScanning()
         }
-
-        videoRef.current.addEventListener("loadedmetadata", loadListener)
       }
     } catch (err: any) {
-      console.error("Camera error:", err.name, err.message)
+      console.error("Camera error:", err)
       let errorMessage = "Failed to access camera. Please try again."
 
       if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
         errorMessage =
-          "Camera permission denied. Please enable camera access in your browser settings:\n\n" +
-          "• Chrome/Edge: Settings > Privacy and security > Site settings > Camera\n" +
-          "• Firefox: About:preferences > Privacy > Permissions > Camera\n" +
-          "• Safari: Settings > Privacy > Camera"
+          "Camera permission denied.\n\n" +
+          "Chrome/Edge:\n" +
+          "Settings > Privacy > Camera\n\n" +
+          "Firefox:\n" +
+          "Preferences > Privacy > Camera\n\n" +
+          "Safari:\n" +
+          "Settings > Privacy > Camera"
         setPermissionDenied(true)
       } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-        errorMessage = "No camera found on this device. Please check that your device has a camera and it's not in use by another application."
+        errorMessage = "No camera found. Check if device has a camera."
       } else if (err.name === "NotReadableError") {
-        errorMessage = "Camera is already in use by another application. Please close other apps using the camera and try again."
+        errorMessage = "Camera in use by another app. Close it and try again."
       } else {
-        errorMessage = `Camera error: ${err.name || err.message}`
+        errorMessage = `Camera error: ${err.message || err.name}`
       }
 
       setError(errorMessage)
@@ -145,87 +126,102 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop())
       streamRef.current = null
-      setIsCameraActive(false)
     }
     if (scanLoopRef.current) {
       cancelAnimationFrame(scanLoopRef.current)
       scanLoopRef.current = null
     }
+    setIsCameraActive(false)
   }
 
-  const scanQRCode = () => {
-    if (!videoRef.current || !canvasRef.current) return
-
-    const canvas = canvasRef.current
-    const video = videoRef.current
-    const ctx = canvas.getContext("2d", { willReadFrequently: true })
-
-    if (!ctx) return
-
-    let scanAttempts = 0
+  const startScanning = () => {
+    if (!videoRef.current || !canvasRef.current || isProcessingRef.current) return
 
     const scan = () => {
-      try {
-        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-          canvas.width = video.videoWidth
-          canvas.height = video.videoHeight
+      if (!isCameraActive || isProcessingRef.current) {
+        return
+      }
 
-          if (canvas.width === 0 || canvas.height === 0) {
-            console.warn("Video dimensions not ready:", canvas.width, canvas.height)
+      try {
+        const video = videoRef.current
+        const canvas = canvasRef.current
+
+        if (!video || !canvas) return
+
+        // Check if video has data
+        if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+          if (isCameraActive) {
+            scanLoopRef.current = requestAnimationFrame(scan)
+          }
+          return
+        }
+
+        // Set canvas size to match video
+        canvas.width = video.videoWidth
+        canvas.height = video.videoHeight
+
+        if (canvas.width === 0 || canvas.height === 0) {
+          if (isCameraActive) {
+            scanLoopRef.current = requestAnimationFrame(scan)
+          }
+          return
+        }
+
+        const ctx = canvas.getContext("2d", { willReadFrequently: true })
+        if (!ctx) return
+
+        // Draw video frame to canvas
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+        try {
+          // Get image data
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+          if (!imageData.data || imageData.data.length === 0) {
             if (isCameraActive) {
               scanLoopRef.current = requestAnimationFrame(scan)
             }
             return
           }
 
-          // Draw video frame to canvas
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+          // Try to decode QR code
+          let qrCode = jsQR(imageData.data, imageData.width, imageData.height)
 
-          try {
-            // Get image data from canvas
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-
-            // Attempt QR code detection with multiple strategies
-            let qrCode = jsQR(imageData.data, imageData.width, imageData.height)
-
-            // If first attempt fails, try with inversion
-            if (!qrCode) {
-              qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
-                inversionAttempts: "attemptBoth",
-              })
-            }
-
-            if (qrCode && qrCode.data) {
-              const now = Date.now()
-              // Prevent duplicate scans within 1 second
-              if (!lastScannedRef.current || now - lastScannedRef.current.time > 1000 || lastScannedRef.current.qr !== qrCode.data) {
-                console.log("QR Code detected:", qrCode.data)
-                lastScannedRef.current = { qr: qrCode.data, time: now }
-                stopCamera()
-                setIsOpen(false)
-                onScanSuccess?.(qrCode.data)
-                setManualQRInput("")
-                setError("")
-                return
-              }
-            }
-
-            scanAttempts++
-            if (scanAttempts % 60 === 0) {
-              console.log("Scanning... attempts:", scanAttempts)
-            }
-          } catch (err) {
-            console.error("QR decode error:", err)
+          // If no QR found, try with inversion
+          if (!qrCode) {
+            qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: "attemptBoth",
+            })
           }
-        } else {
-          if (scanAttempts % 30 === 0) {
-            console.log("Waiting for video data, readyState:", video.readyState)
+
+          // If QR code detected
+          if (qrCode && qrCode.data) {
+            const now = Date.now()
+
+            // Prevent duplicate scans
+            if (
+              !lastScannedRef.current ||
+              now - lastScannedRef.current.time > 1500 ||
+              lastScannedRef.current.qr !== qrCode.data
+            ) {
+              console.log("✓ QR Code found:", qrCode.data)
+              isProcessingRef.current = true
+              lastScannedRef.current = { qr: qrCode.data, time: now }
+
+              stopCamera()
+              setIsOpen(false)
+              onScanSuccess?.(qrCode.data)
+              setManualQRInput("")
+              return
+            }
           }
+        } catch (decodeErr) {
+          console.error("Decode error:", decodeErr)
         }
       } catch (err) {
-        console.error("Scan loop error:", err)
+        console.error("Scan error:", err)
       }
 
+      // Continue scanning
       if (isCameraActive) {
         scanLoopRef.current = requestAnimationFrame(scan)
       }
@@ -237,7 +233,8 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
   const switchCamera = async (cameraId: string) => {
     stopCamera()
     setSelectedCamera(cameraId)
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    isProcessingRef.current = false
+    await new Promise((resolve) => setTimeout(resolve, 200))
     await startCamera(cameraId)
   }
 
@@ -256,15 +253,12 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
     setManualQRInput("")
     setError("")
     setPermissionDenied(false)
+    isProcessingRef.current = false
   }
 
   return (
     <>
-      <Button
-        onClick={() => setIsOpen(true)}
-        variant="outline"
-        className="gap-2"
-      >
+      <Button onClick={() => setIsOpen(true)} variant="outline" className="gap-2">
         <Camera className="w-4 h-4" />
         Scan QR Code
       </Button>
@@ -276,49 +270,50 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
           setIsOpen(true)
         }
       }}>
-        <DialogContent className="max-w-lg w-full max-h-[90vh] overflow-y-auto mx-2 sm:mx-0">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <QrCode className="w-5 h-5" />
-              {title}
+        <DialogContent className="w-[95vw] sm:w-full sm:max-w-md p-3 sm:p-6 max-h-[95vh] overflow-y-auto">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <QrCode className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+              <span>{title}</span>
             </DialogTitle>
-            <DialogDescription>{description}</DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">{description}</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 sm:space-y-4">
+          <div className="space-y-2 sm:space-y-3">
             {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                <AlertDescription className="ml-2 text-sm whitespace-pre-line">
+              <Alert variant="destructive" className="text-xs sm:text-sm">
+                <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 mt-0.5" />
+                <AlertDescription className="ml-2 text-xs sm:text-sm whitespace-pre-line">
                   {error}
                 </AlertDescription>
               </Alert>
             )}
 
             {permissionDenied && (
-              <Alert className="bg-yellow-50 border-yellow-200">
-                <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
-                <AlertDescription className="text-yellow-800 text-sm">
-                  <strong>Permission Denied:</strong> After allowing camera access in your browser settings, refresh this page and try again.
+              <Alert className="bg-yellow-50 border-yellow-200 text-xs sm:text-sm">
+                <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <AlertDescription className="text-yellow-800 text-xs sm:text-sm ml-2">
+                  <strong>Permission Denied:</strong> Allow camera in browser settings, then refresh.
                 </AlertDescription>
               </Alert>
             )}
 
             {!isCameraActive ? (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {cameraDevices.length > 1 && showCameraSelector && (
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium">Select Camera:</label>
-                    <div className="flex flex-col gap-2">
+                  <div className="space-y-1 sm:space-y-2 p-2 sm:p-3 bg-gray-50 rounded-lg">
+                    <label className="block text-xs sm:text-sm font-medium">Select Camera:</label>
+                    <div className="flex flex-col gap-1 sm:gap-2">
                       {cameraDevices.map((device) => (
                         <Button
                           key={device.deviceId}
                           onClick={() => switchCamera(device.deviceId)}
                           variant={selectedCamera === device.deviceId ? "default" : "outline"}
-                          className="justify-start text-left"
+                          className="justify-start text-left text-xs sm:text-sm h-8 sm:h-10"
+                          size="sm"
                         >
-                          <Camera className="w-4 h-4 mr-2" />
-                          {device.label}
+                          <Camera className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
+                          <span className="truncate">{device.label}</span>
                         </Button>
                       ))}
                     </div>
@@ -328,18 +323,18 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
                 <Button
                   onClick={() => startCamera(selectedCamera)}
                   disabled={isLoading}
-                  className="w-full"
-                  size="lg"
+                  className="w-full text-xs sm:text-sm h-8 sm:h-10"
+                  size="sm"
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Requesting Camera Access...
+                      <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin flex-shrink-0" />
+                      <span>Requesting Camera...</span>
                     </>
                   ) : (
                     <>
-                      <Camera className="w-4 h-4 mr-2" />
-                      Enable Camera
+                      <Camera className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
+                      <span>Enable Camera</span>
                     </>
                   )}
                 </Button>
@@ -349,23 +344,23 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
                     onClick={() => setShowCameraSelector(!showCameraSelector)}
                     variant="ghost"
                     size="sm"
-                    className="w-full"
+                    className="w-full text-xs sm:text-sm h-8"
                   >
-                    <Settings2 className="w-4 h-4 mr-2" />
-                    {showCameraSelector ? "Hide" : "Show"} Camera Options
+                    <Settings2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
+                    {showCameraSelector ? "Hide" : "Show"} Options
                   </Button>
                 )}
 
-                <div className="relative">
+                <div className="relative my-2">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t" />
+                    <div className="w-full border-t border-gray-300" />
                   </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white text-gray-500">Or enter manually</span>
+                  <div className="relative flex justify-center">
+                    <span className="px-2 bg-white text-gray-500 text-xs">Or enter manually</span>
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1 sm:space-y-2">
                   <Input
                     placeholder="Paste QR token (EVT-...)"
                     value={manualQRInput}
@@ -375,20 +370,22 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
                         handleManualInput()
                       }
                     }}
-                    className="font-mono"
+                    className="font-mono text-xs sm:text-sm h-8 sm:h-10"
                   />
                   <Button
                     onClick={handleManualInput}
                     disabled={!manualQRInput.trim()}
-                    className="w-full"
+                    className="w-full text-xs sm:text-sm h-8 sm:h-10"
+                    size="sm"
                   >
                     Verify QR Token
                   </Button>
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
-                <div className="relative bg-black rounded-lg overflow-hidden w-full aspect-square max-w-sm mx-auto">
+              <div className="space-y-2 sm:space-y-3">
+                {/* Video Container */}
+                <div className="relative w-full bg-black rounded-lg overflow-hidden" style={{ aspectRatio: "1" }}>
                   <video
                     ref={videoRef}
                     autoPlay
@@ -397,92 +394,69 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
                     className="w-full h-full object-cover"
                   />
                   <canvas ref={canvasRef} className="hidden" />
+
+                  {/* Scanning frame overlay */}
                   <div className="absolute inset-0 border-4 border-primary/50 rounded-lg">
-                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-2/3 h-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-2/3 h-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
-                    {/* Corner markers for QR detection area */}
-                    <div className="absolute top-2 left-2 w-4 h-4 border-l-2 border-t-2 border-primary" />
-                    <div className="absolute top-2 right-2 w-4 h-4 border-r-2 border-t-2 border-primary" />
-                    <div className="absolute bottom-2 left-2 w-4 h-4 border-l-2 border-b-2 border-primary" />
-                    <div className="absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-primary" />
+                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-1/2 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent" />
+                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1/2 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent" />
+                    <div className="absolute top-2 left-2 w-3 h-3 border-l-2 border-t-2 border-primary" />
+                    <div className="absolute top-2 right-2 w-3 h-3 border-r-2 border-t-2 border-primary" />
+                    <div className="absolute bottom-2 left-2 w-3 h-3 border-l-2 border-b-2 border-primary" />
+                    <div className="absolute bottom-2 right-2 w-3 h-3 border-r-2 border-b-2 border-primary" />
                   </div>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3">
-                  <p className="text-xs sm:text-sm text-blue-900 space-y-1">
-                    <div>✓ Point your camera at the QR code</div>
-                    <div>✓ Keep the code within the frame</div>
-                    <div>✓ The app will automatically scan it</div>
+                {/* Instructions */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
+                  <p className="text-xs sm:text-sm text-blue-900 space-y-0.5">
+                    <div>✓ Point at QR code</div>
+                    <div>✓ Keep within frame</div>
+                    <div>✓ Auto-scans when detected</div>
                   </p>
                 </div>
 
+                {/* Camera switcher */}
                 {cameraDevices.length > 1 && (
-                  <Button
-                    onClick={() => setShowCameraSelector(!showCameraSelector)}
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                  >
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Switch Camera
-                  </Button>
+                  <>
+                    <Button
+                      onClick={() => setShowCameraSelector(!showCameraSelector)}
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs sm:text-sm h-8 sm:h-10"
+                    >
+                      <RotateCcw className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
+                      Switch Camera
+                    </Button>
+
+                    {showCameraSelector && (
+                      <div className="space-y-1 p-2 bg-gray-50 rounded-lg max-h-32 overflow-y-auto">
+                        {cameraDevices.map((device) => (
+                          <Button
+                            key={device.deviceId}
+                            onClick={() => switchCamera(device.deviceId)}
+                            variant={selectedCamera === device.deviceId ? "default" : "outline"}
+                            className="justify-start text-left w-full text-xs sm:text-sm h-8"
+                            size="sm"
+                          >
+                            <Camera className="w-3 h-3 mr-2 flex-shrink-0" />
+                            <span className="truncate text-xs">{device.label}</span>
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
 
-                {showCameraSelector && cameraDevices.length > 1 && (
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {cameraDevices.map((device) => (
-                      <Button
-                        key={device.deviceId}
-                        onClick={() => switchCamera(device.deviceId)}
-                        variant={selectedCamera === device.deviceId ? "default" : "outline"}
-                        className="justify-start text-left w-full"
-                        size="sm"
-                      >
-                        <Camera className="w-3 h-3 mr-2 flex-shrink-0" />
-                        {device.label}
-                      </Button>
-                    ))}
-                  </div>
-                )}
-
+                {/* Close button */}
                 <Button
                   onClick={handleClose}
                   variant="outline"
-                  className="w-full"
+                  size="sm"
+                  className="w-full text-xs sm:text-sm h-8 sm:h-10"
                 >
-                  <X className="w-4 h-4 mr-2" />
+                  <X className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
                   Close Scanner
                 </Button>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white text-gray-500">Or enter manually</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Input
-                    placeholder="Paste QR token (EVT-...)"
-                    value={manualQRInput}
-                    onChange={(e) => setManualQRInput(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter") {
-                        handleManualInput()
-                      }
-                    }}
-                    className="font-mono"
-                  />
-                  <Button
-                    onClick={handleManualInput}
-                    disabled={!manualQRInput.trim()}
-                    className="w-full"
-                  >
-                    Verify QR Token
-                  </Button>
-                </div>
               </div>
             )}
           </div>
