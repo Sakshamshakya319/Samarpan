@@ -69,30 +69,54 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
     setPermissionDenied(false)
 
     try {
+      // Try with strict constraints first
       const constraints: MediaStreamConstraints = {
         video: {
           facingMode: "environment",
-          width: { ideal: 1280, min: 640 },
-          height: { ideal: 720, min: 480 },
+          width: { ideal: 1280, min: 320 },
+          height: { ideal: 720, min: 240 },
           ...(cameraId ? { deviceId: { exact: cameraId } } : {}),
         },
         audio: false,
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+      let stream: MediaStream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints)
+      } catch (err: any) {
+        if (err.name === "OverconstrainedError") {
+          // Retry with relaxed constraints
+          console.log("Retrying with relaxed constraints...")
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "environment",
+              ...(cameraId ? { deviceId: { exact: cameraId } } : {}),
+            },
+            audio: false,
+          })
+        } else {
+          throw err
+        }
+      }
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         streamRef.current = stream
         setIsCameraActive(true)
         setShowCameraSelector(false)
+        setError("")
 
         // Wait for video to be loaded before starting scan
-        videoRef.current.onloadedmetadata = () => {
+        const loadListener = () => {
+          console.log("Video loaded, video dimensions:", videoRef.current?.videoWidth, "x", videoRef.current?.videoHeight)
           scanQRCode()
+          videoRef.current?.removeEventListener("loadedmetadata", loadListener)
         }
+
+        videoRef.current.addEventListener("loadedmetadata", loadListener)
       }
     } catch (err: any) {
+      console.error("Camera error:", err.name, err.message)
       let errorMessage = "Failed to access camera. Please try again."
 
       if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
@@ -106,36 +130,12 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
         errorMessage = "No camera found on this device. Please check that your device has a camera and it's not in use by another application."
       } else if (err.name === "NotReadableError") {
         errorMessage = "Camera is already in use by another application. Please close other apps using the camera and try again."
-      } else if (err.name === "OverconstrainedError") {
-        errorMessage = "Camera constraints not supported. Attempting with relaxed settings..."
-        // Retry with less strict constraints
-        try {
-          const relaxedStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              width: { ideal: 640 },
-              height: { ideal: 480 },
-            },
-            audio: false,
-          })
-          if (videoRef.current) {
-            videoRef.current.srcObject = relaxedStream
-            streamRef.current = relaxedStream
-            setIsCameraActive(true)
-            setError("")
-            videoRef.current.onloadedmetadata = () => {
-              scanQRCode()
-            }
-          }
-        } catch (retryErr) {
-          setError("Failed to access camera with any settings.")
-          onScanError?.("Failed to access camera with any settings.")
-        }
+      } else {
+        errorMessage = `Camera error: ${err.name || err.message}`
       }
 
-      if (errorMessage !== "Camera constraints not supported. Attempting with relaxed settings..." || error) {
-        setError(errorMessage)
-        onScanError?.(errorMessage)
-      }
+      setError(errorMessage)
+      onScanError?.(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -162,33 +162,68 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
 
     if (!ctx) return
 
+    let scanAttempts = 0
+
     const scan = () => {
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      try {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          canvas.width = video.videoWidth
+          canvas.height = video.videoHeight
 
-        try {
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-          const qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: "dontInvert",
-          })
-
-          if (qrCode) {
-            const now = Date.now()
-            // Prevent duplicate scans within 1 second
-            if (!lastScannedRef.current || now - lastScannedRef.current.time > 1000 || lastScannedRef.current.qr !== qrCode.data) {
-              lastScannedRef.current = { qr: qrCode.data, time: now }
-              stopCamera()
-              setIsOpen(false)
-              onScanSuccess?.(qrCode.data)
-              setManualQRInput("")
-              setError("")
+          if (canvas.width === 0 || canvas.height === 0) {
+            console.warn("Video dimensions not ready:", canvas.width, canvas.height)
+            if (isCameraActive) {
+              scanLoopRef.current = requestAnimationFrame(scan)
             }
+            return
           }
-        } catch (err) {
-          console.error("QR scan error:", err)
+
+          // Draw video frame to canvas
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+          try {
+            // Get image data from canvas
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+
+            // Attempt QR code detection with multiple strategies
+            let qrCode = jsQR(imageData.data, imageData.width, imageData.height)
+
+            // If first attempt fails, try with inversion
+            if (!qrCode) {
+              qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: "attemptBoth",
+              })
+            }
+
+            if (qrCode && qrCode.data) {
+              const now = Date.now()
+              // Prevent duplicate scans within 1 second
+              if (!lastScannedRef.current || now - lastScannedRef.current.time > 1000 || lastScannedRef.current.qr !== qrCode.data) {
+                console.log("QR Code detected:", qrCode.data)
+                lastScannedRef.current = { qr: qrCode.data, time: now }
+                stopCamera()
+                setIsOpen(false)
+                onScanSuccess?.(qrCode.data)
+                setManualQRInput("")
+                setError("")
+                return
+              }
+            }
+
+            scanAttempts++
+            if (scanAttempts % 60 === 0) {
+              console.log("Scanning... attempts:", scanAttempts)
+            }
+          } catch (err) {
+            console.error("QR decode error:", err)
+          }
+        } else {
+          if (scanAttempts % 30 === 0) {
+            console.log("Waiting for video data, readyState:", video.readyState)
+          }
         }
+      } catch (err) {
+        console.error("Scan loop error:", err)
       }
 
       if (isCameraActive) {
@@ -241,7 +276,7 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
           setIsOpen(true)
         }
       }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg w-full max-h-[90vh] overflow-y-auto mx-2 sm:mx-0">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <QrCode className="w-5 h-5" />
@@ -250,7 +285,7 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
@@ -353,13 +388,13 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="relative bg-black rounded-lg overflow-hidden">
+                <div className="relative bg-black rounded-lg overflow-hidden w-full aspect-square max-w-sm mx-auto">
                   <video
                     ref={videoRef}
                     autoPlay
                     playsInline
                     muted
-                    className="w-full h-64 object-cover"
+                    className="w-full h-full object-cover"
                   />
                   <canvas ref={canvasRef} className="hidden" />
                   <div className="absolute inset-0 border-4 border-primary/50 rounded-lg">
@@ -373,11 +408,11 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
                   </div>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-sm text-blue-900">
-                    ✓ Point your camera at the QR code<br />
-                    ✓ Keep the code within the frame<br />
-                    ✓ The app will automatically scan it
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3">
+                  <p className="text-xs sm:text-sm text-blue-900 space-y-1">
+                    <div>✓ Point your camera at the QR code</div>
+                    <div>✓ Keep the code within the frame</div>
+                    <div>✓ The app will automatically scan it</div>
                   </p>
                 </div>
 
