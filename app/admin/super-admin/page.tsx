@@ -1,6 +1,5 @@
 "use client"
 
-// Mark as dynamic to handle admin authentication and redirects
 export const dynamic = "force-dynamic"
 
 import { useRouter } from "next/navigation"
@@ -17,7 +16,21 @@ import { AdminTransportationManager } from "@/components/admin-transportation-ma
 import { AdminContactSubmissionsManager } from "@/components/admin-contact-submissions-manager"
 import { AdminQRChecker } from "@/components/admin-qr-checker"
 import { AdminEventDonors } from "@/components/admin-event-donors"
-import { LogOut, LayoutDashboard, Calendar, Truck, Mail, QrCode, Users } from "lucide-react"
+import { AdminAdminManager } from "@/components/admin-admin-manager"
+import { AdminBlogManager } from "@/components/admin-blog-manager"
+import { AdminChangePasswordDialog } from "@/components/admin-change-password-dialog"
+import {
+  LogOut,
+  LayoutDashboard,
+  Calendar,
+  Truck,
+  Mail,
+  QrCode,
+  Users,
+  Shield,
+  BookOpen,
+  Lock,
+} from "lucide-react"
 
 interface Admin {
   id: string
@@ -40,13 +53,14 @@ interface User {
   diseaseDescription?: string
 }
 
-export default function AdminPage() {
+export default function SuperAdminPage() {
   const router = useRouter()
   const [admin, setAdmin] = useState<Admin | null>(null)
   const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [token, setToken] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState("users")
+  const [activeTab, setActiveTab] = useState("admin-accounts")
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
 
   useEffect(() => {
     const adminToken = localStorage.getItem("adminToken")
@@ -58,12 +72,8 @@ export default function AdminPage() {
       return
     }
 
-    // Redirect based on role
-    if (adminRole === "superadmin") {
-      router.push("/admin/super-admin")
-      return
-    } else if (adminRole && adminRole !== "admin") {
-      // For other roles (if added in future)
+    // Check if admin is superadmin
+    if (adminRole !== "superadmin") {
       router.push("/admin/dashboard")
       return
     }
@@ -72,8 +82,8 @@ export default function AdminPage() {
     setAdmin({
       id: "",
       email: adminEmail,
-      name: "Admin",
-      role: adminRole || "admin",
+      name: "Super Admin",
+      role: "superadmin",
     })
 
     fetchUsers(adminToken).finally(() => setIsLoading(false))
@@ -95,14 +105,15 @@ export default function AdminPage() {
 
   const handleLogout = async () => {
     try {
-      // Call logout endpoint to clear cookie
       await fetch("/api/auth/admin-logout", { method: "POST" })
     } catch (err) {
       console.error("Logout error:", err)
     } finally {
-      // Clear localStorage
       localStorage.removeItem("adminToken")
       localStorage.removeItem("adminEmail")
+      localStorage.removeItem("adminRole")
+      localStorage.removeItem("adminPermissions")
+      localStorage.removeItem("adminName")
       router.push("/admin/login")
     }
   }
@@ -125,15 +136,26 @@ export default function AdminPage() {
               <LayoutDashboard className="w-6 h-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-primary">Samarpan Admin</h1>
-              <p className="text-xs text-muted-foreground">Administration Panel</p>
+              <h1 className="text-2xl font-bold text-primary">Samarpan Super Admin</h1>
+              <p className="text-xs text-muted-foreground">Full System Control</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium">{admin.email}</p>
-              <p className="text-xs text-muted-foreground">Administrator</p>
+              <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
+                Super Admin
+              </span>
             </div>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowPasswordDialog(true)} 
+              className="gap-2 bg-transparent hidden sm:flex"
+              title="Change Password"
+            >
+              <Lock className="w-4 h-4" />
+              Change Password
+            </Button>
             <Button variant="outline" onClick={handleLogout} className="gap-2 bg-transparent">
               <LogOut className="w-4 h-4" />
               Logout
@@ -146,6 +168,17 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tab Navigation */}
         <div className="flex gap-4 mb-8 border-b border-border overflow-x-auto pb-2">
+          <button
+            onClick={() => setActiveTab("admin-accounts")}
+            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "admin-accounts"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            Admin Management
+          </button>
           <button
             onClick={() => setActiveTab("users")}
             className={`px-4 py-2 font-medium transition whitespace-nowrap ${
@@ -261,9 +294,26 @@ export default function AdminPage() {
             <Users className="w-4 h-4" />
             Event Donors
           </button>
+          <button
+            onClick={() => setActiveTab("blogs")}
+            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "blogs"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            Blog Management
+          </button>
         </div>
 
         {/* Tab Content */}
+        {activeTab === "admin-accounts" && (
+          <div className="grid grid-cols-1 gap-6">
+            {token && <AdminAdminManager token={token} />}
+          </div>
+        )}
+
         {activeTab === "users" && (
           <div className="grid grid-cols-1 gap-6">
             {token && <AdminUsersTable token={token} />}
@@ -329,7 +379,23 @@ export default function AdminPage() {
             {token && <AdminEventDonors />}
           </div>
         )}
+
+        {activeTab === "blogs" && (
+          <div className="grid grid-cols-1 gap-6">
+            <AdminBlogManager />
+          </div>
+        )}
       </div>
+
+      {/* Password Change Dialog */}
+      {token && admin && (
+        <AdminChangePasswordDialog
+          open={showPasswordDialog}
+          onOpenChange={setShowPasswordDialog}
+          adminEmail={admin.email}
+          token={token}
+        />
+      )}
     </main>
   )
 }

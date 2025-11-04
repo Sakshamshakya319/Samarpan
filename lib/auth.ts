@@ -28,13 +28,29 @@ export function verifyToken(token: string): { userId: string; email?: string } |
   }
 }
 
-export function generateAdminToken(adminId: string): string {
-  return jwt.sign({ adminId, role: "admin" }, JWT_SECRET, { expiresIn: "7d" })
+export function generateAdminToken(
+  adminId: string,
+  role: string = "admin",
+  email?: string,
+): string {
+  const payload: any = { adminId, role }
+  if (email) {
+    payload.email = email
+  }
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" })
 }
 
-export function verifyAdminToken(token: string): { adminId: string; role: string } | null {
+export function verifyAdminToken(token: string): {
+  adminId: string
+  role: string
+  email?: string
+} | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as { adminId: string; role: string }
+    return jwt.verify(token, JWT_SECRET) as {
+      adminId: string
+      role: string
+      email?: string
+    }
   } catch {
     return null
   }

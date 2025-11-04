@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Bell, LogOut, User, Calendar, Trash2 } from "lucide-react"
+import { Bell, LogOut, User, Calendar, Trash2, Lock } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/lib/hooks"
 import { fetchUserProfile, updateUserProfile } from "@/lib/slices/userSlice"
 import { logout } from "@/lib/slices/authSlice"
@@ -18,6 +18,7 @@ import { DonationImageUpload } from "@/components/donation-image-upload"
 import { DriverDetailsDisplay } from "@/components/driver-details-display"
 import { UserCertificatesDisplay } from "@/components/user-certificates-display"
 import { UserEventRegistrations } from "@/components/user-event-registrations"
+import { UserChangePasswordDialog } from "@/components/user-change-password-dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
 interface Notification {
@@ -38,6 +39,7 @@ export default function DashboardPage() {
   const [errorMessage, setErrorMessage] = useState("")
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     bloodGroup: "",
@@ -159,6 +161,10 @@ export default function DashboardPage() {
             <p className="text-sm md:text-base text-gray-600">Manage your profile and donations</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+            <Button onClick={() => setShowPasswordDialog(true)} variant="outline" className="flex-1 sm:flex-none gap-2">
+              <Lock className="w-4 h-4" />
+              Change Password
+            </Button>
             <Button onClick={() => setShowDeleteDialog(true)} variant="destructive" className="bg-red-600 hover:bg-red-700 flex-1 sm:flex-none">
               <Trash2 className="w-4 h-4 mr-2" />
               Delete Account
@@ -404,6 +410,16 @@ export default function DashboardPage() {
             </div>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Password Change Dialog */}
+        {token && user && (
+          <UserChangePasswordDialog
+            open={showPasswordDialog}
+            onOpenChange={setShowPasswordDialog}
+            userEmail={user.email}
+            token={token}
+          />
+        )}
       </div>
     </div>
   )

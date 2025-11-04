@@ -127,12 +127,14 @@ Samarpan is a comprehensive blood donation management platform designed to conne
    NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id
    ```
 
-4. **Set up the database:**
+4. **Set up the database and create super admin:**
    ```bash
-   npm run db:init
+   npm run setup:admin
    ```
    
-   This creates the admin account. You'll be prompted for admin credentials or they can be set via environment variables.
+   This initializes the admin system with database indexes and creates the super admin account.
+   
+   > 📌 For detailed admin setup instructions, see [Admin Quick Start Guide](./ADMIN_QUICKSTART.md)
 
 5. **Start the development server:**
    ```bash
@@ -141,11 +143,33 @@ Samarpan is a comprehensive blood donation management platform designed to conne
    
    The application will be available at `http://localhost:3000`
 
-### Default Admin Credentials
+### Admin System
 
-After running `npm run db:init`, use these to login at `/admin/login`:
+#### Default Super Admin Credentials
+
+Login at `/admin/login`:
 - **Email:** `admin@samarpan.com`
-- **Password:** Set during initialization
+- **Password:** `admin@123`
+
+#### Setup Commands
+
+```bash
+npm run setup:admin      # Recommended: Sets up everything with indexes
+npm run create-admin     # Interactive: Create super admin or regular admin
+npx tsx create-admin.ts  # Direct: Create/update super admin
+```
+
+#### Admin Features
+
+✅ Create and manage admin accounts with specific features/permissions  
+✅ Two-tier system: Super Admin (full access) and Regular Admin (limited)  
+✅ Granular permission control (16+ different permissions)  
+✅ Real-time admin dashboard with activity tracking  
+
+For complete documentation, see:
+- 📖 [Admin Quick Start Guide](./ADMIN_QUICKSTART.md)
+- 📚 [Admin Creation Guide](./docs/ADMIN_CREATION_GUIDE.md)
+- 🔧 [Admin System Documentation](./docs/ADMIN_SYSTEM.md)
 
 ---
 

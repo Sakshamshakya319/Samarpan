@@ -1,10 +1,8 @@
 "use client"
 
-// Mark as dynamic to handle authentication state and redirects
 export const dynamic = "force-dynamic"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -13,20 +11,19 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { AlertCircle, Loader2 } from "lucide-react"
 
-export default function AdminLogin() {
+export default function AdminStaffLogin() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
-  // Redirect if admin is already authenticated
   useEffect(() => {
     const adminToken = localStorage.getItem("adminToken")
     const adminRole = localStorage.getItem("adminRole")
 
     if (adminToken && adminRole) {
-      console.log("[Admin] Already authenticated, redirecting to appropriate panel")
+      console.log("[Admin Staff] Already authenticated, redirecting to dashboard")
       const timer = setTimeout(() => {
         if (adminRole === "superadmin") {
           router.push("/admin/super-admin")
@@ -57,6 +54,12 @@ export default function AdminLogin() {
         return
       }
 
+      // Check if user is superadmin
+      if (data.admin.role === "superadmin") {
+        setError("Super admins should use the admin login page")
+        return
+      }
+
       // Store token and admin info in localStorage
       localStorage.setItem("adminToken", data.token)
       localStorage.setItem("adminEmail", data.admin.email)
@@ -64,12 +67,8 @@ export default function AdminLogin() {
       localStorage.setItem("adminPermissions", JSON.stringify(data.admin.permissions || []))
       localStorage.setItem("adminName", data.admin.name)
 
-      // Redirect based on role
-      if (data.admin.role === "superadmin") {
-        router.push("/admin/super-admin")
-      } else {
-        router.push("/admin/dashboard")
-      }
+      // Redirect to admin dashboard
+      router.push("/admin/dashboard")
     } catch (err) {
       setError("An error occurred. Please try again.")
       console.error(err)
@@ -103,7 +102,7 @@ export default function AdminLogin() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin"
+              placeholder="your@email.com"
               required
               disabled={loading}
             />
@@ -133,16 +132,24 @@ export default function AdminLogin() {
           </Button>
         </form>
 
-        <div className="mt-6 pt-6 border-t border-border text-center">
-          <p className="text-sm text-muted-foreground">
-            Not an admin?{" "}
-            <Link href="/login" className="text-primary hover:underline font-medium">
-              User Login
-            </Link>
-          </p>
+        <div className="mt-6 pt-6 border-t border-border space-y-3">
+          <div className="text-center text-sm">
+            <p className="text-muted-foreground">
+              Super Admin?{" "}
+              <Link href="/admin/login" className="text-primary hover:underline font-medium">
+                Use Admin Login
+              </Link>
+            </p>
+          </div>
+          <div className="text-center text-sm">
+            <p className="text-muted-foreground">
+              Not an admin?{" "}
+              <Link href="/login" className="text-primary hover:underline font-medium">
+                User Login
+              </Link>
+            </p>
+          </div>
         </div>
-
-        
       </Card>
     </div>
   )

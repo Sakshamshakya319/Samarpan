@@ -9,7 +9,11 @@
     "dev": "next dev",
     "lint": "eslint .",
     "migrate:qr": "tsx scripts/migrate-qr-tokens.ts",
+    "migrate:blogs": "tsx scripts/migrate-blog-permissions.ts",
+    "add-blog-perms": "tsx scripts/add-blog-permissions.ts",
     "setup": "npm install && npm run create-admin",
+    "setup:admin": "tsx scripts/setup-admin-system.ts",
+    "setup:superadmin": "tsx scripts/upgrade-to-superadmin.ts",
     "start": "next start",
     "test:email": "tsx scripts/test-email.ts"
   },

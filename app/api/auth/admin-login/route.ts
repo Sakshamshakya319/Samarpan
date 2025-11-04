@@ -7,7 +7,10 @@ export async function POST(request: NextRequest) {
     const { email, password } = await request.json()
 
     if (!email || !password) {
-      return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Email and password are required" },
+        { status: 400 },
+      )
     }
 
     const db = await getDatabase()
@@ -25,7 +28,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
-    const token = generateAdminToken(admin._id.toString())
+    // Check if admin is active
+    if (admin.status === "inactive") {
+      return NextResponse.json(
+        { error: "Admin account is inactive" },
+        { status: 403 },
+      )
+    }
+
+    const token = generateAdminToken(
+      admin._id.toString(),
+      admin.role || "admin",
+      email,
+    )
 
     const response = NextResponse.json(
       {
@@ -35,7 +50,8 @@ export async function POST(request: NextRequest) {
           id: admin._id,
           email: admin.email,
           name: admin.name,
-          role: "admin",
+          role: admin.role || "admin",
+          permissions: admin.permissions || [],
         },
       },
       { status: 200 },

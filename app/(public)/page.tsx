@@ -9,6 +9,7 @@ import {
   CarouselPrevious,
   CarouselNext,
 } from "@/components/ui/carousel"
+import { BlogCarousel } from "@/components/blog-carousel"
 
 export default function Home() {
   return (
@@ -149,6 +150,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Blog Carousel Section */}
+      <BlogCarousel />
 
       {/* CTA Section */}
       <section className="py-20 md:py-32 bg-primary/5 border-y border-border">

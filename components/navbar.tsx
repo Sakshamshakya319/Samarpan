@@ -39,6 +39,9 @@ export function Navbar() {
             <Link href="/about" className="text-sm font-medium text-muted-foreground hover:text-foreground transition">
               About
             </Link>
+            <Link href="/blogs" className="text-sm font-medium text-muted-foreground hover:text-foreground transition">
+              Blog
+            </Link>
             <Link href="/events" className="text-sm font-medium text-muted-foreground hover:text-foreground transition">
               Events
             </Link>
@@ -107,6 +110,9 @@ export function Navbar() {
             </Link>
             <Link href="/about" className="block text-sm font-medium text-muted-foreground hover:text-foreground py-2">
               About
+            </Link>
+            <Link href="/blogs" className="block text-sm font-medium text-muted-foreground hover:text-foreground py-2">
+              Blog
             </Link>
             <Link href="/events" className="block text-sm font-medium text-muted-foreground hover:text-foreground py-2">
               Events
