@@ -42,13 +42,11 @@ export function useGeolocation(): UseGeolocationReturn {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), NOMINATIM_TIMEOUT)
 
+      // Use backend proxy to avoid CORS issues
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`,
+        `/api/geolocation?lat=${lat}&lon=${lon}`,
         {
           signal: controller.signal,
-          headers: {
-            "User-Agent": "Samarpan-BloodDonation-App/1.0 (+https://samarpan.local)",
-          },
         }
       )
 
@@ -56,14 +54,7 @@ export function useGeolocation(): UseGeolocationReturn {
 
       if (response.ok) {
         const data = await response.json()
-        const cityName =
-          data.address?.city ||
-          data.address?.town ||
-          data.address?.village ||
-          data.address?.county ||
-          data.display_name?.split(",")[0] ||
-          ""
-        setLocationName(cityName)
+        setLocationName(data.locationName || "")
       } else {
         // API call failed, but we already have coordinates - that's OK
         setLocationName("")

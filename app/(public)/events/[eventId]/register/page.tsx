@@ -176,6 +176,7 @@ export default function EventRegistrationPage() {
       })
 
       if (response.ok) {
+        const data = await response.json()
         setIsSuccess(true)
         toast({
           title: "Registration Successful!",
@@ -183,9 +184,12 @@ export default function EventRegistrationPage() {
           variant: "default",
         })
         
+        // Redirect to confirmation page with registration ID
         setTimeout(() => {
-          router.push("/events")
-        }, 2000)
+          router.push(
+            `/events/${eventId}/register/confirmation?registrationId=${data.registrationId}`
+          )
+        }, 1500)
       } else {
         const data = await response.json()
         setSubmitError(data.error || "Failed to register")

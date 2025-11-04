@@ -1,12 +1,17 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
-import { verifyAdminToken } from "@/lib/auth"
+import { verifyToken } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 
 /**
- * Admin Event Registrations Management
- * View, update, and export event registrations
+ * User Event Registrations API
+ * Get user's event registrations
  */
+
+// Generate a unique QR code token
+function generateQRToken(): string {
+  return `EVT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,115 +20,168 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const decoded = verifyAdminToken(token)
-    if (!decoded || decoded.role !== "admin") {
-      return NextResponse.json({ error: "Invalid token or insufficient permissions" }, { status: 401 })
+    const decoded = verifyToken(token)
+    if (!decoded || !decoded.userId) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
+
+    const db = await getDatabase()
+    const registrationsCollection = db.collection("event_registrations")
+    const eventsCollection = db.collection("events")
 
     const url = new URL(request.url)
     const eventId = url.searchParams.get("eventId")
-    const format = url.searchParams.get("format") // "json" or "excel"
 
-    if (!eventId) {
-      return NextResponse.json({ error: "Event ID is required" }, { status: 400 })
-    }
+    // If eventId is provided, get all registrations for that event (for admin view)
+    if (eventId) {
+      let eventRegistrations = await registrationsCollection
+        .find({ eventId: new ObjectId(eventId) })
+        .sort({ createdAt: -1 })
+        .toArray()
 
-    const db = await getDatabase()
-    const registrationsCollection = db.collection("event_registrations")
+      // CRITICAL FIX: Generate missing qrTokens for legacy registrations
+      const registrationsNeedingQRToken = eventRegistrations.filter(
+        (reg) => !reg.qrToken || reg.qrToken.trim() === ""
+      )
 
-    const registrations = await registrationsCollection
-      .find({ eventId: new ObjectId(eventId) })
-      .sort({ createdAt: -1 })
-      .toArray()
+      if (registrationsNeedingQRToken.length > 0) {
+        for (const reg of registrationsNeedingQRToken) {
+          const newQrToken = generateQRToken()
+          await registrationsCollection.updateOne(
+            { _id: reg._id },
+            {
+              $set: {
+                qrToken: newQrToken,
+                qrVerified: false,
+                updatedAt: new Date(),
+              }
+            }
+          )
+          // Update in-memory registration object
+          reg.qrToken = newQrToken
+          reg.qrVerified = false
+          reg.updatedAt = new Date()
+        }
+      }
 
-    if (format === "excel") {
-      // Convert to CSV format for Excel
-      const csv = convertToCSV(registrations)
-      return new NextResponse(csv, {
-        status: 200,
-        headers: {
-          "Content-Type": "text/csv;charset=utf-8",
-          "Content-Disposition": `attachment; filename="event-registrations-${eventId}.csv"`,
-        },
+      // Get the event data for enrichment
+      const event = await eventsCollection.findOne({
+        _id: new ObjectId(eventId),
+      })
+
+      // Enrich registrations with event data and ensure all required fields
+      const enrichedEventRegistrations = eventRegistrations.map((reg) => ({
+        _id: reg._id,
+        eventId: reg.eventId,
+        userId: reg.userId,
+        email: reg.email || "", // Email from registration record
+        registrationNumber: reg.registrationNumber || "",
+        name: reg.name || "",
+        timeSlot: reg.timeSlot || "",
+        status: reg.status || "Registered",
+        qrToken: reg.qrToken || "", // ALWAYS present now after generation
+        qrVerified: reg.qrVerified || false,
+        donationStatus: reg.donationStatus || "Pending",
+        verifiedAt: reg.verifiedAt || null,
+        verifiedBy: reg.verifiedBy || null,
+        createdAt: reg.createdAt,
+        updatedAt: reg.updatedAt,
+        event: event
+          ? {
+              title: event.title,
+              location: event.location,
+              eventDate: event.eventDate,
+            }
+          : null,
+      }))
+
+      return NextResponse.json({
+        registrations: enrichedEventRegistrations,
+        total: enrichedEventRegistrations.length,
       })
     }
 
-    return NextResponse.json({
-      registrations,
-      total: registrations.length,
-    })
-  } catch (error) {
-    console.error("Admin get registrations error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
-  }
-}
+    // Otherwise, get all registrations for the user
+    let registrations = await registrationsCollection
+      .find({ userId: new ObjectId(decoded.userId) })
+      .sort({ createdAt: -1 })
+      .toArray()
 
-export async function PATCH(request: NextRequest) {
-  try {
-    const token = request.headers.get("authorization")?.split(" ")[1]
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const decoded = verifyAdminToken(token)
-    if (!decoded || decoded.role !== "admin") {
-      return NextResponse.json({ error: "Invalid token or insufficient permissions" }, { status: 401 })
-    }
-
-    const db = await getDatabase()
-    const { registrationId, status } = await request.json()
-
-    if (!registrationId || !status) {
-      return NextResponse.json({ error: "Registration ID and status are required" }, { status: 400 })
-    }
-
-    const registrationsCollection = db.collection("event_registrations")
-
-    const result = await registrationsCollection.updateOne(
-      { _id: new ObjectId(registrationId) },
-      {
-        $set: {
-          status,
-          updatedAt: new Date(),
-        },
-      }
+    // CRITICAL FIX: Generate missing qrTokens for legacy registrations
+    const registrationsNeedingQRToken = registrations.filter(
+      (reg) => !reg.qrToken || reg.qrToken.trim() === ""
     )
 
-    if (result.matchedCount === 0) {
-      return NextResponse.json({ error: "Registration not found" }, { status: 404 })
+    if (registrationsNeedingQRToken.length > 0) {
+      for (const reg of registrationsNeedingQRToken) {
+        const newQrToken = generateQRToken()
+        await registrationsCollection.updateOne(
+          { _id: reg._id },
+          {
+            $set: {
+              qrToken: newQrToken,
+              qrVerified: false,
+              updatedAt: new Date(),
+            }
+          }
+        )
+        // Update in-memory registration object
+        reg.qrToken = newQrToken
+        reg.qrVerified = false
+        reg.updatedAt = new Date()
+      }
     }
 
-    return NextResponse.json({ message: "Registration updated successfully" })
+    // Get user details for email fallback
+    const usersCollection = db.collection("users")
+    const user = await usersCollection.findOne({
+      _id: new ObjectId(decoded.userId),
+    })
+
+    // Enrich with event data and ensure all required fields exist
+    const enrichedRegistrations = await Promise.all(
+      registrations.map(async (reg) => {
+        const event = await eventsCollection.findOne({
+          _id: new ObjectId(reg.eventId),
+        })
+        
+        // Use email from registration, JWT token, or user record (in that priority order)
+        const registrationEmail = reg.email || decoded.email || user?.email || ""
+        
+        // Ensure all required fields exist with proper defaults
+        return {
+          _id: reg._id,
+          eventId: reg.eventId,
+          userId: reg.userId,
+          email: registrationEmail,
+          registrationNumber: reg.registrationNumber || "",
+          name: reg.name || "",
+          timeSlot: reg.timeSlot || "",
+          status: reg.status || "Registered",
+          qrToken: reg.qrToken || "", // ALWAYS present now after generation
+          qrVerified: reg.qrVerified || false,
+          donationStatus: reg.donationStatus || "Pending",
+          verifiedAt: reg.verifiedAt || null,
+          verifiedBy: reg.verifiedBy || null,
+          createdAt: reg.createdAt,
+          updatedAt: reg.updatedAt,
+          event: event
+            ? {
+                title: event.title,
+                location: event.location,
+                eventDate: event.eventDate,
+              }
+            : null,
+        }
+      })
+    )
+
+    return NextResponse.json({
+      registrations: enrichedRegistrations,
+      total: enrichedRegistrations.length,
+    })
   } catch (error) {
-    console.error("Admin update registration error:", error)
+    console.error("Get user registrations error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
-}
-
-// Helper function to convert registrations to CSV
-function convertToCSV(registrations: any[]): string {
-  if (registrations.length === 0) {
-    return "No registrations found"
-  }
-
-  // CSV Headers
-  const headers = ["Registration Number", "Name", "Email", "Time Slot", "Status", "Registered At"]
-
-  // CSV Rows
-  const rows = registrations.map((reg: any) => [
-    reg.registrationNumber,
-    reg.name,
-    reg.email,
-    reg.timeSlot,
-    reg.status,
-    new Date(reg.createdAt).toLocaleString(),
-  ])
-
-  // Combine headers and rows
-  const csvContent = [
-    headers.map((h) => `"${h}"`).join(","),
-    ...rows.map((row: string[]) => row.map((cell: string) => `"${cell}"`).join(",")),
-  ].join("\n")
-
-  return csvContent
 }

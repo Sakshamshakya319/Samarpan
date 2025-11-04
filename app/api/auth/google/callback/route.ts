@@ -186,7 +186,7 @@ async function handleGoogleCallback(
 
     // Generate JWT
     console.log("[Google Auth] Generating JWT token...")
-    const token = generateToken(user._id.toString())
+    const token = generateToken(user._id.toString(), user.email)
 
     console.log("[Google Auth] Authentication successful for user:", user.email)
     return {

@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("[v0] Login successful for user:", email)
-    const token = generateToken(user._id.toString())
+    const token = generateToken(user._id.toString(), user.email)
 
     const response = NextResponse.json(
       {

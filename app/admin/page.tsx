@@ -15,7 +15,9 @@ import { AdminDonationImagesViewer } from "@/components/admin-donation-images-vi
 import { AdminBloodRequestsManager } from "@/components/admin-blood-requests-manager"
 import { AdminTransportationManager } from "@/components/admin-transportation-manager"
 import { AdminContactSubmissionsManager } from "@/components/admin-contact-submissions-manager"
-import { LogOut, LayoutDashboard, Calendar, Truck, Mail } from "lucide-react"
+import { AdminQRChecker } from "@/components/admin-qr-checker"
+import { AdminEventDonors } from "@/components/admin-event-donors"
+import { LogOut, LayoutDashboard, Calendar, Truck, Mail, QrCode, Users } from "lucide-react"
 
 interface Admin {
   id: string
@@ -226,6 +228,28 @@ export default function AdminPage() {
             <Mail className="w-4 h-4" />
             Contact Submissions
           </button>
+          <button
+            onClick={() => setActiveTab("qr-checker")}
+            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "qr-checker"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <QrCode className="w-4 h-4" />
+            QR Checker
+          </button>
+          <button
+            onClick={() => setActiveTab("event-donors")}
+            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "event-donors"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            Event Donors
+          </button>
         </div>
 
         {/* Tab Content */}
@@ -280,6 +304,18 @@ export default function AdminPage() {
         {activeTab === "contacts" && (
           <div className="grid grid-cols-1 gap-6">
             {token && <AdminContactSubmissionsManager token={token} />}
+          </div>
+        )}
+
+        {activeTab === "qr-checker" && (
+          <div className="grid grid-cols-1 gap-6">
+            {token && <AdminQRChecker token={token} />}
+          </div>
+        )}
+
+        {activeTab === "event-donors" && (
+          <div className="grid grid-cols-1 gap-6">
+            {token && <AdminEventDonors />}
           </div>
         )}
       </div>

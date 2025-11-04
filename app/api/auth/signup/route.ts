@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] User created successfully:", result.insertedId)
 
-    const token = generateToken(result.insertedId.toString())
+    const token = generateToken(result.insertedId.toString(), email)
 
     // Send welcome email
     console.log("[v0] Sending welcome email to:", email)

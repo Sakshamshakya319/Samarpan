@@ -17,6 +17,7 @@ import { BloodDonationRequests } from "@/components/blood-donation-requests"
 import { DonationImageUpload } from "@/components/donation-image-upload"
 import { DriverDetailsDisplay } from "@/components/driver-details-display"
 import { UserCertificatesDisplay } from "@/components/user-certificates-display"
+import { UserEventRegistrations } from "@/components/user-event-registrations"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
 interface Notification {
@@ -335,6 +336,9 @@ export default function DashboardPage() {
 
             {/* Certificates Card - Using new component */}
             <UserCertificatesDisplay />
+
+            {/* Event Registrations Card */}
+            <UserEventRegistrations />
           </div>
 
           {/* Notifications Sidebar */}
