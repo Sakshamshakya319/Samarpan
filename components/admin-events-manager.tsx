@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { AdminEventRegistrationsViewer } from "@/components/admin-event-registrations-viewer"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +25,8 @@ import {
   Edit2,
   AlertCircle,
   Clock,
+  Download,
+  FileText,
 } from "lucide-react"
 
 interface Event {
@@ -35,9 +38,11 @@ interface Event {
   endTime: string
   location: string
   expectedAttendees: number
+  volunteerSlotsNeeded: number
   eventType: string
   status: string
   createdAt: string
+  allowRegistrations?: boolean
 }
 
 interface AdminEventsManagerProps {
@@ -54,6 +59,8 @@ export function AdminEventsManager({ token }: AdminEventsManagerProps) {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [showRegistrationsDialog, setShowRegistrationsDialog] = useState(false)
+  const [registrationEventId, setRegistrationEventId] = useState<string | null>(null)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -64,7 +71,9 @@ export function AdminEventsManager({ token }: AdminEventsManagerProps) {
     endTime: "",
     location: "",
     expectedAttendees: "",
+    volunteerSlotsNeeded: "",
     eventType: "donation_camp",
+    allowRegistrations: true,
   })
 
   useEffect(() => {
@@ -101,7 +110,9 @@ export function AdminEventsManager({ token }: AdminEventsManagerProps) {
       endTime: "",
       location: "",
       expectedAttendees: "",
+      volunteerSlotsNeeded: "",
       eventType: "donation_camp",
+      allowRegistrations: true,
     })
     setIsEditing(false)
     setSelectedEvent(null)
@@ -117,7 +128,9 @@ export function AdminEventsManager({ token }: AdminEventsManagerProps) {
       endTime: event.endTime,
       location: event.location,
       expectedAttendees: event.expectedAttendees.toString(),
+      volunteerSlotsNeeded: event.volunteerSlotsNeeded.toString(),
       eventType: event.eventType,
+      allowRegistrations: event.allowRegistrations !== false,
     })
     setIsEditing(true)
     setShowDialog(true)
@@ -145,7 +158,9 @@ export function AdminEventsManager({ token }: AdminEventsManagerProps) {
         endTime: formData.endTime,
         location: formData.location,
         expectedAttendees: parseInt(formData.expectedAttendees) || 0,
+        volunteerSlotsNeeded: parseInt(formData.volunteerSlotsNeeded) || 0,
         eventType: formData.eventType,
+        allowRegistrations: formData.allowRegistrations,
       }
 
       if (isEditing && selectedEvent) {
@@ -202,6 +217,38 @@ export function AdminEventsManager({ token }: AdminEventsManagerProps) {
     }
   }
 
+  const handleDownloadRegistrations = async (eventId: string) => {
+    try {
+      const response = await fetch(`/api/admin/event-registrations?eventId=${eventId}&format=excel`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `registrations-${eventId}.csv`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        setSuccess("Registrations downloaded successfully!")
+        setTimeout(() => setSuccess(""), 3000)
+      } else {
+        setError("Failed to download registrations")
+      }
+    } catch (err) {
+      setError("Error downloading registrations")
+      console.error(err)
+    }
+  }
+
+  const handleViewRegistrations = (eventId: string) => {
+    setRegistrationEventId(eventId)
+    setShowRegistrationsDialog(true)
+  }
+
   if (isLoading) {
     return (
       <Card>
@@ -253,7 +300,12 @@ export function AdminEventsManager({ token }: AdminEventsManagerProps) {
                       <h3 className="text-lg font-semibold text-gray-900">{event.title}</h3>
                       <p className="text-sm text-gray-600 mt-1">{event.description}</p>
                     </div>
-                    <Badge className="bg-blue-100 text-blue-800 capitalize">{event.eventType}</Badge>
+                    <div className="flex gap-2">
+                      <Badge className="bg-blue-100 text-blue-800 capitalize">{event.eventType}</Badge>
+                      <Badge className={event.allowRegistrations !== false ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
+                        {event.allowRegistrations !== false ? "Registrations Open" : "Closed"}
+                      </Badge>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 mb-4">
@@ -280,7 +332,29 @@ export function AdminEventsManager({ token }: AdminEventsManagerProps) {
                     )}
                   </div>
 
-                  <div className="flex gap-2 justify-end">
+                  <div className="flex gap-2 justify-end flex-wrap">
+                    {event.volunteerSlotsNeeded > 0 && (
+                      <>
+                        <Button
+                          onClick={() => handleViewRegistrations(event._id)}
+                          size="sm"
+                          variant="outline"
+                          className="gap-2"
+                        >
+                          <Users className="w-4 h-4" />
+                          View Registrations
+                        </Button>
+                        <Button
+                          onClick={() => handleDownloadRegistrations(event._id)}
+                          size="sm"
+                          variant="outline"
+                          className="gap-2"
+                        >
+                          <Download className="w-4 h-4" />
+                          Export Excel
+                        </Button>
+                      </>
+                    )}
                     <Button
                       onClick={() => handleEdit(event)}
                       size="sm"
@@ -405,6 +479,29 @@ export function AdminEventsManager({ token }: AdminEventsManagerProps) {
                   onChange={(e) => setFormData({ ...formData, expectedAttendees: e.target.value })}
                 />
               </div>
+
+              <div>
+                <label className="text-sm font-medium">Volunteer Slots Needed</label>
+                <Input
+                  type="number"
+                  placeholder="e.g., 250"
+                  value={formData.volunteerSlotsNeeded}
+                  onChange={(e) => setFormData({ ...formData, volunteerSlotsNeeded: e.target.value })}
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="allowRegistrations"
+                  checked={formData.allowRegistrations}
+                  onChange={(e) => setFormData({ ...formData, allowRegistrations: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-300"
+                />
+                <label htmlFor="allowRegistrations" className="text-sm font-medium cursor-pointer">
+                  Enable Registrations for Users
+                </label>
+              </div>
             </div>
           </div>
 
@@ -420,6 +517,14 @@ export function AdminEventsManager({ token }: AdminEventsManagerProps) {
           </div>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Event Registrations Viewer */}
+      <AdminEventRegistrationsViewer
+        eventId={registrationEventId}
+        token={token}
+        open={showRegistrationsDialog}
+        onOpenChange={setShowRegistrationsDialog}
+      />
     </>
   )
 }

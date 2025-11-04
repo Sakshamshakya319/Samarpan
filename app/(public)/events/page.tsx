@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Calendar, MapPin, Users, Loader2 } from "lucide-react"
+import { useAppSelector } from "@/lib/hooks"
+import { useRouter } from "next/navigation"
 
 interface Event {
   _id: string
@@ -13,17 +16,56 @@ interface Event {
   endTime: string
   location: string
   expectedAttendees: number
+  volunteerSlotsNeeded: number
+  registeredVolunteers: number
   eventType: string
+  allowRegistrations?: boolean
 }
 
 export default function Events() {
   const [events, setEvents] = useState<Event[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
+  const [userRegistrations, setUserRegistrations] = useState<Record<string, boolean>>({})
+  const { token } = useAppSelector((state) => state.auth)
+  const { isAuthenticated } = useAppSelector((state) => state.auth)
+  const router = useRouter()
 
   useEffect(() => {
     fetchEvents()
   }, [])
+
+  // Check registration status for each event if user is authenticated
+  useEffect(() => {
+    if (isAuthenticated && token && events.length > 0) {
+      checkUserRegistrations()
+    }
+  }, [isAuthenticated, token, events.length])
+
+  const checkUserRegistrations = async () => {
+    try {
+      const registrations: Record<string, boolean> = {}
+      
+      for (const event of events) {
+        const response = await fetch(
+          `/api/event-registrations?eventId=${event._id}&checkUser=true`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
+        if (response.ok) {
+          const data = await response.json()
+          registrations[event._id] = data.isRegistered || false
+        }
+      }
+      
+      setUserRegistrations(registrations)
+    } catch (err) {
+      console.error("Error checking registration status:", err)
+    }
+  }
 
   const fetchEvents = async () => {
     try {
@@ -78,45 +120,93 @@ export default function Events() {
             </div>
           ) : (
             <div className="space-y-6">
-              {events.map((event) => (
-                <Card key={event._id} className="p-8 hover:border-primary/50 transition">
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-start gap-6">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-2xl font-bold">{event.title}</h3>
-                        <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
-                          {formatEventType(event.eventType)}
-                        </span>
-                      </div>
-                      <p className="text-muted-foreground mb-4">{event.description}</p>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Calendar size={18} />
-                          <span>
-                            {new Date(event.eventDate).toLocaleDateString("en-US", {
-                              weekday: "long",
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            })}
+              {events.map((event) => {
+                const availableSlots = event.volunteerSlotsNeeded - event.registeredVolunteers
+                const isFull = availableSlots <= 0
+                return (
+                  <Card key={event._id} className="p-8 hover:border-primary/50 transition">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-2xl font-bold">{event.title}</h3>
+                          <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                            {formatEventType(event.eventType)}
                           </span>
-                          {event.startTime && <span className="ml-2 font-medium">{event.startTime}</span>}
                         </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <MapPin size={18} />
-                          <span>{event.location}</span>
-                        </div>
-                        {event.expectedAttendees > 0 && (
+                        <p className="text-muted-foreground mb-4">{event.description}</p>
+                        <div className="space-y-2">
                           <div className="flex items-center gap-2 text-muted-foreground">
-                            <Users size={18} />
-                            <span>{event.expectedAttendees} expected attendees</span>
+                            <Calendar size={18} />
+                            <span>
+                              {new Date(event.eventDate).toLocaleDateString("en-US", {
+                                weekday: "long",
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })}
+                            </span>
+                            {event.startTime && <span className="ml-2 font-medium">{event.startTime}</span>}
                           </div>
-                        )}
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <MapPin size={18} />
+                            <span>{event.location}</span>
+                          </div>
+                          {event.expectedAttendees > 0 && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Users size={18} />
+                              <span>{event.expectedAttendees} expected attendees</span>
+                            </div>
+                          )}
+                          {event.volunteerSlotsNeeded > 0 && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Users size={18} />
+                              <span>
+                                {event.registeredVolunteers} / {event.volunteerSlotsNeeded} volunteers registered
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Register Button - Inside Card */}
+                      {event.volunteerSlotsNeeded > 0 && event.allowRegistrations && (
+                        <div className="flex flex-col gap-2">
+                          {isFull && (
+                            <div className="text-sm font-medium text-destructive">Event is Full</div>
+                          )}
+                          {userRegistrations[event._id] && (
+                            <div className="text-sm font-medium text-green-600">Already Registered</div>
+                          )}
+                          <Button
+                            onClick={() => {
+                              if (!isAuthenticated) {
+                                router.push("/login")
+                              } else if (!userRegistrations[event._id]) {
+                                router.push(`/events/${event._id}/register`)
+                              }
+                            }}
+                            disabled={isFull || userRegistrations[event._id]}
+                            size="lg"
+                            className={
+                              userRegistrations[event._id]
+                                ? "bg-gray-400"
+                                : isFull
+                                  ? ""
+                                  : "bg-green-600 hover:bg-green-700"
+                            }
+                          >
+                            {userRegistrations[event._id]
+                              ? "Already Registered"
+                              : isFull
+                                ? "Event Full"
+                                : "Register as Donor"}
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                )
+              })}
             </div>
           )}
         </div>
