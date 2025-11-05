@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, QrCode, CheckCircle2, AlertCircle, Copy, Camera } from "lucide-react"
-import { QRScanner } from "@/components/qr-scanner"
+import { Loader2, QrCode, CheckCircle2, AlertCircle, Copy, Camera, RefreshCw } from "lucide-react"
+import { AdminQRScanner } from "@/components/admin-qr-scanner"
 
 interface AdminQRCheckerProps {
   token: string
@@ -38,8 +38,10 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
   const [successMessage, setSuccessMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
 
-  const handleSearchQR = async () => {
-    if (!qrInput.trim()) {
+  const handleSearchQR = async (qrToken?: string) => {
+    const tokenToSearch = qrToken || qrInput.trim()
+    
+    if (!tokenToSearch) {
       setErrorMessage("Please enter a QR token")
       return
     }
@@ -51,7 +53,7 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
 
     try {
       const response = await fetch(
-        `/api/event-registrations/qr-verify?qrToken=${encodeURIComponent(qrInput)}`,
+        `/api/event-registrations/qr-verify?qrToken=${encodeURIComponent(tokenToSearch)}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -62,6 +64,10 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
       if (response.ok) {
         const data = await response.json()
         setRegistrationDetails(data.registration)
+        if (!qrToken) {
+          // Update input only if not from scanner
+          setQrInput(tokenToSearch)
+        }
       } else {
         const data = await response.json()
         setErrorMessage(data.error || "QR token not found")
@@ -81,6 +87,8 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
     setErrorMessage("")
 
     try {
+      console.log("Verifying QR for registration:", registrationDetails._id)
+      
       const response = await fetch("/api/event-registrations/qr-verify", {
         method: "POST",
         headers: {
@@ -94,17 +102,24 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
       })
 
       if (response.ok) {
-        setSuccessMessage("QR code verified successfully! Donation recorded.")
-        setRegistrationDetails(null)
-        setQrInput("")
-        setTimeout(() => setSuccessMessage(""), 4000)
+        console.log("✓ QR verification successful")
+        setSuccessMessage("✓ QR verified! Donation recorded successfully.")
+        
+        // Auto-clear after success for next scan
+        setTimeout(() => {
+          setRegistrationDetails(null)
+          setQrInput("")
+          setSuccessMessage("")
+        }, 2500)
       } else {
         const data = await response.json()
-        setErrorMessage(data.error || "Failed to verify QR code")
+        const errorMsg = data.error || "Failed to verify QR code"
+        console.error("Verification failed:", errorMsg)
+        setErrorMessage(errorMsg)
       }
     } catch (err) {
-      setErrorMessage("Error verifying QR code")
-      console.error(err)
+      console.error("Error verifying QR code:", err)
+      setErrorMessage("Network error: Failed to verify QR code")
     } finally {
       setIsVerifying(false)
     }
@@ -150,23 +165,26 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
             </Alert>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <label className="block text-sm font-medium">QR Token</label>
+            
+            {/* Input and Buttons */}
             <div className="flex gap-2">
               <Input
-                placeholder="Scan QR code or paste QR token (EVT-...)"
+                placeholder="Paste QR token (EVT-...)"
                 value={qrInput}
                 onChange={(e) => setQrInput(e.target.value)}
                 onKeyPress={(e) => {
-                  if (e.key === "Enter") {
+                  if (e.key === "Enter" && qrInput.trim()) {
                     handleSearchQR()
                   }
                 }}
                 className="font-mono flex-1"
               />
               <Button
-                onClick={handleSearchQR}
+                onClick={() => handleSearchQR()}
                 disabled={isLoading || !qrInput.trim()}
+                title="Search for this QR token"
               >
                 {isLoading ? (
                   <>
@@ -177,14 +195,17 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
                   "Search"
                 )}
               </Button>
-              <QRScanner
+              <AdminQRScanner
                 onScanSuccess={(qrData) => {
+                  console.log("QR scanned by admin:", qrData)
                   setQrInput(qrData)
+                  // Auto-search after a brief delay to let state update
                   setTimeout(() => {
-                    handleSearchQR()
-                  }, 100)
+                    handleSearchQR(qrData)
+                  }, 200)
                 }}
-                onScanError={(error) => {
+                onError={(error) => {
+                  console.error("Scanner error:", error)
                   setErrorMessage(error)
                 }}
               />
@@ -198,14 +219,34 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
         <Card className="border-2 border-blue-200 bg-blue-50">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Registration Details</CardTitle>
-              <Badge
-                variant={
-                  registrationDetails.qrVerified ? "default" : "secondary"
-                }
-              >
-                {registrationDetails.donationStatus}
-              </Badge>
+              <div>
+                <CardTitle>Registration Details</CardTitle>
+                <CardDescription className="text-xs mt-1">
+                  Scanned QR Token: {qrInput}
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant={
+                    registrationDetails.qrVerified ? "default" : "secondary"
+                  }
+                >
+                  {registrationDetails.donationStatus}
+                </Badge>
+                <Button
+                  onClick={() => {
+                    setRegistrationDetails(null)
+                    setQrInput("")
+                    setErrorMessage("")
+                    setSuccessMessage("")
+                  }}
+                  variant="outline"
+                  size="sm"
+                  title="Clear and scan another QR"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
