@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
-import { verifyPassword, generateToken } from "@/lib/auth"
+import { verifyPassword, generateToken, generateAdminToken } from "@/lib/auth"
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,12 +37,32 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("[v0] Login successful for user:", email)
-    const token = generateToken(user._id.toString(), user.email)
+
+    // Check if user is an admin
+    console.log("[v0] Checking if user is admin...")
+    const adminsCollection = db.collection("admins")
+    const admin = await adminsCollection.findOne({ email })
+
+    let token: string
+    let isAdmin = false
+    let adminRole = ""
+
+    if (admin) {
+      console.log("[v0] Admin found! Generating admin token for:", email)
+      token = generateAdminToken(admin._id.toString(), admin.role, admin.email)
+      isAdmin = true
+      adminRole = admin.role
+    } else {
+      console.log("[v0] Regular user. Generating user token for:", email)
+      token = generateToken(user._id.toString(), user.email)
+    }
 
     const response = NextResponse.json(
       {
         message: "Login successful",
         token,
+        isAdmin,
+        adminRole,
         user: {
           _id: user._id,
           id: user._id,
@@ -61,14 +81,23 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     )
     
-    // Set token in HTTP-only cookie for middleware to access
-    response.cookies.set("token", token, {
+    const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: "lax" as const,
       maxAge: 7 * 24 * 60 * 60, // 7 days
       path: "/",
-    })
+    }
+
+    if (isAdmin) {
+      // For admin users, set adminToken cookie for admin operations
+      console.log("[v0] Setting adminToken cookie for admin user")
+      response.cookies.set("adminToken", token, cookieOptions)
+    } else {
+      // For regular users, set token cookie
+      console.log("[v0] Setting token cookie for regular user")
+      response.cookies.set("token", token, cookieOptions)
+    }
 
     return response
   } catch (error) {

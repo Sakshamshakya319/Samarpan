@@ -2,22 +2,18 @@ import { NextRequest, NextResponse } from "next/server"
 import { ObjectId } from "mongodb"
 import jwt from "jsonwebtoken"
 import { getDatabase } from "@/lib/mongodb"
-import { verifyAdminPermission } from "@/lib/admin-utils"
 
 const jwtSecret = process.env.JWT_SECRET || "your-secret-key-change-in-production"
 
-// Verify user token
 function verifyUserToken(token: string): any {
   try {
-    const decoded = jwt.verify(token, jwtSecret) as any
-    return decoded
-  } catch (error) {
-    console.error("[Blog Comments] Token verification failed:", error)
+    return jwt.verify(token, jwtSecret) as any
+  } catch {
     return null
   }
 }
 
-export async function DELETE(
+export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; commentId: string }> }
 ) {
@@ -30,18 +26,14 @@ export async function DELETE(
 
     const authHeader = request.headers.get("authorization")
     if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized - please login" }, { status: 401 })
     }
 
     const token = authHeader.substring(7)
+    const userToken = verifyUserToken(token)
 
-    // Try to verify as admin first
-    const adminVerification = await verifyAdminPermission(request)
-    const admin = adminVerification.valid ? adminVerification.admin : null
-    const userToken = !admin ? verifyUserToken(token) : null
-
-    if (!admin && !userToken) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    if (!userToken) {
+      return NextResponse.json({ error: "Invalid user token" }, { status: 401 })
     }
 
     const db = await getDatabase()
@@ -60,26 +52,48 @@ export async function DELETE(
       return NextResponse.json({ error: "Comment not found" }, { status: 404 })
     }
 
-    // Check authorization: user can delete their own comment, admin can delete any
-    const isOwnComment = userToken && comment.userId.toString() === userToken.userId
-    const isAdminUser = admin !== null
+    // Check if user has already liked this comment
+    const likes = comment.likes || []
+    const userLikeIndex = likes.indexOf(userToken.userId)
 
-    if (!isOwnComment && !isAdminUser) {
-      return NextResponse.json({ error: "You can only delete your own comments" }, { status: 403 })
+    let updatedComments: any[]
+
+    if (userLikeIndex > -1) {
+      // Unlike: remove user ID from likes
+      updatedComments = blog.comments.map((c: any) => {
+        if (c._id.toString() === commentId) {
+          return {
+            ...c,
+            likes: c.likes?.filter((id: string) => id !== userToken.userId) || [],
+          }
+        }
+        return c
+      })
+    } else {
+      // Like: add user ID to likes
+      updatedComments = blog.comments.map((c: any) => {
+        if (c._id.toString() === commentId) {
+          return {
+            ...c,
+            likes: [...(c.likes || []), userToken.userId],
+          }
+        }
+        return c
+      })
     }
 
-    // Remove the comment
     await blogsCollection.updateOne(
       { _id: new ObjectId(id) },
-      { $pull: { comments: { _id: new ObjectId(commentId) } } }
+      { $set: { comments: updatedComments } }
     )
 
     return NextResponse.json({
       success: true,
-      message: "Comment deleted successfully",
+      liked: userLikeIndex === -1,
+      message: userLikeIndex === -1 ? "Comment liked" : "Comment unliked",
     })
   } catch (error) {
-    console.error("Error deleting comment:", error)
-    return NextResponse.json({ error: "Failed to delete comment" }, { status: 500 })
+    console.error("[Blog Comments] Error liking comment:", error)
+    return NextResponse.json({ error: "Failed to like comment" }, { status: 500 })
   }
 }

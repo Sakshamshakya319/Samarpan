@@ -13,7 +13,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const decoded = verifyAdminToken(token)
-    if (!decoded || decoded.role !== "admin") {
+    if (!decoded || !["admin", "superadmin"].includes(decoded.role)) {
       return NextResponse.json({ error: "Invalid token or insufficient permissions" }, { status: 401 })
     }
 
@@ -67,7 +67,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     }
 
     const decoded = verifyAdminToken(token)
-    if (!decoded || decoded.role !== "admin") {
+    if (!decoded || !["admin", "superadmin"].includes(decoded.role)) {
       return NextResponse.json({ error: "Invalid token or insufficient permissions" }, { status: 401 })
     }
 

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
-import { verifyToken } from "@/lib/auth"
+import { verifyAdminToken } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 
 /**
@@ -16,8 +16,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const decoded = verifyToken(token)
-    if (!decoded || decoded.role !== "admin") {
+    const decoded = verifyAdminToken(token)
+    if (!decoded || !["admin", "superadmin"].includes(decoded.role)) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 })
     }
 
@@ -92,8 +92,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const decoded = verifyToken(token)
-    if (!decoded || decoded.role !== "admin") {
+    const decoded = verifyAdminToken(token)
+    if (!decoded || !["admin", "superadmin"].includes(decoded.role)) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 })
     }
 

@@ -3,14 +3,15 @@ import { ObjectId } from "mongodb"
 import jwt from "jsonwebtoken"
 import { getDatabase } from "@/lib/mongodb"
 
-const jwtSecret = process.env.JWT_SECRET || ""
+const jwtSecret = process.env.JWT_SECRET || "your-secret-key-change-in-production"
 
 // Verify user token
 function verifyUserToken(token: string): any {
   try {
     const decoded = jwt.verify(token, jwtSecret) as any
     return decoded
-  } catch {
+  } catch (error) {
+    console.error("[Blog Comments] Token verification failed:", error)
     return null
   }
 }

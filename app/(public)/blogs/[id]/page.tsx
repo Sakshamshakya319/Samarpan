@@ -7,8 +7,18 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Eye, MessageSquare, Calendar, User, Trash2, AlertCircle, ArrowLeft } from "lucide-react"
+import { Loader2, Eye, MessageSquare, Calendar, User, Trash2, AlertCircle, ArrowLeft, Heart, MessageCircle, X, Share2, Mail, Facebook, Instagram } from "lucide-react"
 import { useAppSelector } from "@/lib/hooks"
+
+interface Reply {
+  _id: string
+  userName: string
+  userEmail: string
+  text: string
+  createdAt: string
+  userId: string
+  likes?: string[]
+}
 
 interface Comment {
   _id: string
@@ -17,6 +27,8 @@ interface Comment {
   text: string
   createdAt: string
   userId: string
+  likes?: string[]
+  replies?: Reply[]
 }
 
 interface BlogImage {
@@ -50,8 +62,36 @@ export default function BlogDetailPage() {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [commentError, setCommentError] = useState("")
   const [commentSuccess, setCommentSuccess] = useState("")
+  const [userToken, setUserToken] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null)
+  const [replyText, setReplyText] = useState("")
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false)
+  const [likedComments, setLikedComments] = useState<Set<string>>(new Set())
+  const [likedReplies, setLikedReplies] = useState<Set<string>>(new Set())
 
   const { isAuthenticated, token } = useAppSelector((state) => state.auth)
+
+  // Initialize token and userId from localStorage on component mount
+  useEffect(() => {
+    const storedToken = localStorage.getItem("token")
+    const storedUser = localStorage.getItem("user")
+    
+    if (storedToken) {
+      setUserToken(storedToken)
+    } else if (token) {
+      setUserToken(token)
+    }
+    
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser)
+        setUserId(user._id || user.id)
+      } catch (e) {
+        console.error("Failed to parse user from localStorage:", e)
+      }
+    }
+  }, [token])
 
   useEffect(() => {
     fetchBlog()
@@ -80,8 +120,9 @@ export default function BlogDetailPage() {
     setCommentError("")
     setCommentSuccess("")
 
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !userToken) {
       setCommentError("Please login to comment")
+      console.warn("[Blog Comments] User not authenticated or token missing")
       return
     }
 
@@ -90,30 +131,41 @@ export default function BlogDetailPage() {
       return
     }
 
+    if (!userToken) {
+      setCommentError("Authentication token not found. Please refresh and try again.")
+      console.error("[Blog Comments] Token is missing when attempting to post comment")
+      return
+    }
+
     setIsSubmittingComment(true)
 
     try {
+      console.log("[Blog Comments] Posting comment with token", userToken.substring(0, 20) + "...")
       const response = await fetch(`/api/blogs/${blogId}/comments`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${userToken}`,
         },
         body: JSON.stringify({ text: commentText }),
       })
 
+      console.log("[Blog Comments] Comment POST response status:", response.status)
+
       if (response.ok) {
         setCommentSuccess("Comment added successfully!")
         setCommentText("")
-        fetchBlog()
+        await fetchBlog()
         setTimeout(() => setCommentSuccess(""), 3000)
       } else {
         const data = await response.json()
+        console.error("[Blog Comments] Comment POST error:", data)
         setCommentError(data.error || "Failed to add comment")
       }
     } catch (err) {
-      setCommentError("Error adding comment")
-      console.error(err)
+      const errorMsg = err instanceof Error ? err.message : "Unknown error"
+      console.error("[Blog Comments] Exception while posting comment:", errorMsg)
+      setCommentError("Error adding comment. Please try again.")
     } finally {
       setIsSubmittingComment(false)
     }
@@ -122,19 +174,204 @@ export default function BlogDetailPage() {
   const handleDeleteComment = async (commentId: string) => {
     if (!window.confirm("Delete this comment?")) return
 
+    if (!userToken) {
+      console.error("[Blog Comments] Token missing for delete operation")
+      return
+    }
+
     try {
+      console.log("[Blog Comments] Deleting comment with token", userToken.substring(0, 20) + "...")
       const response = await fetch(`/api/blogs/${blogId}/comments/${commentId}`, {
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${userToken}`,
+        },
+      })
+
+      console.log("[Blog Comments] Comment DELETE response status:", response.status)
+
+      if (response.ok) {
+        await fetchBlog()
+      } else {
+        const data = await response.json()
+        console.error("[Blog Comments] Delete comment error:", data)
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Unknown error"
+      console.error("[Blog Comments] Exception while deleting comment:", errorMsg)
+    }
+  }
+
+  const handleLikeComment = async (commentId: string) => {
+    if (!isAuthenticated || !userToken || !userId) {
+      setCommentError("Please login to like comments")
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/blogs/${blogId}/comments/${commentId}/like`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userToken}`,
         },
       })
 
       if (response.ok) {
-        fetchBlog()
+        const isLiked = likedComments.has(commentId)
+        if (isLiked) {
+          likedComments.delete(commentId)
+        } else {
+          likedComments.add(commentId)
+        }
+        setLikedComments(new Set(likedComments))
+        await fetchBlog()
+      } else {
+        const data = await response.json()
+        console.error("[Blog Comments] Like error:", data)
       }
     } catch (err) {
-      console.error("Error deleting comment:", err)
+      console.error("[Blog Comments] Exception while liking comment:", err)
+    }
+  }
+
+  const handleAddReply = async (e: React.FormEvent, commentId: string) => {
+    e.preventDefault()
+    
+    if (!isAuthenticated || !userToken) {
+      setCommentError("Please login to reply")
+      return
+    }
+
+    if (!replyText.trim()) {
+      setCommentError("Reply cannot be empty")
+      return
+    }
+
+    setIsSubmittingReply(true)
+
+    try {
+      const response = await fetch(`/api/blogs/${blogId}/comments/${commentId}/replies`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userToken}`,
+        },
+        body: JSON.stringify({ text: replyText }),
+      })
+
+      if (response.ok) {
+        setReplyText("")
+        setReplyingToCommentId(null)
+        await fetchBlog()
+      } else {
+        const data = await response.json()
+        console.error("[Blog Comments] Reply error:", data)
+        setCommentError(data.error || "Failed to add reply")
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Unknown error"
+      console.error("[Blog Comments] Exception while posting reply:", errorMsg)
+      setCommentError("Error adding reply. Please try again.")
+    } finally {
+      setIsSubmittingReply(false)
+    }
+  }
+
+  const handleDeleteReply = async (commentId: string, replyId: string) => {
+    if (!window.confirm("Delete this reply?")) return
+
+    if (!userToken) {
+      console.error("[Blog Comments] Token missing for delete reply operation")
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/blogs/${blogId}/comments/${commentId}/replies/${replyId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${userToken}`,
+        },
+      })
+
+      if (response.ok) {
+        await fetchBlog()
+      } else {
+        const data = await response.json()
+        console.error("[Blog Comments] Delete reply error:", data)
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Unknown error"
+      console.error("[Blog Comments] Exception while deleting reply:", errorMsg)
+    }
+  }
+
+  const handleLikeReply = async (commentId: string, replyId: string) => {
+    if (!isAuthenticated || !userToken || !userId) {
+      setCommentError("Please login to like replies")
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/blogs/${blogId}/comments/${commentId}/replies/${replyId}/like`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userToken}`,
+        },
+      })
+
+      if (response.ok) {
+        const likeId = `${commentId}-${replyId}`
+        const isLiked = likedReplies.has(likeId)
+        if (isLiked) {
+          likedReplies.delete(likeId)
+        } else {
+          likedReplies.add(likeId)
+        }
+        setLikedReplies(new Set(likedReplies))
+        await fetchBlog()
+      } else {
+        const data = await response.json()
+        console.error("[Blog Comments] Reply like error:", data)
+      }
+    } catch (err) {
+      console.error("[Blog Comments] Exception while liking reply:", err)
+    }
+  }
+
+  const handleShareBlog = (platform: string) => {
+    const blogUrl = typeof window !== "undefined" ? window.location.href : ""
+    const title = blog?.title || "Check out this blog"
+    const text = `${title} - Read on Samarpan`
+
+    const shares = {
+      facebook: () => {
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(blogUrl)}`, "_blank", "width=600,height=400")
+      },
+      whatsapp: () => {
+        window.open(`https://wa.me/?text=${encodeURIComponent(text + " " + blogUrl)}`, "_blank")
+      },
+      twitter: () => {
+        window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(blogUrl)}&text=${encodeURIComponent(title)}`, "_blank", "width=600,height=400")
+      },
+      mail: () => {
+        window.location.href = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text + "\n\n" + blogUrl)}`
+      },
+      instagram: () => {
+        alert("To share on Instagram, copy the link and paste it in your Instagram story or direct message.")
+        navigator.clipboard.writeText(blogUrl)
+      },
+      copy: () => {
+        navigator.clipboard.writeText(blogUrl).then(() => {
+          alert("Link copied to clipboard!")
+        })
+      },
+    }
+
+    const shareFunc = shares[platform as keyof typeof shares]
+    if (shareFunc) {
+      shareFunc()
     }
   }
 
@@ -207,6 +444,75 @@ export default function BlogDetailPage() {
                 <MessageSquare className="w-4 h-4" />
                 {blog.comments.length} comments
               </div>
+            </div>
+
+            {/* Social Sharing */}
+            <div className="flex flex-wrap gap-2 items-center pt-4 border-t">
+              <span className="text-sm font-medium text-muted-foreground">Share:</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleShareBlog("facebook")}
+                className="gap-2"
+                title="Share on Facebook"
+              >
+                <Facebook className="w-4 h-4" />
+                <span className="hidden sm:inline">Facebook</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleShareBlog("whatsapp")}
+                className="gap-2"
+                title="Share on WhatsApp"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a9.87 9.87 0 00-4.73 1.16l-.335.198-3.476.523.529 3.372.38.183c.247.123.486.271.707.445 3.282 2.817 8.125 2.51 11.044-.566 1.231-1.268 2.077-3.016 2.288-4.853.055-.468.034-.933-.017-1.395 0-.036 0-.073-.003-.109-.15-.864-.787-1.618-1.675-1.822-.34-.066-.686-.053-1.024.044-1.297.349-2.572 1.336-3.226 2.565-.224.433-.427.923-.586 1.457-.04.134-.082.269-.124.402z"/>
+                </svg>
+                <span className="hidden sm:inline">WhatsApp</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleShareBlog("twitter")}
+                className="gap-2"
+                title="Share on Twitter"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2s9 5 20 5a9.5 9.5 0 00-9-5.5c4.75 2.25 7-7 7-7-2.25 1.5-2.25 1.5-4.5-.25"/>
+                </svg>
+                <span className="hidden sm:inline">Twitter</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleShareBlog("instagram")}
+                className="gap-2"
+                title="Share on Instagram"
+              >
+                <Instagram className="w-4 h-4" />
+                <span className="hidden sm:inline">Instagram</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleShareBlog("mail")}
+                className="gap-2"
+                title="Share via Email"
+              >
+                <Mail className="w-4 h-4" />
+                <span className="hidden sm:inline">Email</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleShareBlog("copy")}
+                className="gap-2"
+                title="Copy link"
+              >
+                <Share2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Copy Link</span>
+              </Button>
             </div>
           </div>
 
@@ -311,40 +617,170 @@ export default function BlogDetailPage() {
             )}
 
             {/* Comments List */}
-            <div className="space-y-4">
+            <div className="space-y-6">
               {blog.comments.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8">
                   No comments yet. Be the first to comment!
                 </p>
               ) : (
                 blog.comments.map((comment) => (
-                  <Card key={comment._id}>
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <p className="font-semibold">{comment.userName}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(comment.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <p className="text-muted-foreground">{comment.text}</p>
-                        </div>
+                  <div key={comment._id} className="space-y-4">
+                    {/* Main Comment */}
+                    <Card className="border-l-4 border-l-primary">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start gap-4">
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-sm">{comment.userName}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(comment.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <p className="text-foreground whitespace-pre-wrap">{comment.text}</p>
 
-                        {isAuthenticated && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDeleteComment(comment._id)}
-                            className="gap-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Delete
-                          </Button>
-                        )}
+                            {/* Action Buttons */}
+                            <div className="flex gap-3 pt-2 flex-wrap">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleLikeComment(comment._id)}
+                                className="gap-1 h-7 text-xs"
+                              >
+                                <Heart
+                                  className={`w-3.5 h-3.5 ${
+                                    likedComments.has(comment._id) ? "fill-red-500 text-red-500" : ""
+                                  }`}
+                                />
+                                <span>{comment.likes?.length || 0}</span>
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setReplyingToCommentId(comment._id)}
+                                className="gap-1 h-7 text-xs"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                                Reply
+                              </Button>
+
+                              {isAuthenticated && userId === comment.userId && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDeleteComment(comment._id)}
+                                  className="gap-1 h-7 text-xs text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  Delete
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Reply Form */}
+                    {replyingToCommentId === comment._id && (
+                      <Card className="ml-6 border-l-2 border-l-accent bg-accent/5">
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-center mb-3">
+                            <p className="text-sm font-medium">Reply to {comment.userName}</p>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setReplyingToCommentId(null)}
+                              className="h-6 w-6 p-0"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <form onSubmit={(e) => handleAddReply(e, comment._id)} className="space-y-2">
+                            <Textarea
+                              value={replyText}
+                              onChange={(e) => setReplyText(e.target.value)}
+                              placeholder="Write a reply..."
+                              rows={2}
+                              className="resize-none"
+                            />
+                            <Button
+                              type="submit"
+                              disabled={isSubmittingReply}
+                              size="sm"
+                              className="gap-1"
+                            >
+                              {isSubmittingReply ? (
+                                <>
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                  Posting...
+                                </>
+                              ) : (
+                                <>
+                                  <MessageCircle className="w-3 h-3" />
+                                  Reply
+                                </>
+                              )}
+                            </Button>
+                          </form>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Nested Replies */}
+                    {comment.replies && comment.replies.length > 0 && (
+                      <div className="ml-6 space-y-3 border-l-2 border-l-muted pl-4">
+                        {comment.replies.map((reply) => (
+                          <Card key={reply._id} className="bg-muted/30">
+                            <CardContent className="p-3">
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-sm">{reply.userName}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(reply.createdAt).toLocaleDateString()}
+                                  </p>
+                                </div>
+                                <p className="text-sm text-foreground whitespace-pre-wrap">
+                                  {reply.text}
+                                </p>
+
+                                {/* Reply Action Buttons */}
+                                <div className="flex gap-3 pt-1 flex-wrap">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleLikeReply(comment._id, reply._id)}
+                                    className="gap-1 h-6 text-xs px-2"
+                                  >
+                                    <Heart
+                                      className={`w-3 h-3 ${
+                                        likedReplies.has(`${comment._id}-${reply._id}`)
+                                          ? "fill-red-500 text-red-500"
+                                          : ""
+                                      }`}
+                                    />
+                                    <span className="text-xs">{reply.likes?.length || 0}</span>
+                                  </Button>
+
+                                  {isAuthenticated && userId === reply.userId && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleDeleteReply(comment._id, reply._id)}
+                                      className="gap-1 h-6 text-xs px-2 text-destructive hover:text-destructive"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                      Delete
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
                       </div>
-                    </CardContent>
-                  </Card>
+                    )}
+                  </div>
                 ))
               )}
             </div>

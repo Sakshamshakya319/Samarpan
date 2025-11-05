@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     const decoded = verifyAdminToken(token)
-    if (!decoded || decoded.role !== "admin") {
+    if (!decoded || !["admin", "superadmin"].includes(decoded.role)) {
       return NextResponse.json({ error: "Invalid token or insufficient permissions" }, { status: 401 })
     }
 
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     }
 
     const decoded = verifyAdminToken(token)
-    if (!decoded || decoded.role !== "admin") {
+    if (!decoded || !["admin", "superadmin"].includes(decoded.role)) {
       return NextResponse.json({ error: "Invalid token or insufficient permissions" }, { status: 401 })
     }
 
@@ -102,7 +102,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const decoded = verifyAdminToken(token)
-    if (!decoded || decoded.role !== "admin") {
+    if (!decoded || !["admin", "superadmin"].includes(decoded.role)) {
       return NextResponse.json({ error: "Invalid token or insufficient permissions" }, { status: 401 })
     }
 
@@ -160,7 +160,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const decoded = verifyAdminToken(token)
-    if (!decoded || decoded.role !== "admin") {
+    if (!decoded || !["admin", "superadmin"].includes(decoded.role)) {
       return NextResponse.json({ error: "Invalid token or insufficient permissions" }, { status: 401 })
     }
 

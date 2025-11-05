@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { AlertCircle, Loader2, Trash2, Edit2, Image as ImageIcon, Eye, MessageSquare } from "lucide-react"
-import { useAppSelector } from "@/lib/hooks"
+import { AlertCircle, Loader2, Trash2, Edit2, Image as ImageIcon, Eye, MessageSquare, Heart, MessageCircle, X } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -16,6 +15,27 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
+
+interface Reply {
+  _id: string
+  userName: string
+  userEmail: string
+  text: string
+  createdAt: string
+  userId: string
+  likes?: string[]
+}
+
+interface Comment {
+  _id: string
+  userName: string
+  userEmail: string
+  text: string
+  createdAt: string
+  userId: string
+  likes?: string[]
+  replies?: Reply[]
+}
 
 interface BlogImage {
   url: string
@@ -32,7 +52,7 @@ interface Blog {
   createdAt: string
   updatedAt: string
   views: number
-  comments: any[]
+  comments: Comment[]
   authorName: string
 }
 
@@ -50,19 +70,29 @@ export function AdminBlogManager() {
   })
   const [uploadedImages, setUploadedImages] = useState<BlogImage[]>([])
   const [thumbnailIndex, setThumbnailIndex] = useState<number>(0)
-
-  const { token } = useAppSelector((state) => state.auth)
+  const [adminToken, setAdminToken] = useState<string>("")
+  const [showCommentsDialog, setShowCommentsDialog] = useState(false)
+  const [selectedBlogForComments, setSelectedBlogForComments] = useState<Blog | null>(null)
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null)
+  const [replyText, setReplyText] = useState("")
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false)
+  const [likedComments, setLikedComments] = useState<Set<string>>(new Set())
+  const [likedReplies, setLikedReplies] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    fetchBlogs()
-  }, [token])
+    const token = localStorage.getItem("adminToken")
+    if (token) {
+      setAdminToken(token)
+      fetchBlogs()
+    }
+  }, [])
 
   const fetchBlogs = async () => {
     try {
       setIsLoading(true)
       const response = await fetch("/api/blogs", {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${adminToken}`,
         },
       })
 
@@ -159,7 +189,7 @@ export function AdminBlogManager() {
         method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           title: formData.title,
@@ -209,7 +239,7 @@ export function AdminBlogManager() {
       const response = await fetch(`/api/blogs/${blogId}`, {
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${adminToken}`,
         },
       })
 
@@ -239,6 +269,137 @@ export function AdminBlogManager() {
   const handleOpenDialog = () => {
     resetForm()
     setShowDialog(true)
+  }
+
+  const handleViewComments = (blog: Blog) => {
+    setSelectedBlogForComments(blog)
+    setShowCommentsDialog(true)
+    setReplyingToCommentId(null)
+    setReplyText("")
+    setLikedComments(new Set())
+    setLikedReplies(new Set())
+  }
+
+  const handleAdminLikeComment = async (commentId: string) => {
+    if (!selectedBlogForComments) return
+
+    try {
+      const response = await fetch(`/api/blogs/${selectedBlogForComments._id}/comments/${commentId}/like`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+      })
+
+      if (response.ok) {
+        const isLiked = likedComments.has(commentId)
+        if (isLiked) {
+          likedComments.delete(commentId)
+        } else {
+          likedComments.add(commentId)
+        }
+        setLikedComments(new Set(likedComments))
+        await fetchBlogs()
+      }
+    } catch (err) {
+      console.error("Error liking comment:", err)
+    }
+  }
+
+  const handleAdminAddReply = async (commentId: string) => {
+    if (!selectedBlogForComments || !replyText.trim()) return
+
+    setIsSubmittingReply(true)
+
+    try {
+      const response = await fetch(
+        `/api/blogs/${selectedBlogForComments._id}/comments/${commentId}/replies`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({ text: replyText }),
+        }
+      )
+
+      if (response.ok) {
+        setReplyText("")
+        setReplyingToCommentId(null)
+        await fetchBlogs()
+        // Refresh the selected blog for comments display
+        const updatedBlog = blogs.find((b) => b._id === selectedBlogForComments._id)
+        if (updatedBlog) {
+          setSelectedBlogForComments(updatedBlog)
+        }
+      } else {
+        setError("Failed to add reply")
+      }
+    } catch (err) {
+      console.error("Error adding reply:", err)
+      setError("Error adding reply")
+    } finally {
+      setIsSubmittingReply(false)
+    }
+  }
+
+  const handleAdminDeleteReply = async (commentId: string, replyId: string) => {
+    if (!window.confirm("Delete this reply?") || !selectedBlogForComments) return
+
+    try {
+      const response = await fetch(
+        `/api/blogs/${selectedBlogForComments._id}/comments/${commentId}/replies/${replyId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      )
+
+      if (response.ok) {
+        await fetchBlogs()
+        const updatedBlog = blogs.find((b) => b._id === selectedBlogForComments._id)
+        if (updatedBlog) {
+          setSelectedBlogForComments(updatedBlog)
+        }
+      }
+    } catch (err) {
+      console.error("Error deleting reply:", err)
+    }
+  }
+
+  const handleAdminLikeReply = async (commentId: string, replyId: string) => {
+    if (!selectedBlogForComments) return
+
+    try {
+      const response = await fetch(
+        `/api/blogs/${selectedBlogForComments._id}/comments/${commentId}/replies/${replyId}/like`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      )
+
+      if (response.ok) {
+        const likeId = `${commentId}-${replyId}`
+        const isLiked = likedReplies.has(likeId)
+        if (isLiked) {
+          likedReplies.delete(likeId)
+        } else {
+          likedReplies.add(likeId)
+        }
+        setLikedReplies(new Set(likedReplies))
+        await fetchBlogs()
+      }
+    } catch (err) {
+      console.error("Error liking reply:", err)
+    }
   }
 
   return (
@@ -397,6 +558,170 @@ export function AdminBlogManager() {
         </DialogContent>
       </Dialog>
 
+      {/* Comments Dialog */}
+      <Dialog open={showCommentsDialog} onOpenChange={setShowCommentsDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Blog Comments - {selectedBlogForComments?.title}</DialogTitle>
+            <DialogDescription>
+              {selectedBlogForComments?.comments?.length || 0} comment(s)
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="h-96 border rounded-lg p-4 space-y-4">
+            {!selectedBlogForComments?.comments || selectedBlogForComments.comments.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No comments yet</p>
+            ) : (
+              <div className="space-y-6">
+                {selectedBlogForComments.comments.map((comment) => (
+                  <div key={comment._id} className="space-y-3 border-b pb-4">
+                    {/* Main Comment */}
+                    <div className="bg-muted/30 p-3 rounded-lg">
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-sm">{comment.userName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(comment.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <p className="text-sm text-foreground whitespace-pre-wrap mt-1">{comment.text}</p>
+
+                          {/* Comment Actions */}
+                          <div className="flex gap-2 pt-2 flex-wrap">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleAdminLikeComment(comment._id)}
+                              className="gap-1 h-6 text-xs px-2"
+                            >
+                              <Heart
+                                className={`w-3 h-3 ${
+                                  likedComments.has(comment._id) ? "fill-red-500 text-red-500" : ""
+                                }`}
+                              />
+                              <span>{comment.likes?.length || 0}</span>
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setReplyingToCommentId(comment._id)}
+                              className="gap-1 h-6 text-xs px-2"
+                            >
+                              <MessageCircle className="w-3 h-3" />
+                              Reply
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Reply Form */}
+                    {replyingToCommentId === comment._id && (
+                      <div className="ml-4 border-l-2 border-l-accent bg-accent/5 p-3 rounded-lg">
+                        <div className="flex justify-between items-center mb-2">
+                          <p className="text-xs font-medium">Reply to {comment.userName}</p>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setReplyingToCommentId(null)}
+                            className="h-5 w-5 p-0"
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault()
+                            handleAdminAddReply(comment._id)
+                          }}
+                          className="space-y-2"
+                        >
+                          <Textarea
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            placeholder="Write a reply..."
+                            rows={2}
+                            className="resize-none text-xs"
+                          />
+                          <Button
+                            type="submit"
+                            disabled={isSubmittingReply}
+                            size="sm"
+                            className="gap-1 text-xs h-7"
+                          >
+                            {isSubmittingReply ? (
+                              <>
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                Posting...
+                              </>
+                            ) : (
+                              <>
+                                <MessageCircle className="w-3 h-3" />
+                                Reply
+                              </>
+                            )}
+                          </Button>
+                        </form>
+                      </div>
+                    )}
+
+                    {/* Nested Replies */}
+                    {comment.replies && comment.replies.length > 0 && (
+                      <div className="ml-4 space-y-2 border-l-2 border-l-muted pl-3">
+                        {comment.replies.map((reply) => (
+                          <div key={reply._id} className="bg-muted/20 p-2 rounded-lg">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-xs">{reply.userName}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(reply.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <p className="text-xs text-foreground whitespace-pre-wrap">{reply.text}</p>
+
+                              {/* Reply Action Buttons */}
+                              <div className="flex gap-2 pt-1 flex-wrap">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleAdminLikeReply(comment._id, reply._id)}
+                                  className="gap-1 h-5 text-xs px-1"
+                                >
+                                  <Heart
+                                    className={`w-2 h-2 ${
+                                      likedReplies.has(`${comment._id}-${reply._id}`)
+                                        ? "fill-red-500 text-red-500"
+                                        : ""
+                                    }`}
+                                  />
+                                  <span className="text-xs">{reply.likes?.length || 0}</span>
+                                </Button>
+
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleAdminDeleteReply(comment._id, reply._id)}
+                                  className="gap-1 h-5 text-xs px-1 text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="w-2 h-2" />
+                                  Delete
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
       {/* Blogs List */}
       <div className="grid gap-4">
         {isLoading && blogs.length === 0 ? (
@@ -449,7 +774,19 @@ export function AdminBlogManager() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-2 flex-shrink-0">
+                    <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
+                      {blog.comments && blog.comments.length > 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleViewComments(blog)}
+                          className="gap-2"
+                          title={`View ${blog.comments.length} comments`}
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          Comments ({blog.comments.length})
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
