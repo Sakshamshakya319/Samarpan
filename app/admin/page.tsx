@@ -13,6 +13,7 @@ import { AdminDonationsManagerEnhanced } from "@/components/admin-donations-mana
 import { AdminEventsManager } from "@/components/admin-events-manager"
 import { AdminDonationImagesViewer } from "@/components/admin-donation-images-viewer"
 import { AdminBloodRequestsManager } from "@/components/admin-blood-requests-manager"
+import { AdminBloodHistory } from "@/components/admin-blood-history"
 import { AdminTransportationManager } from "@/components/admin-transportation-manager"
 import { AdminContactSubmissionsManager } from "@/components/admin-contact-submissions-manager"
 import { AdminQRChecker } from "@/components/admin-qr-checker"
@@ -207,6 +208,16 @@ export default function AdminPage() {
             Blood Requests
           </button>
           <button
+            onClick={() => setActiveTab("blood-history")}
+            className={`px-4 py-2 font-medium transition whitespace-nowrap ${
+              activeTab === "blood-history"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Blood History
+          </button>
+          <button
             onClick={() => setActiveTab("events")}
             className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
               activeTab === "events"
@@ -297,6 +308,12 @@ export default function AdminPage() {
         {activeTab === "blood-requests" && (
           <div className="grid grid-cols-1 gap-6">
             {token && <AdminBloodRequestsManager token={token} />}
+          </div>
+        )}
+
+        {activeTab === "blood-history" && (
+          <div className="grid grid-cols-1 gap-6">
+            {token && <AdminBloodHistory token={token} />}
           </div>
         )}
 

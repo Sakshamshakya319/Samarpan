@@ -3,6 +3,7 @@ import { getDatabase } from "@/lib/mongodb"
 import { verifyToken } from "@/lib/auth"
 import { sendEmail, generateBloodRequestEmailHTML } from "@/lib/email"
 import { ObjectId } from "mongodb"
+import { verifyAdminPermission } from "@/lib/admin-utils-server"
 
 export async function POST(request: NextRequest) {
   try {
@@ -142,14 +143,24 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.headers.get("authorization")?.split(" ")[1]
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    // Check if this is an admin token first
+    const adminVerification = await verifyAdminPermission(request)
+    const isAdmin = adminVerification.valid
+    
+    let userId: string | null = null
+    
+    if (!isAdmin) {
+      // If not admin, verify as regular user token
+      const token = request.headers.get("authorization")?.split(" ")[1]
+      if (!token) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      }
+      
+      const decoded = verifyToken(token)
+      if (!decoded) {
+        return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+      }
+      userId = decoded.userId
     }
 
     // Check if user wants to get own requests or all active requests
@@ -160,16 +171,23 @@ export async function GET(request: NextRequest) {
     const bloodRequestsCollection = db.collection("bloodRequests")
 
     if (getAllRequests) {
-      // Get all active blood requests (for donation page)
+      // Get all active blood requests (for donation page or admin)
       const allRequests = await bloodRequestsCollection
         .find({ status: "active" })
+        .sort({ createdAt: -1 })
+        .toArray()
+      return NextResponse.json({ requests: allRequests })
+    } else if (isAdmin) {
+      // Admin can see all requests (all statuses)
+      const allRequests = await bloodRequestsCollection
+        .find({})
         .sort({ createdAt: -1 })
         .toArray()
       return NextResponse.json({ requests: allRequests })
     } else {
       // Get user's own blood requests
       const userRequests = await bloodRequestsCollection
-        .find({ userId: new ObjectId(decoded.userId) })
+        .find({ userId: new ObjectId(userId!) })
         .sort({ createdAt: -1 })
         .toArray()
       return NextResponse.json({ requests: userRequests })

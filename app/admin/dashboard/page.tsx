@@ -18,7 +18,8 @@ import { AdminQRChecker } from "@/components/admin-qr-checker"
 import { AdminEventDonors } from "@/components/admin-event-donors"
 import { AdminBlogManager } from "@/components/admin-blog-manager"
 import { AdminChangePasswordDialog } from "@/components/admin-change-password-dialog"
-import { LogOut, LayoutDashboard, Calendar, Truck, Mail, QrCode, Users, BookOpen, Lock } from "lucide-react"
+import { AdminBloodHistory } from "@/components/admin-blood-history"
+import { LogOut, LayoutDashboard, Calendar, Truck, Mail, QrCode, Users, BookOpen, Lock, Droplets } from "lucide-react"
 import { getAvailableFeatures, hasPermission } from "@/lib/admin-utils"
 import { ADMIN_PERMISSIONS } from "@/lib/constants/admin-permissions"
 
@@ -197,6 +198,13 @@ export default function AdminDashboard() {
       permission: [ADMIN_PERMISSIONS.MANAGE_BLOGS, ADMIN_PERMISSIONS.VIEW_BLOGS],
       enabled: availableFeatures.blogs,
       icon: BookOpen,
+    },
+    {
+      id: "blood-history",
+      label: "Blood Donation History",
+      permission: [ADMIN_PERMISSIONS.MANAGE_DONATIONS, ADMIN_PERMISSIONS.VIEW_DONATIONS],
+      enabled: availableFeatures.donations,
+      icon: Droplets,
     },
   ]
 
@@ -379,6 +387,12 @@ export default function AdminDashboard() {
         {activeTab === "blogs" && enabledTabs.some((t) => t.id === "blogs") && (
           <div className="grid grid-cols-1 gap-6">
             <AdminBlogManager />
+          </div>
+        )}
+
+        {activeTab === "blood-history" && enabledTabs.some((t) => t.id === "blood-history") && (
+          <div className="grid grid-cols-1 gap-6">
+            {token && <AdminBloodHistory token={token} />}
           </div>
         )}
       </div>

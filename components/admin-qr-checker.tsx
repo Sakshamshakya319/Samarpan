@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, QrCode, CheckCircle2, AlertCircle, Copy, Camera, RefreshCw } from "lucide-react"
-import { QRScanner } from "@/components/qr-scanner"
+import { AdminQRScannerModern } from "@/components/admin-qr-scanner-modern"
 
 interface AdminQRCheckerProps {
   token: string
@@ -195,7 +195,7 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
                   "Search"
                 )}
               </Button>
-              <QRScanner
+              <AdminQRScannerModern
                 onScanSuccess={(qrData) => {
                   console.log("QR scanned by admin:", qrData)
                   setQrInput(qrData)
@@ -204,12 +204,11 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
                     handleSearchQR(qrData)
                   }, 200)
                 }}
-                onScanError={(error) => {
+                onError={(error) => {
                   console.error("Scanner error:", error)
                   setErrorMessage(error)
                 }}
                 title="Scan Donor QR Code"
-                description="Scan the QR code from the donor's registration to verify their donation"
               />
             </div>
           </div>

@@ -47,7 +47,7 @@ export function AdminBloodRequestsManager({ token }: AdminBloodRequestsManagerPr
   const [successMessage, setSuccessMessage] = useState("")
   const [selectedRequest, setSelectedRequest] = useState<BloodRequest | null>(null)
   const [showDialog, setShowDialog] = useState(false)
-  const [dialogAction, setDialogAction] = useState<"fulfill" | "cancel" | null>(null)
+  const [dialogAction, setDialogAction] = useState<"fulfill" | "cancel" | "delete" | null>(null)
 
   useEffect(() => {
     fetchRequests()
@@ -105,7 +105,34 @@ export function AdminBloodRequestsManager({ token }: AdminBloodRequestsManagerPr
     }
   }
 
-  const openDialog = (request: BloodRequest, action: "fulfill" | "cancel") => {
+  const handleDeleteRequest = async (requestId: string) => {
+    if (!token) return
+
+    try {
+      const response = await fetch(`/api/blood-request/${requestId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        setSuccessMessage("Blood request deleted successfully")
+        setShowDialog(false)
+        setSelectedRequest(null)
+        fetchRequests()
+        setTimeout(() => setSuccessMessage(""), 3000)
+      } else {
+        const data = await response.json()
+        setError(data.error || "Failed to delete request")
+      }
+    } catch (err) {
+      setError("Error deleting blood request")
+      console.error(err)
+    }
+  }
+
+  const openDialog = (request: BloodRequest, action: "fulfill" | "cancel" | "delete") => {
     setSelectedRequest(request)
     setDialogAction(action)
     setShowDialog(true)
@@ -229,6 +256,14 @@ export function AdminBloodRequestsManager({ token }: AdminBloodRequestsManagerPr
                         >
                           Cancel Request
                         </Button>
+                        <Button
+                          onClick={() => openDialog(request, "delete")}
+                          size="sm"
+                          variant="destructive"
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Delete
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -309,12 +344,14 @@ export function AdminBloodRequestsManager({ token }: AdminBloodRequestsManagerPr
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {dialogAction === "fulfill" ? "Mark Request as Fulfilled?" : "Cancel This Request?"}
+              {dialogAction === "fulfill" ? "Mark Request as Fulfilled?" : dialogAction === "cancel" ? "Cancel This Request?" : "Delete This Request?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {dialogAction === "fulfill"
                 ? `Are you sure you want to mark the blood request for ${selectedRequest?.bloodGroup} (${selectedRequest?.quantity} units) as fulfilled?`
-                : `Are you sure you want to cancel the blood request for ${selectedRequest?.bloodGroup} (${selectedRequest?.quantity} units)?`}
+                : dialogAction === "cancel"
+                ? `Are you sure you want to cancel the blood request for ${selectedRequest?.bloodGroup} (${selectedRequest?.quantity} units)?`
+                : `Are you sure you want to delete the blood request for ${selectedRequest?.bloodGroup} (${selectedRequest?.quantity} units)? This action cannot be undone.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex gap-2 justify-end">
@@ -322,13 +359,19 @@ export function AdminBloodRequestsManager({ token }: AdminBloodRequestsManagerPr
             <AlertDialogAction
               onClick={() => {
                 if (selectedRequest && dialogAction) {
-                  const newStatus = dialogAction === "fulfill" ? "fulfilled" : "cancelled"
-                  handleStatusUpdate(selectedRequest._id, newStatus)
+                  if (dialogAction === "delete") {
+                    handleDeleteRequest(selectedRequest._id)
+                  } else {
+                    const newStatus = dialogAction === "fulfill" ? "fulfilled" : "cancelled"
+                    handleStatusUpdate(selectedRequest._id, newStatus)
+                  }
                 }
               }}
-              className={dialogAction === "fulfill" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
+              className={
+                dialogAction === "fulfill" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
+              }
             >
-              {dialogAction === "fulfill" ? "Yes, Mark Fulfilled" : "Yes, Cancel Request"}
+              {dialogAction === "fulfill" ? "Yes, Mark Fulfilled" : dialogAction === "cancel" ? "Yes, Cancel Request" : "Yes, Delete Request"}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>

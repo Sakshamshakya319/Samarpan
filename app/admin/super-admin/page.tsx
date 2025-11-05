@@ -308,8 +308,8 @@ export default function SuperAdminPage() {
             <BookOpen className="w-4 h-4" />
             Blog Management
           </button>
-          </div>
         </div>
+      </div>
 
         {/* Tab Content */}
         {activeTab === "admin-accounts" && (
@@ -380,7 +380,7 @@ export default function SuperAdminPage() {
 
         {activeTab === "event-donors" && (
           <div className="grid grid-cols-1 gap-6">
-            {token && <AdminEventDonors token={token} />}
+            {token && <AdminEventDonors />}
           </div>
         )}
 

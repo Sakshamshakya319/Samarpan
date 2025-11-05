@@ -1,12 +1,15 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
-import { Scanner } from "@yudiel/react-qr-scanner"
+import { useState, useEffect, useRef } from "react"
+import { Scanner, useDevices } from "@yudiel/react-qr-scanner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Loader2, QrCode, Camera, X, AlertCircle, Lightbulb } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { QrCode, Camera, CameraOff, RotateCcw, AlertTriangle, CheckCircle, Lightbulb, X } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface AdminQRScannerEnhancedProps {
   onScanSuccess: (qrData: string) => void
@@ -26,34 +29,73 @@ export function AdminQRScannerEnhanced({
   const [manualInput, setManualInput] = useState("")
   const [scannerKey, setScannerKey] = useState(0)
   const [flashOn, setFlashOn] = useState(false)
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | undefined>()
   const processingRef = useRef(false)
   const lastScannedRef = useRef<{ qr: string; time: number } | null>(null)
+  
+  // Get available video devices
+  const videoDevices = useDevices({ deviceType: "videoinput" })
 
-  const handleScan = (result: string) => {
-    if (processingRef.current) return
-
-    const now = Date.now()
-
-    // Prevent duplicate scans within 1 second
-    if (
-      !lastScannedRef.current ||
-      now - lastScannedRef.current.time > 1000 ||
-      lastScannedRef.current.qr !== result
-    ) {
-      console.log("✓ QR Code scanned:", result)
-      processingRef.current = true
-      lastScannedRef.current = { qr: result, time: now }
-
-      cleanup()
-      setIsOpen(false)
-      onScanSuccess(result)
-      setManualInput("")
+  // Auto-select back camera on mobile
+  useEffect(() => {
+    if (videoDevices.length > 0 && !selectedDeviceId) {
+      const backCamera = videoDevices.find(device => 
+        device.label?.toLowerCase().includes('back') || 
+        device.label?.toLowerCase().includes('rear')
+      )
+      setSelectedDeviceId(backCamera?.deviceId || videoDevices[0].deviceId)
     }
+  }, [videoDevices, selectedDeviceId])
+
+  const switchCamera = (deviceId: string) => {
+    setSelectedDeviceId(deviceId)
+    // Reset scanner to apply new device
+    setScannerKey(prev => prev + 1)
   }
 
-  const handleScanError = (error: string) => {
-    // Don't show errors from scanner - it's normal during scanning
-    console.debug("Scanner debug:", error)
+  const handleScan = (detectedCodes: any[]) => {
+    if (detectedCodes.length === 0) return
+    
+    const qrCode = detectedCodes[0].rawValue
+    
+    // Prevent duplicate scans within 2 seconds
+    const now = Date.now()
+    if (processingRef.current || 
+        (lastScannedRef.current && 
+         lastScannedRef.current.qr === qrCode && 
+         now - lastScannedRef.current.time < 2000)) {
+      return
+    }
+    
+    processingRef.current = true
+    lastScannedRef.current = { qr: qrCode, time: now }
+    setIsCameraActive(false)
+    onScanSuccess(qrCode)
+    
+    // Reset processing after a short delay
+    setTimeout(() => {
+      processingRef.current = false
+    }, 500)
+  }
+
+  const handleScanError = (error: any) => {
+    console.error("Scanner error:", error)
+    let errorMsg = "Failed to access camera"
+    
+    if (error?.name === "NotAllowedError" || error?.name === "PermissionDeniedError") {
+      errorMsg = "Camera permission denied. Please allow camera access and try again."
+    } else if (error?.name === "NotFoundError") {
+      errorMsg = "No camera found on this device."
+    } else if (error?.name === "NotReadableError") {
+      errorMsg = "Camera is in use by another application. Close other apps and try again."
+    } else if (error?.name === "OverconstrainedError") {
+      errorMsg = "Camera settings not supported. Try switching cameras."
+    } else if (error?.message) {
+      errorMsg = error.message
+    }
+    
+    setError(errorMsg)
+    onError?.(errorMsg)
   }
 
   const cleanup = () => {
@@ -132,42 +174,80 @@ export function AdminQRScannerEnhanced({
             {/* QR Scanner View */}
             {isCameraActive && (
               <div className="space-y-3">
+                {/* Camera Selection */}
+                {videoDevices.length > 1 && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Select Camera:</label>
+                    <div className="flex gap-2 flex-wrap">
+                      {videoDevices.map((device) => (
+                        <Button
+                          key={device.deviceId}
+                          onClick={() => switchCamera(device.deviceId)}
+                          variant={selectedDeviceId === device.deviceId ? "default" : "outline"}
+                          size="sm"
+                          className="gap-2"
+                        >
+                          <Camera className="w-4 h-4" />
+                          {device.label || `Camera ${device.deviceId.slice(0, 8)}`}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div
                   className="relative w-full bg-black rounded-lg overflow-hidden"
                   style={{ aspectRatio: "1" }}
                 >
                   <Scanner
                     key={scannerKey}
-                    onDecode={(result) => handleScan(result.getText())}
+                    onScan={handleScan}
                     onError={handleScanError}
                     constraints={{
+                      deviceId: selectedDeviceId,
                       facingMode: "environment",
                       width: { ideal: 1280, max: 1920 },
                       height: { ideal: 720, max: 1080 },
                     }}
-                    containerStyle={{
-                      width: "100%",
-                      height: "100%",
-                    }}
-                    videoStyle={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                    ViewFinder={() => (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        {/* Corner marks */}
-                        <div className="absolute inset-2 border-2 border-green-500 rounded-lg opacity-75">
-                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1/3 h-1/3 border-2 border-green-400" />
-                        </div>
+                    scanDelay={300} // Scan every 300ms for better responsiveness
+                    components={{
+                      audio: false, // Disable audio beep
+                      tracker: (detectedCodes, ctx) => {
+                        // Draw custom tracking overlay
+                        detectedCodes.forEach((code) => {
+                          const { boundingBox, cornerPoints } = code
+                          
+                          // Draw bounding box
+                          ctx.strokeStyle = '#00FF00'
+                          ctx.lineWidth = 3
+                          ctx.strokeRect(
+                            boundingBox.x,
+                            boundingBox.y,
+                            boundingBox.width,
+                            boundingBox.height
+                          )
 
-                        {/* Corners */}
-                        <div className="absolute top-1 left-1 w-4 h-4 border-l-2 border-t-2 border-green-500" />
-                        <div className="absolute top-1 right-1 w-4 h-4 border-r-2 border-t-2 border-green-500" />
-                        <div className="absolute bottom-1 left-1 w-4 h-4 border-l-2 border-b-2 border-green-500" />
-                        <div className="absolute bottom-1 right-1 w-4 h-4 border-r-2 border-b-2 border-green-500" />
-                      </div>
-                    )}
+                          // Draw corner points
+                          ctx.fillStyle = '#FF0000'
+                          cornerPoints.forEach((point) => {
+                            ctx.beginPath()
+                            ctx.arc(point.x, point.y, 6, 0, 2 * Math.PI)
+                            ctx.fill()
+                          })
+                        })
+                      }
+                    }}
+                    styles={{
+                      container: {
+                        width: '100%',
+                        height: '100%',
+                      },
+                      video: {
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }
+                    }}
                   />
                 </div>
 
