@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
           $project: {
             _id: 1,
             name: 1,
-            email: 1,
+            email: { $ifNull: ["$user.email", "$email"] },
             phone: { $ifNull: ["$user.phone", "$phone"] },
             registrationNumber: 1,
             timeSlot: 1,

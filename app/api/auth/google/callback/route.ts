@@ -112,6 +112,19 @@ async function handleGoogleCallback(
     let user = await usersCollection.findOne({ email })
 
     if (!user) {
+      // Check if there's a case-insensitive match or email with different casing
+      console.log("[Google Auth] No exact email match found, checking case-insensitive...")
+      const caseInsensitiveUser = await usersCollection.findOne({
+        email: { $regex: new RegExp(`^${email}$`, 'i') }
+      })
+      
+      if (caseInsensitiveUser) {
+        console.log("[Google Auth] Found user with case-insensitive email match")
+        user = caseInsensitiveUser
+      }
+    }
+
+    if (!user) {
       // Create new user
       console.log("[Google Auth] Creating new user...")
       const result = await usersCollection.insertOne({
@@ -167,7 +180,9 @@ async function handleGoogleCallback(
     } else if (!user.googleId) {
       // Link Google account to existing user
       console.log("[Google Auth] Linking Google account to existing user...")
-      await usersCollection.updateOne(
+      
+      // Update the user with Google OAuth information
+      const updateResult = await usersCollection.updateOne(
         { _id: user._id },
         {
           $set: {
@@ -178,7 +193,14 @@ async function handleGoogleCallback(
           },
         },
       )
+      
+      if (updateResult.modifiedCount === 0) {
+        console.error("[Google Auth] Failed to update user with Google account linking")
+        throw new Error("Failed to link Google account")
+      }
+      
       user.googleId = googleId
+      user.oauthProvider = "google"
       console.log("[Google Auth] Google account linked successfully")
     } else {
       console.log("[Google Auth] User already authenticated with Google")

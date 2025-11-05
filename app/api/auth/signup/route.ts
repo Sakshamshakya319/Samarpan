@@ -35,9 +35,11 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase()
     const usersCollection = db.collection("users")
 
-    // Check if user already exists
+    // Check if user already exists (case-insensitive)
     console.log("[v0] Checking if user exists...")
-    const existingUser = await usersCollection.findOne({ email })
+    const existingUser = await usersCollection.findOne({
+      email: { $regex: new RegExp(`^${email}$`, 'i') }
+    })
     if (existingUser) {
       console.log("[v0] User already exists:", email)
       return NextResponse.json({ error: "User already exists with this email" }, { status: 400 })

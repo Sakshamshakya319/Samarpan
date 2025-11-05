@@ -61,7 +61,7 @@ export default function AdminDashboard() {
     const adminPermissions = localStorage.getItem("adminPermissions")
     const adminName = localStorage.getItem("adminName")
 
-    if (!adminToken || !adminEmail || adminRole === "superadmin") {
+    if (!adminToken || !adminEmail) {
       router.push("/admin/staff/login")
       return
     }

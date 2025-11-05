@@ -34,12 +34,13 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
   const [cameraDevices, setCameraDevices] = useState<CameraDevice[]>([])
   const [selectedCamera, setSelectedCamera] = useState<string>("")
   const [showCameraSelector, setShowCameraSelector] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const streamRef = useRef<MediaStream | null>(null)
   const scanLoopRef = useRef<number | null>(null)
   const lastScannedRef = useRef<{ qr: string; time: number } | null>(null)
   const isProcessingRef = useRef(false)
 
-  // Initialize available cameras
+  // Initialize available cameras and detect mobile
   useEffect(() => {
     const initializeCameras = async () => {
       try {
@@ -59,7 +60,14 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
       }
     }
 
+    // Detect mobile device
+    const checkMobile = () => {
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      setIsMobile(isMobileDevice)
+    }
+
     if (isOpen) {
+      checkMobile()
       initializeCameras()
     }
   }, [isOpen])
@@ -70,9 +78,13 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
     setPermissionDenied(false)
 
     try {
+      // Enhanced constraints for better mobile compatibility
       const constraints: MediaStreamConstraints = {
         video: {
-          facingMode: "environment",
+          facingMode: "environment", // Prefer back camera on mobile
+          width: { ideal: 1920, max: 1920 }, // Limit resolution for better performance
+          height: { ideal: 1080, max: 1080 },
+          frameRate: { ideal: 30, max: 30 }, // Limit frame rate
           ...(cameraId ? { deviceId: { exact: cameraId } } : {}),
         },
         audio: false,
@@ -105,12 +117,46 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
           "Firefox:\n" +
           "Preferences > Privacy > Camera\n\n" +
           "Safari:\n" +
-          "Settings > Privacy > Camera"
+          "Settings > Privacy > Camera\n\n" +
+          "Mobile:\n" +
+          "Allow camera access when prompted"
         setPermissionDenied(true)
       } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
         errorMessage = "No camera found. Check if device has a camera."
       } else if (err.name === "NotReadableError") {
         errorMessage = "Camera in use by another app. Close it and try again."
+      } else if (err.name === "OverconstrainedError") {
+        // Try with lower constraints for older devices
+        try {
+          const fallbackConstraints: MediaStreamConstraints = {
+            video: {
+              facingMode: "environment",
+              width: { ideal: 1280, max: 1280 },
+              height: { ideal: 720, max: 720 },
+            },
+            audio: false,
+          }
+          
+          const fallbackStream = await navigator.mediaDevices.getUserMedia(fallbackConstraints)
+          
+          if (videoRef.current) {
+            videoRef.current.srcObject = fallbackStream
+            streamRef.current = fallbackStream
+            setIsCameraActive(true)
+            setShowCameraSelector(false)
+            setError("")
+
+            videoRef.current.onloadedmetadata = () => {
+              console.log("Video stream started with fallback constraints")
+              startScanning()
+            }
+          }
+          setIsLoading(false)
+          return
+        } catch (fallbackErr) {
+          console.error("Fallback camera error:", fallbackErr)
+          errorMessage = "Camera not supported on this device. Try manual entry."
+        }
       } else {
         errorMessage = `Camera error: ${err.message || err.name}`
       }
@@ -137,8 +183,21 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
   const startScanning = () => {
     if (!videoRef.current || !canvasRef.current || isProcessingRef.current) return
 
+    let scanCount = 0
+    const scanInterval = 3 // Scan every 3rd frame for better performance on mobile
+
     const scan = () => {
       if (!isCameraActive || isProcessingRef.current) {
+        return
+      }
+
+      scanCount++
+      
+      // Skip frames for better performance
+      if (scanCount % scanInterval !== 0) {
+        if (isCameraActive) {
+          scanLoopRef.current = requestAnimationFrame(scan)
+        }
         return
       }
 
@@ -156,9 +215,24 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
           return
         }
 
-        // Set canvas size to match video
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
+        // Use smaller canvas for better mobile performance
+        const maxDimension = 640 // Limit max dimension for mobile performance
+        let canvasWidth = video.videoWidth
+        let canvasHeight = video.videoHeight
+        
+        if (canvasWidth > maxDimension || canvasHeight > maxDimension) {
+          const aspectRatio = canvasWidth / canvasHeight
+          if (aspectRatio > 1) {
+            canvasWidth = maxDimension
+            canvasHeight = maxDimension / aspectRatio
+          } else {
+            canvasHeight = maxDimension
+            canvasWidth = maxDimension * aspectRatio
+          }
+        }
+
+        canvas.width = canvasWidth
+        canvas.height = canvasHeight
 
         if (canvas.width === 0 || canvas.height === 0) {
           if (isCameraActive) {
@@ -183,15 +257,10 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
             return
           }
 
-          // Try to decode QR code
-          let qrCode = jsQR(imageData.data, imageData.width, imageData.height)
-
-          // If no QR found, try with inversion
-          if (!qrCode) {
-            qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
-              inversionAttempts: "attemptBoth",
-            })
-          }
+          // Try to decode QR code with optimized settings
+          let qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "attemptBoth",
+          })
 
           // If QR code detected
           if (qrCode && qrCode.data) {
@@ -200,7 +269,7 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
             // Prevent duplicate scans
             if (
               !lastScannedRef.current ||
-              now - lastScannedRef.current.time > 1500 ||
+              now - lastScannedRef.current.time > 1000 || // Reduced delay for faster scanning
               lastScannedRef.current.qr !== qrCode.data
             ) {
               console.log("✓ QR Code found:", qrCode.data)
@@ -260,7 +329,7 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
     <>
       <Button onClick={() => setIsOpen(true)} variant="outline" className="gap-2">
         <Camera className="w-4 h-4" />
-        Scan QR Code
+        {isMobile ? "Scan QR" : "Scan QR Code"}
       </Button>
 
       <Dialog open={isOpen} onOpenChange={(open) => {

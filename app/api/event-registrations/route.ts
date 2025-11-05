@@ -46,10 +46,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get user's email from database if not in token
+    // Get user's email and phone from database
     const usersCollection = db.collection("users")
     const userData = await usersCollection.findOne({ _id: new ObjectId(decoded.userId) })
     const userEmail = decoded.email || userData?.email || ""
+    const userPhone = userData?.phone || ""
 
     // Check if event exists and has available slots
     const eventsCollection = db.collection("events")
@@ -96,6 +97,7 @@ export async function POST(request: NextRequest) {
       eventId: new ObjectId(eventId),
       userId: new ObjectId(decoded.userId),
       email: userEmail,
+      phone: userPhone, // Add phone number to registration
       registrationNumber,
       name,
       timeSlot,

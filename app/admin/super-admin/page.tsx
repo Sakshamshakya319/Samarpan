@@ -140,26 +140,28 @@ export default function SuperAdminPage() {
               <p className="text-xs text-muted-foreground">Full System Control</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right hidden sm:block">
+          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
+            <div className="text-right">
               <p className="text-sm font-medium">{admin.email}</p>
               <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
                 Super Admin
               </span>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowPasswordDialog(true)} 
-              className="gap-2 bg-transparent hidden sm:flex"
-              title="Change Password"
-            >
-              <Lock className="w-4 h-4" />
-              Change Password
-            </Button>
-            <Button variant="outline" onClick={handleLogout} className="gap-2 bg-transparent">
-              <LogOut className="w-4 h-4" />
-              Logout
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowPasswordDialog(true)} 
+                className="gap-2 bg-transparent"
+                title="Change Password"
+              >
+                <Lock className="w-4 h-4" />
+                <span className="hidden sm:inline">Change Password</span>
+              </Button>
+              <Button variant="outline" onClick={handleLogout} className="gap-2 bg-transparent">
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Logout</span>
+              </Button>
+            </div>
           </div>
         </div>
       </nav>
@@ -167,7 +169,8 @@ export default function SuperAdminPage() {
       {/* Admin Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tab Navigation */}
-        <div className="flex gap-4 mb-8 border-b border-border overflow-x-auto pb-2">
+        <div className="overflow-x-auto pb-2">
+          <div className="flex gap-4 mb-8 border-b border-border">
           <button
             onClick={() => setActiveTab("admin-accounts")}
             className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
@@ -305,6 +308,7 @@ export default function SuperAdminPage() {
             <BookOpen className="w-4 h-4" />
             Blog Management
           </button>
+          </div>
         </div>
 
         {/* Tab Content */}

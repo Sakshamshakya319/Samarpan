@@ -20,9 +20,11 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase()
     const usersCollection = db.collection("users")
 
-    // Find user
+    // Find user (case-insensitive)
     console.log("[v0] Finding user...")
-    const user = await usersCollection.findOne({ email })
+    const user = await usersCollection.findOne({
+      email: { $regex: new RegExp(`^${email}$`, 'i') }
+    })
     if (!user) {
       console.log("[v0] User not found:", email)
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
