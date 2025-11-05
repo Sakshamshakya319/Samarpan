@@ -54,6 +54,10 @@ export async function GET(request: NextRequest) {
           eventType: event.eventType,
           imageUrl: event.imageUrl || "",
           allowRegistrations: event.allowRegistrations !== false, // Default to true if not specified
+          ngoName: event.ngoName || "", // NGO name
+          ngoLogo: event.ngoLogo || "", // NGO logo URL
+          ngoWebsite: event.ngoWebsite || "", // NGO website
+          organizedBy: event.organizedBy || "", // Organized by description
         }
       })
     )

@@ -24,6 +24,10 @@ interface Event {
   registeredVolunteers: number
   eventType: string
   allowRegistrations?: boolean
+  ngoName?: string
+  ngoLogo?: string
+  ngoWebsite?: string
+  organizedBy?: string
 }
 
 // Generate 2-hour time slots based on event end time
@@ -340,6 +344,50 @@ export default function EventRegistrationPage() {
                     />
                   </div>
                 </div>
+
+                {/* NGO Details Section */}
+                {(event.ngoName || event.ngoLogo || event.organizedBy) && (
+                  <div className="border-t pt-6 mt-6">
+                    <h3 className="text-lg font-semibold mb-4">Event Organizer Information</h3>
+                    <div className="space-y-4">
+                      {event.ngoLogo && (
+                        <div className="flex justify-center">
+                          <img
+                            src={event.ngoLogo}
+                            alt={event.ngoName || "NGO Logo"}
+                            className="h-16 w-auto rounded"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none"
+                            }}
+                          />
+                        </div>
+                      )}
+                      {event.ngoName && (
+                        <div className="text-center">
+                          <p className="text-sm font-medium text-muted-foreground mb-1">NGO Name</p>
+                          {event.ngoWebsite ? (
+                            <a
+                              href={event.ngoWebsite}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-lg font-semibold text-blue-600 hover:underline"
+                            >
+                              {event.ngoName}
+                            </a>
+                          ) : (
+                            <p className="text-lg font-semibold">{event.ngoName}</p>
+                          )}
+                        </div>
+                      )}
+                      {event.organizedBy && (
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground mb-2">Organised By</p>
+                          <p className="text-muted-foreground whitespace-pre-wrap">{event.organizedBy}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

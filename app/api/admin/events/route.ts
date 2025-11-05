@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     const db = await getDatabase()
-    const { title, description, eventDate, startTime, endTime, location, expectedAttendees, eventType, volunteerSlotsNeeded, allowRegistrations } =
+    const { title, description, eventDate, startTime, endTime, location, expectedAttendees, eventType, volunteerSlotsNeeded, allowRegistrations, ngoName, ngoLogo, ngoWebsite, organizedBy } =
       await request.json()
 
     // Validation
@@ -46,6 +46,10 @@ export async function POST(request: NextRequest) {
       eventType: eventType || "donation_camp", // donation_camp, awareness_seminar, donor_appreciation, etc.
       status: "active", // active, completed, cancelled
       allowRegistrations: allowRegistrations !== false, // Default to true if not specified
+      ngoName: ngoName || "", // NGO name (optional)
+      ngoLogo: ngoLogo || "", // NGO logo URL (optional)
+      ngoWebsite: ngoWebsite || "", // NGO website (optional)
+      organizedBy: organizedBy || "", // Organized by description (optional)
       createdBy: new ObjectId(decoded.adminId),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -107,7 +111,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const db = await getDatabase()
-    const { eventId, title, description, eventDate, startTime, endTime, location, expectedAttendees, status, volunteerSlotsNeeded, allowRegistrations } =
+    const { eventId, title, description, eventDate, startTime, endTime, location, expectedAttendees, status, volunteerSlotsNeeded, allowRegistrations, ngoName, ngoLogo, ngoWebsite, organizedBy } =
       await request.json()
 
     if (!eventId) {
@@ -130,6 +134,10 @@ export async function PUT(request: NextRequest) {
     if (volunteerSlotsNeeded !== undefined) updateData.volunteerSlotsNeeded = volunteerSlotsNeeded
     if (status) updateData.status = status
     if (allowRegistrations !== undefined) updateData.allowRegistrations = allowRegistrations
+    if (ngoName !== undefined) updateData.ngoName = ngoName
+    if (ngoLogo !== undefined) updateData.ngoLogo = ngoLogo
+    if (ngoWebsite !== undefined) updateData.ngoWebsite = ngoWebsite
+    if (organizedBy !== undefined) updateData.organizedBy = organizedBy
 
     const result = await eventsCollection.updateOne(
       { _id: new ObjectId(eventId) },

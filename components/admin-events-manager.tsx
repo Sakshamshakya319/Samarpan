@@ -43,6 +43,10 @@ interface Event {
   status: string
   createdAt: string
   allowRegistrations?: boolean
+  ngoName?: string
+  ngoLogo?: string
+  ngoWebsite?: string
+  organizedBy?: string
 }
 
 interface AdminEventsManagerProps {
@@ -74,6 +78,10 @@ export function AdminEventsManager({ token }: AdminEventsManagerProps) {
     volunteerSlotsNeeded: "",
     eventType: "donation_camp",
     allowRegistrations: true,
+    ngoName: "",
+    ngoLogo: "",
+    ngoWebsite: "",
+    organizedBy: "",
   })
 
   useEffect(() => {
@@ -113,6 +121,10 @@ export function AdminEventsManager({ token }: AdminEventsManagerProps) {
       volunteerSlotsNeeded: "",
       eventType: "donation_camp",
       allowRegistrations: true,
+      ngoName: "",
+      ngoLogo: "",
+      ngoWebsite: "",
+      organizedBy: "",
     })
     setIsEditing(false)
     setSelectedEvent(null)
@@ -131,6 +143,10 @@ export function AdminEventsManager({ token }: AdminEventsManagerProps) {
       volunteerSlotsNeeded: event.volunteerSlotsNeeded.toString(),
       eventType: event.eventType,
       allowRegistrations: event.allowRegistrations !== false,
+      ngoName: event.ngoName || "",
+      ngoLogo: event.ngoLogo || "",
+      ngoWebsite: event.ngoWebsite || "",
+      organizedBy: event.organizedBy || "",
     })
     setIsEditing(true)
     setShowDialog(true)
@@ -161,6 +177,10 @@ export function AdminEventsManager({ token }: AdminEventsManagerProps) {
         volunteerSlotsNeeded: parseInt(formData.volunteerSlotsNeeded) || 0,
         eventType: formData.eventType,
         allowRegistrations: formData.allowRegistrations,
+        ngoName: formData.ngoName,
+        ngoLogo: formData.ngoLogo,
+        ngoWebsite: formData.ngoWebsite,
+        organizedBy: formData.organizedBy,
       }
 
       if (isEditing && selectedEvent) {
@@ -501,6 +521,50 @@ export function AdminEventsManager({ token }: AdminEventsManagerProps) {
                 <label htmlFor="allowRegistrations" className="text-sm font-medium cursor-pointer">
                   Enable Registrations for Users
                 </label>
+              </div>
+
+              {/* NGO Details Section */}
+              <div className="border-t pt-4 mt-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">NGO Details (Optional)</h3>
+                
+                <div>
+                  <label className="text-sm font-medium">NGO Name</label>
+                  <Input
+                    placeholder="e.g., Red Crescent Society"
+                    value={formData.ngoName}
+                    onChange={(e) => setFormData({ ...formData, ngoName: e.target.value })}
+                  />
+                </div>
+
+                <div className="mt-3">
+                  <label className="text-sm font-medium">NGO Logo URL</label>
+                  <Input
+                    placeholder="e.g., https://example.com/logo.png"
+                    value={formData.ngoLogo}
+                    onChange={(e) => setFormData({ ...formData, ngoLogo: e.target.value })}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Provide a direct URL to the NGO logo image</p>
+                </div>
+
+                <div className="mt-3">
+                  <label className="text-sm font-medium">NGO Website</label>
+                  <Input
+                    placeholder="e.g., https://www.ngodomain.com"
+                    value={formData.ngoWebsite}
+                    onChange={(e) => setFormData({ ...formData, ngoWebsite: e.target.value })}
+                  />
+                </div>
+
+                <div className="mt-3">
+                  <label className="text-sm font-medium">Organised By</label>
+                  <textarea
+                    placeholder="Describe who is organizing this event..."
+                    value={formData.organizedBy}
+                    onChange={(e) => setFormData({ ...formData, organizedBy: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    rows={2}
+                  />
+                </div>
               </div>
             </div>
           </div>

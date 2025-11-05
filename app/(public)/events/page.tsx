@@ -20,6 +20,10 @@ interface Event {
   registeredVolunteers: number
   eventType: string
   allowRegistrations?: boolean
+  ngoName?: string
+  ngoLogo?: string
+  ngoWebsite?: string
+  organizedBy?: string
 }
 
 export default function Events() {
@@ -125,6 +129,50 @@ export default function Events() {
                 const isFull = availableSlots <= 0
                 return (
                   <Card key={event._id} className="p-8 hover:border-primary/50 transition">
+                    {/* NGO Section - Top */}
+                    {(event.ngoName || event.ngoLogo || event.organizedBy) && (
+                      <div className="mb-6 pb-6 border-b">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                          {event.ngoLogo && (
+                            <div className="flex-shrink-0">
+                              <img
+                                src={event.ngoLogo}
+                                alt={event.ngoName || "NGO Logo"}
+                                className="h-12 w-auto rounded"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = "none"
+                                }}
+                              />
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            {event.ngoName && (
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-semibold text-primary">NGO:</span>
+                                {event.ngoWebsite ? (
+                                  <a
+                                    href={event.ngoWebsite}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm font-semibold text-blue-600 hover:underline"
+                                  >
+                                    {event.ngoName}
+                                  </a>
+                                ) : (
+                                  <span className="text-sm font-semibold">{event.ngoName}</span>
+                                )}
+                              </div>
+                            )}
+                            {event.organizedBy && (
+                              <p className="text-sm text-muted-foreground">
+                                <span className="font-semibold">Organised by:</span> {event.organizedBy}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
