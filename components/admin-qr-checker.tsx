@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, QrCode, CheckCircle2, AlertCircle, Copy, Camera, RefreshCw } from "lucide-react"
-import { AdminQRScanner } from "@/components/admin-qr-scanner"
+import { AdminQRScannerEnhanced } from "@/components/admin-qr-scanner-enhanced"
 
 interface AdminQRCheckerProps {
   token: string
@@ -195,7 +195,7 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
                   "Search"
                 )}
               </Button>
-              <AdminQRScanner
+              <AdminQRScannerEnhanced
                 onScanSuccess={(qrData) => {
                   console.log("QR scanned by admin:", qrData)
                   setQrInput(qrData)
