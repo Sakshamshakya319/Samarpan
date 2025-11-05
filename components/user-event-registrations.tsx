@@ -47,7 +47,7 @@ export function UserEventRegistrations() {
     }
 
     try {
-      const response = await fetch("/api/admin/event-registrations", {
+      const response = await fetch("/api/users/event-registrations", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
