@@ -21,8 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Loader2, Users, Download, AlertCircle, CheckCircle2, FileDown } from "lucide-react"
-import { useAppSelector } from "@/lib/hooks"
+import { Loader2, Users, Download, AlertCircle, CheckCircle2, FileDown, Edit3, Save, X } from "lucide-react"
 
 interface DonorRecord {
   _id: string
@@ -36,14 +35,19 @@ interface DonorRecord {
   verifiedAt?: string
   verifiedBy?: string
   createdAt: string
+  bloodType?: string
+  bloodTestCompleted?: boolean
+  bloodTestUpdatedAt?: string
+  bloodTestUpdatedBy?: string
+  userBloodGroup?: string
 }
 
 interface AdminEventDonorsProps {
   eventId?: string
+  token: string
 }
 
-export function AdminEventDonors({ eventId }: AdminEventDonorsProps) {
-  const { token } = useAppSelector((state) => state.auth)
+export function AdminEventDonors({ eventId, token }: AdminEventDonorsProps) {
   const [donors, setDonors] = useState<DonorRecord[]>([])
   const [events, setEvents] = useState<any[]>([])
   const [selectedEventId, setSelectedEventId] = useState(eventId || "")
@@ -51,6 +55,11 @@ export function AdminEventDonors({ eventId }: AdminEventDonorsProps) {
   const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState<"all" | "completed" | "pending">("all")
+  const [editingBloodType, setEditingBloodType] = useState<string | null>(null)
+  const [bloodTypeInput, setBloodTypeInput] = useState("")
+  const [updatingBloodType, setUpdatingBloodType] = useState(false)
+
+  const bloodTypeOptions = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
 
   useEffect(() => {
     if (!eventId) {
@@ -99,6 +108,9 @@ export function AdminEventDonors({ eventId }: AdminEventDonorsProps) {
       if (response.ok) {
         const data = await response.json()
         setDonors(data.donors || [])
+        // Reset editing state when fetching new data
+        setEditingBloodType(null)
+        setBloodTypeInput("")
       } else {
         const data = await response.json()
         setError(data.error || "Failed to fetch donors")
@@ -172,6 +184,58 @@ export function AdminEventDonors({ eventId }: AdminEventDonorsProps) {
         return "bg-red-100 text-red-800"
       default:
         return "bg-gray-100 text-gray-800"
+    }
+  }
+
+  const updateBloodType = async (registrationId: string, bloodType: string) => {
+    if (!token) return
+
+    setUpdatingBloodType(true)
+    setError("")
+
+    try {
+      const response = await fetch("/api/admin/event-donors/update-blood-type", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          registrationId,
+          bloodType,
+        }),
+      })
+
+      if (response.ok) {
+        // Refresh the donors list to show updated data
+        await fetchDonors()
+        setEditingBloodType(null)
+        setBloodTypeInput("")
+      } else {
+        const data = await response.json()
+        setError(data.error || "Failed to update blood type")
+      }
+    } catch (err) {
+      console.error("Error updating blood type:", err)
+      setError("Network error: Failed to update blood type")
+    } finally {
+      setUpdatingBloodType(false)
+    }
+  }
+
+  const startEditingBloodType = (donor: DonorRecord) => {
+    setEditingBloodType(donor._id)
+    setBloodTypeInput(donor.bloodType || "")
+  }
+
+  const cancelEditingBloodType = () => {
+    setEditingBloodType(null)
+    setBloodTypeInput("")
+  }
+
+  const saveBloodType = (registrationId: string) => {
+    if (bloodTypeInput.trim()) {
+      updateBloodType(registrationId, bloodTypeInput.trim())
     }
   }
 
@@ -311,6 +375,7 @@ export function AdminEventDonors({ eventId }: AdminEventDonorsProps) {
                       <TableHead className="font-semibold">Email</TableHead>
                       <TableHead className="font-semibold">Phone</TableHead>
                       <TableHead className="font-semibold">Time Slot</TableHead>
+                      <TableHead className="font-semibold">Blood Type</TableHead>
                       <TableHead className="font-semibold">Status</TableHead>
                       <TableHead className="font-semibold text-center">Verified</TableHead>
                       <TableHead className="font-semibold">Verified Date</TableHead>
@@ -318,7 +383,7 @@ export function AdminEventDonors({ eventId }: AdminEventDonorsProps) {
                   </TableHeader>
                   <TableBody>
                     {filteredDonors.map((donor) => (
-                      <TableRow key={donor._id}>
+                      <TableRow key={donor._id} className="group">
                         <TableCell className="font-mono font-semibold text-sm">
                           {donor.registrationNumber}
                         </TableCell>
@@ -326,6 +391,66 @@ export function AdminEventDonors({ eventId }: AdminEventDonorsProps) {
                         <TableCell className="text-sm">{donor.email}</TableCell>
                         <TableCell className="text-sm">{donor.phone || "-"}</TableCell>
                         <TableCell className="text-sm">{donor.timeSlot}</TableCell>
+                        <TableCell>
+                          {editingBloodType === donor._id ? (
+                            <div className="flex items-center gap-1">
+                              <Select
+                                value={bloodTypeInput}
+                                onValueChange={setBloodTypeInput}
+                              >
+                                <SelectTrigger className="w-20 h-8">
+                                  <SelectValue placeholder="Select" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {bloodTypeOptions.map((type) => (
+                                    <SelectItem key={type} value={type}>
+                                      {type}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => saveBloodType(donor._id)}
+                                disabled={updatingBloodType || !bloodTypeInput.trim()}
+                                className="h-8 w-8 p-0"
+                              >
+                                {updatingBloodType ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <Save className="w-3 h-3" />
+                                )}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={cancelEditingBloodType}
+                                disabled={updatingBloodType}
+                                className="h-8 w-8 p-0"
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className={`font-medium ${donor.bloodType ? 'text-green-700' : 'text-gray-400'}`}>
+                                {donor.bloodType || "Not tested"}
+                              </span>
+                              {donor.bloodTestCompleted && (
+                                <CheckCircle2 className="w-3 h-3 text-green-600" />
+                              )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => startEditingBloodType(donor)}
+                                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <Badge className={getStatusColor(donor.donationStatus)}>
                             {donor.donationStatus}

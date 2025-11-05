@@ -47,6 +47,58 @@ Samarpan is a comprehensive blood donation management platform designed to conne
 
 ---
 
+## 👥 NGO Staff Guide
+
+### Getting Started as NGO Staff
+
+1. **Access the Admin Panel**
+   - Visit `/admin/login` in your browser
+   - Use the default credentials:
+     - Email: `admin@samarpan.com`
+     - Password: `admin@123`
+   - Change your password immediately after first login
+
+2. **Understanding the Dashboard**
+   - **User Management**: View and manage all registered donors
+   - **Event Management**: Create and manage blood donation events
+   - **Donation Tracking**: Monitor donation activities and certificates
+   - **Notifications**: Send bulk notifications to users
+
+### Key Operations for NGO Staff
+
+#### Managing Events
+- **Create Events**: Go to Admin Dashboard → Events → Create New Event
+- **Set Event Details**: Title, date, location, volunteer slots needed
+- **Monitor Registrations**: View donor registrations and QR codes
+- **Track Donations**: Update donation status and blood test results
+
+#### Managing Donors
+- **View Donor List**: Admin Dashboard → Users → View all registered users
+- **Event Donors**: Events → Select Event → View Registered Donors
+- **Update Blood Types**: After blood testing, update donor blood types
+- **Generate Certificates**: Automatically generate donation certificates
+
+#### Blood Donation Process
+1. **Event Creation**: Create event with date, time slots, and location
+2. **Donor Registration**: Donors register through the public portal
+3. **Check-in Process**: Use QR codes to verify donor arrival
+4. **Blood Testing**: Update blood types after lab results
+5. **Certificate Generation**: Generate certificates for completed donations
+
+#### Important Settings
+- **Environment Variables**: Ensure all required environment variables are set
+- **Email Configuration**: Set up email service for notifications
+- **Database Backup**: Regular backups of MongoDB data
+- **Admin Permissions**: Assign appropriate permissions to staff members
+
+### Troubleshooting
+- **Can't access admin panel**: Check login credentials and permissions
+- **Events not showing**: Verify event dates and status
+- **QR codes not working**: Ensure QR tokens are generated for registrations
+- **Email notifications failing**: Check email service configuration
+
+---
+
 ## 🛠️ Tech Stack
 
 ### Frontend

@@ -326,7 +326,7 @@ export default function AdminPage() {
 
         {activeTab === "event-donors" && (
           <div className="grid grid-cols-1 gap-6">
-            {token && <AdminEventDonors />}
+            {token && <AdminEventDonors token={token} />}
           </div>
         )}
       </div>

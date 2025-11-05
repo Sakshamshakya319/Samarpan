@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
-import { verifyToken } from "@/lib/auth"
+import { verifyAdminToken } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 
 /**
@@ -20,9 +20,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const decoded = verifyToken(token)
-    if (!decoded || !decoded.userId) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    const decoded = verifyAdminToken(token)
+    if (!decoded || !["admin", "superadmin"].includes(decoded.role)) {
+      return NextResponse.json({ error: "Invalid token or insufficient permissions" }, { status: 401 })
     }
 
     const db = await getDatabase()

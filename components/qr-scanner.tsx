@@ -98,9 +98,9 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
       const constraints: MediaStreamConstraints = {
         video: {
           facingMode: "environment", // Prefer back camera on mobile
-          width: { ideal: 1920, max: 1920 }, // Limit resolution for better performance
-          height: { ideal: 1080, max: 1080 },
-          frameRate: { ideal: 30, max: 30 }, // Limit frame rate
+          width: { ideal: 1280, max: 1920 }, // More flexible resolution
+          height: { ideal: 720, max: 1080 },
+          frameRate: { ideal: 24, max: 30 }, // Slightly lower frame rate for better performance
           ...(cameraId ? { deviceId: { exact: cameraId } } : {}),
         },
         audio: false,
@@ -169,8 +169,9 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
           const fallbackConstraints: MediaStreamConstraints = {
             video: {
               facingMode: "environment",
-              width: { ideal: 1280, max: 1280 },
-              height: { ideal: 720, max: 720 },
+              width: { ideal: 640, max: 1280 },
+              height: { ideal: 480, max: 720 },
+              frameRate: { ideal: 15, max: 24 },
             },
             audio: false,
           }
@@ -236,13 +237,18 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
       }
 
       scanCount++
-      
+
       // Skip frames for better performance
       if (scanCount % scanInterval !== 0) {
         if (isCameraActive) {
           scanLoopRef.current = requestAnimationFrame(scan)
         }
         return
+      }
+
+      // Debug: Log every 30 frames to avoid spam
+      if (scanCount % 30 === 0) {
+        console.log("Scanning frame", scanCount)
       }
 
       try {
@@ -306,6 +312,25 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
             inversionAttempts: "attemptBoth",
           })
 
+          // If no QR code found, try with different inversion attempts
+          if (!qrCode) {
+            qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: "dontInvert",
+            })
+          }
+
+          if (!qrCode) {
+            qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: "onlyInvert",
+            })
+          }
+
+          if (!qrCode) {
+            qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: "invertFirst",
+            })
+          }
+
           // If QR code detected
           if (qrCode && qrCode.data) {
             const now = Date.now()
@@ -313,10 +338,10 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
             // Prevent duplicate scans
             if (
               !lastScannedRef.current ||
-              now - lastScannedRef.current.time > 1000 || // Reduced delay for faster scanning
+              now - lastScannedRef.current.time > 2000 || // Increased delay to prevent false duplicates
               lastScannedRef.current.qr !== qrCode.data
             ) {
-              console.log("✓ QR Code found:", qrCode.data)
+              console.log("✓ QR Code detected:", qrCode.data, "Location:", qrCode.location)
               isProcessingRef.current = true
               lastScannedRef.current = { qr: qrCode.data, time: now }
 

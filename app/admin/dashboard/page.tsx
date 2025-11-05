@@ -372,7 +372,7 @@ export default function AdminDashboard() {
 
         {activeTab === "event-donors" && enabledTabs.some((t) => t.id === "event-donors") && (
           <div className="grid grid-cols-1 gap-6">
-            {token && <AdminEventDonors />}
+            {token && <AdminEventDonors token={token} />}
           </div>
         )}
 

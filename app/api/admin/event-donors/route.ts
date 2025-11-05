@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
-import { verifyToken } from "@/lib/auth"
+import { verifyAdminToken } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 
 /**
@@ -16,9 +16,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    const decoded = verifyAdminToken(token)
+    if (!decoded || !["admin", "superadmin"].includes(decoded.role)) {
+      return NextResponse.json({ error: "Invalid token or insufficient permissions" }, { status: 401 })
     }
 
     const url = new URL(request.url)
@@ -56,16 +56,21 @@ export async function GET(request: NextRequest) {
         {
           $project: {
             _id: 1,
-            name: 1,
-            email: { $ifNull: ["$user.email", "$email"] },
-            phone: { $ifNull: ["$user.phone", "$phone"] },
-            registrationNumber: 1,
-            timeSlot: 1,
-            qrVerified: 1,
-            donationStatus: 1,
-            verifiedAt: 1,
-            verifiedBy: 1,
-            createdAt: 1,
+            name: { $ifNull: ["$name", "Unknown"] },
+            email: { $ifNull: ["$user.email", { $ifNull: ["$email", ""] }] },
+            phone: { $ifNull: ["$user.phone", { $ifNull: ["$phone", ""] }] },
+            registrationNumber: { $ifNull: ["$registrationNumber", ""] },
+            timeSlot: { $ifNull: ["$timeSlot", ""] },
+            qrVerified: { $ifNull: ["$qrVerified", false] },
+            donationStatus: { $ifNull: ["$donationStatus", "Pending"] },
+            verifiedAt: "$verifiedAt",
+            verifiedBy: "$verifiedBy",
+            createdAt: "$createdAt",
+            bloodType: "$bloodType",
+            bloodTestCompleted: { $ifNull: ["$bloodTestCompleted", false] },
+            bloodTestUpdatedAt: "$bloodTestUpdatedAt",
+            bloodTestUpdatedBy: "$bloodTestUpdatedBy",
+            userBloodGroup: "$user.bloodGroup",
           },
         },
         {

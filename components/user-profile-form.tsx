@@ -15,6 +15,8 @@ interface UserProfile {
   email: string
   name: string
   bloodGroup: string
+  bloodGroupVerified?: boolean
+  bloodGroupVerifiedAt?: string
   location: string
   phone: string
   lastDonationDate?: string
@@ -42,6 +44,8 @@ export function UserProfileForm() {
     hasDisease: false,
     diseaseDescription: "",
   })
+
+  const bloodTypeOptions = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
   const { token } = useAppSelector((state) => state.auth)
 
   useEffect(() => {
@@ -155,7 +159,24 @@ export function UserProfileForm() {
               </div>
               <div>
                 <p className="text-xs sm:text-sm text-muted-foreground">Blood Group</p>
-                <p className="font-medium truncate text-sm sm:text-base">{profile?.bloodGroup || "Not set"}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium truncate text-sm sm:text-base">{profile?.bloodGroup || "Not set"}</p>
+                  {profile?.bloodGroupVerified && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Verified
+                    </span>
+                  )}
+                  {profile?.bloodGroup && !profile?.bloodGroupVerified && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                      Self-reported
+                    </span>
+                  )}
+                </div>
+                {profile?.bloodGroupVerifiedAt && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Verified on {new Date(profile.bloodGroupVerifiedAt).toLocaleDateString()}
+                  </p>
+                )}
               </div>
               <div>
                 <p className="text-xs sm:text-sm text-muted-foreground">Phone</p>
