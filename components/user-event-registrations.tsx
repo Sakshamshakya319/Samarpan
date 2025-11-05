@@ -168,30 +168,33 @@ export function UserEventRegistrations() {
           {registrations.map((registration) => (
             <div
               key={registration._id}
-              className="border rounded-lg p-4 hover:border-primary/50 transition-colors"
+              className="border rounded-lg p-3 sm:p-4 hover:border-primary/50 transition-colors"
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">
+              {/* Header Section - Responsive */}
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-base sm:text-lg truncate">
                     {registration.event?.title || "Event"}
                   </h3>
-                  <p className="text-sm text-gray-600">
-                    Reg #: {registration.registrationNumber}
-                  </p>
-                  {registration.email && (
-                    <p className="text-sm text-gray-600">
-                      Email: {registration.email}
+                  <div className="space-y-1 mt-1">
+                    <p className="text-xs sm:text-sm text-gray-600 truncate">
+                      Reg #: {registration.registrationNumber}
                     </p>
-                  )}
-                  {registration.name && (
-                    <p className="text-sm text-gray-600">
-                      Name: {registration.name}
-                    </p>
-                  )}
+                    {registration.email && (
+                      <p className="text-xs sm:text-sm text-gray-600 truncate">
+                        Email: {registration.email}
+                      </p>
+                    )}
+                    {registration.name && (
+                      <p className="text-xs sm:text-sm text-gray-600 truncate">
+                        Name: {registration.name}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <Badge
-                    className={`${getStatusColor(registration.donationStatus)}`}
+                    className={`${getStatusColor(registration.donationStatus)} text-xs sm:text-sm`}
                     variant="outline"
                   >
                     {registration.donationStatus}
@@ -200,65 +203,68 @@ export function UserEventRegistrations() {
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              {/* Event Details Grid - Mobile Optimized */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-4">
                 {registration.event && (
                   <>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="w-4 h-4 text-gray-500" />
-                      <span>{formatDate(registration.event.eventDate)}</span>
+                    <div className="flex items-center gap-2 text-xs sm:text-sm">
+                      <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
+                      <span className="truncate">{formatDate(registration.event.eventDate)}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="w-4 h-4 text-gray-500" />
+                    <div className="flex items-center gap-2 text-xs sm:text-sm">
+                      <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
                       <span className="truncate">{registration.event.location}</span>
                     </div>
                   </>
                 )}
-                <div className="flex items-center gap-2 text-sm">
-                  <Clock className="w-4 h-4 text-gray-500" />
-                  <span>{registration.timeSlot}</span>
+                <div className="flex items-center gap-2 text-xs sm:text-sm">
+                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
+                  <span className="truncate">{registration.timeSlot}</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2 text-xs sm:text-sm">
                   {registration.qrVerified ? (
                     <>
-                      <CheckCircle2 className="w-4 h-4 text-green-600" />
+                      <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 text-green-600 flex-shrink-0" />
                       <span className="text-green-700">Verified</span>
                     </>
                   ) : (
                     <>
-                      <AlertCircle className="w-4 h-4 text-amber-600" />
-                      <span className="text-amber-700">Pending Verification</span>
+                      <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 text-amber-600 flex-shrink-0" />
+                      <span className="text-amber-700">Pending</span>
                     </>
                   )}
                 </div>
               </div>
 
-              {/* QR Code Section */}
+              {/* QR Code Section - Mobile Optimized */}
               {!registration.qrVerified && registration.qrToken && (
-                <div className="flex flex-col sm:flex-row gap-3 items-center bg-blue-50 p-3 rounded-lg border border-blue-200 mb-3">
-                  <div
-                    id={`qr-${registration._id}`}
-                    className="flex-shrink-0"
-                  >
-                    <QRCode
-                      value={registration.qrToken || ""}
-                      size={80}
-                      level="H"
-                      includeMargin={true}
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-700 mb-1">QR Token:</p>
-                    <code className="text-xs bg-white p-2 rounded block overflow-auto border border-blue-300 font-mono">
-                      {registration.qrToken}
-                    </code>
+                <div className="flex flex-col gap-3 bg-blue-50 p-2 sm:p-3 rounded-lg border border-blue-200 mb-3">
+                  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                    <div
+                      id={`qr-${registration._id}`}
+                      className="flex-shrink-0 p-2 bg-white rounded border border-blue-300"
+                    >
+                      <QRCode
+                        value={registration.qrToken || ""}
+                        size={60}
+                        level="H"
+                        includeMargin={true}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-700 mb-1">QR Token:</p>
+                      <code className="text-xs bg-white p-1.5 sm:p-2 rounded block overflow-auto border border-blue-300 font-mono break-all">
+                        {registration.qrToken}
+                      </code>
+                    </div>
                   </div>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => handleDownloadQR(registration)}
-                    className="flex-shrink-0"
+                    className="w-full sm:w-auto text-xs sm:text-sm"
                   >
-                    <Download className="w-4 h-4 mr-1" />
+                    <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                     Download
                   </Button>
                 </div>
@@ -266,16 +272,16 @@ export function UserEventRegistrations() {
 
               {/* Fallback when QR Token is not available */}
               {!registration.qrVerified && !registration.qrToken && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3 flex items-center justify-between">
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 sm:p-3 mb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
                   <div className="flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                    <p className="text-sm text-amber-800">QR code is being generated. Click refresh to try again.</p>
+                    <AlertCircle className="h-3 h-3 sm:h-4 sm:w-4 text-amber-600 flex-shrink-0" />
+                    <p className="text-xs sm:text-sm text-amber-800">QR code is being generated. Click refresh to try again.</p>
                   </div>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={handleRefreshQR}
-                    className="flex-shrink-0"
+                    className="flex-shrink-0 text-xs sm:text-sm"
                   >
                     Refresh
                   </Button>
@@ -284,8 +290,8 @@ export function UserEventRegistrations() {
 
               {registration.qrVerified && (
                 <Alert className="bg-green-50 border-green-200 mb-3">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <AlertDescription className="text-green-800">
+                  <CheckCircle2 className="h-3 h-3 sm:h-4 sm:w-4 text-green-600" />
+                  <AlertDescription className="text-xs sm:text-sm text-green-800">
                     Your donation has been verified and recorded.
                   </AlertDescription>
                 </Alert>

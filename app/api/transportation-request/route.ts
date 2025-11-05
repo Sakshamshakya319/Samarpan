@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
     }
 
     const decoded = verifyAdminToken(token)
-    if (!decoded || decoded.role !== "admin") {
+    if (!decoded || !["admin", "superadmin"].includes(decoded.role)) {
       return NextResponse.json({ error: "Invalid token or insufficient permissions" }, { status: 401 })
     }
 
@@ -121,26 +121,44 @@ export async function GET(request: NextRequest) {
       .toArray()
 
     // Enrich requests with user and blood request details
-    const enrichedRequests = await Promise.all(
+    const enrichedRequests = await Promise.allSettled(
       requests.map(async (req: any) => {
-        const user = await usersCollection.findOne({ _id: req.userId })
-        const bloodRequest = req.bloodRequestId
-          ? await bloodRequestsCollection.findOne({ _id: req.bloodRequestId })
-          : null
+        try {
+          const user = await usersCollection.findOne({ _id: req.userId })
+          const bloodRequest = req.bloodRequestId
+            ? await bloodRequestsCollection.findOne({ _id: req.bloodRequestId })
+            : null
 
-        return {
-          ...req,
-          userName: user?.name || "Unknown",
-          userEmail: user?.email || "Unknown",
-          userPhone: user?.phone || "",
-          bloodGroup: bloodRequest?.bloodGroup || "N/A",
-          quantity: bloodRequest?.quantity || 0,
-          hospitalLocation: bloodRequest?.hospitalLocation || req.hospitalLocation || "",
+          return {
+            ...req,
+            userName: user?.name || "Unknown",
+            userEmail: user?.email || "Unknown",
+            userPhone: user?.phone || "",
+            bloodGroup: bloodRequest?.bloodGroup || "N/A",
+            quantity: bloodRequest?.quantity || 0,
+            hospitalLocation: bloodRequest?.hospitalLocation || req.hospitalLocation || "",
+          }
+        } catch (err) {
+          console.error(`Error enriching transportation request ${req._id}:`, err)
+          return {
+            ...req,
+            userName: "Unknown",
+            userEmail: "Unknown",
+            userPhone: "",
+            bloodGroup: "N/A",
+            quantity: 0,
+            hospitalLocation: req.hospitalLocation || "",
+          }
         }
       })
     )
 
-    return NextResponse.json({ requests: enrichedRequests })
+    // Extract fulfilled values and filter out rejected promises
+    const successfulRequests = enrichedRequests
+      .filter((result) => result.status === "fulfilled")
+      .map((result) => (result as PromiseFulfilledResult<any>).value)
+
+    return NextResponse.json({ requests: successfulRequests })
   } catch (error) {
     console.error("Get transportation requests error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
@@ -155,12 +173,12 @@ export async function PATCH(request: NextRequest) {
     }
 
     const decoded = verifyAdminToken(token)
-    if (!decoded || decoded.role !== "admin") {
+    if (!decoded || !["admin", "superadmin"].includes(decoded.role)) {
       return NextResponse.json({ error: "Invalid token or insufficient permissions" }, { status: 401 })
     }
 
     const db = await getDatabase()
-    const { transportationId, driverNumber, status } = await request.json()
+    const { transportationId, driverNumber, driverName, status } = await request.json()
 
     if (!transportationId) {
       return NextResponse.json({ error: "Missing transportationId" }, { status: 400 })
@@ -175,6 +193,10 @@ export async function PATCH(request: NextRequest) {
 
     if (driverNumber) {
       updateData.driverNumber = driverNumber
+    }
+
+    if (driverName) {
+      updateData.driverName = driverName
     }
 
     if (status) {

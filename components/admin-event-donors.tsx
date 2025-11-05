@@ -28,6 +28,7 @@ interface DonorRecord {
   _id: string
   name: string
   email: string
+  phone?: string
   registrationNumber: string
   timeSlot: string
   qrVerified: boolean
@@ -122,6 +123,7 @@ export function AdminEventDonors({ eventId }: AdminEventDonorsProps) {
         "Registration #",
         "Name",
         "Email",
+        "Phone",
         "Time Slot",
         "Donation Status",
         "Verified",
@@ -133,6 +135,7 @@ export function AdminEventDonors({ eventId }: AdminEventDonorsProps) {
         donor.registrationNumber,
         donor.name,
         donor.email,
+        donor.phone || "-",
         donor.timeSlot,
         donor.donationStatus,
         donor.qrVerified ? "Yes" : "No",
@@ -306,6 +309,7 @@ export function AdminEventDonors({ eventId }: AdminEventDonorsProps) {
                       <TableHead className="font-semibold">Reg. #</TableHead>
                       <TableHead className="font-semibold">Name</TableHead>
                       <TableHead className="font-semibold">Email</TableHead>
+                      <TableHead className="font-semibold">Phone</TableHead>
                       <TableHead className="font-semibold">Time Slot</TableHead>
                       <TableHead className="font-semibold">Status</TableHead>
                       <TableHead className="font-semibold text-center">Verified</TableHead>
@@ -320,6 +324,7 @@ export function AdminEventDonors({ eventId }: AdminEventDonorsProps) {
                         </TableCell>
                         <TableCell className="font-medium">{donor.name}</TableCell>
                         <TableCell className="text-sm">{donor.email}</TableCell>
+                        <TableCell className="text-sm">{donor.phone || "-"}</TableCell>
                         <TableCell className="text-sm">{donor.timeSlot}</TableCell>
                         <TableCell>
                           <Badge className={getStatusColor(donor.donationStatus)}>

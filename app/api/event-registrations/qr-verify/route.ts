@@ -161,12 +161,22 @@ export async function GET(request: NextRequest) {
       _id: new ObjectId(registration.eventId),
     })
 
+    // Fetch user details for phone
+    let userPhone = registration.phone
+    if (!userPhone && registration.userId) {
+      const user = await db.collection("users").findOne({
+        _id: new ObjectId(registration.userId),
+      })
+      userPhone = user?.phone
+    }
+
     return NextResponse.json({
       registration: {
         _id: registration._id,
         name: registration.name,
         registrationNumber: registration.registrationNumber,
         email: registration.email,
+        phone: userPhone,
         timeSlot: registration.timeSlot,
         qrVerified: registration.qrVerified,
         donationStatus: registration.donationStatus,

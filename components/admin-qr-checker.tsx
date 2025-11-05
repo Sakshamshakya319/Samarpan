@@ -18,6 +18,7 @@ interface RegistrationDetails {
   name: string
   registrationNumber: string
   email: string
+  phone?: string
   timeSlot: string
   qrVerified: boolean
   donationStatus: string
@@ -220,6 +221,10 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
               <div>
                 <p className="text-sm text-gray-600 mb-1">Email</p>
                 <p>{registrationDetails.email}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Phone</p>
+                <p>{registrationDetails.phone || "-"}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600 mb-1">Time Slot</p>

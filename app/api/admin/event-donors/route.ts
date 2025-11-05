@@ -48,10 +48,17 @@ export async function GET(request: NextRequest) {
           },
         },
         {
+          $unwind: {
+            path: "$user",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
           $project: {
             _id: 1,
             name: 1,
             email: 1,
+            phone: { $ifNull: ["$user.phone", "$phone"] },
             registrationNumber: 1,
             timeSlot: 1,
             qrVerified: 1,
