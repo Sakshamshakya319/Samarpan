@@ -39,6 +39,10 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
   const scanLoopRef = useRef<number | null>(null)
   const lastScannedRef = useRef<{ qr: string; time: number } | null>(null)
   const isProcessingRef = useRef(false)
+  const [cameraInUse, setCameraInUse] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
+  const retryTimeoutRef = useRef<number | null>(null)
+  const maxRetries = 3
 
   // Initialize available cameras and detect mobile
   useEffect(() => {
@@ -72,6 +76,18 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
     }
   }, [isOpen])
 
+  // Handle auto-retry for camera in use
+  useEffect(() => {
+    if (cameraInUse && retryCount > 0 && retryCount <= maxRetries) {
+      console.log(`Attempting automatic retry ${retryCount} of ${maxRetries}...`)
+      const retryDelay = setTimeout(() => {
+        startCamera(selectedCamera)
+      }, 500)
+
+      return () => clearTimeout(retryDelay)
+    }
+  }, [retryCount, cameraInUse, selectedCamera])
+
   const startCamera = async (cameraId?: string) => {
     setIsLoading(true)
     setError("")
@@ -98,6 +114,12 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
         setIsCameraActive(true)
         setShowCameraSelector(false)
         setError("")
+        setCameraInUse(false)
+        setRetryCount(0)
+        if (retryTimeoutRef.current) {
+          clearTimeout(retryTimeoutRef.current)
+          retryTimeoutRef.current = null
+        }
 
         // Start scanning once video is ready
         videoRef.current.onloadedmetadata = () => {
@@ -112,19 +134,35 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
       if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
         errorMessage =
           "Camera permission denied.\n\n" +
-          "Chrome/Edge:\n" +
-          "Settings > Privacy > Camera\n\n" +
-          "Firefox:\n" +
-          "Preferences > Privacy > Camera\n\n" +
-          "Safari:\n" +
-          "Settings > Privacy > Camera\n\n" +
-          "Mobile:\n" +
-          "Allow camera access when prompted"
+          "To grant permission:\n" +
+          "1. Check browser address bar for camera icon\n" +
+          "2. Click it and select 'Allow'\n" +
+          "3. Refresh the page\n\n" +
+          "Or use manual entry below to scan QR codes."
         setPermissionDenied(true)
       } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-        errorMessage = "No camera found. Check if device has a camera."
+        errorMessage = "No camera found on this device. Please use manual entry below to scan QR codes."
       } else if (err.name === "NotReadableError") {
-        errorMessage = "Camera in use by another app. Close it and try again."
+        setCameraInUse(true)
+        setRetryCount(0)
+        errorMessage = 
+          "Camera is currently in use by another app.\n\n" +
+          "Steps to fix:\n" +
+          "1. Close other apps using the camera\n" +
+          "2. Check browser tabs (another tab might be using it)\n" +
+          "3. Try again with the retry button\n\n" +
+          "Or use manual entry below as an alternative."
+        
+        // Auto-retry after 3 seconds if under max retries
+        if (retryCount < maxRetries) {
+          if (retryTimeoutRef.current) {
+            clearTimeout(retryTimeoutRef.current)
+          }
+          retryTimeoutRef.current = window.setTimeout(() => {
+            setRetryCount((prev) => prev + 1)
+            console.log(`Auto-retrying camera access (attempt ${retryCount + 2})...`)
+          }, 3000)
+        }
       } else if (err.name === "OverconstrainedError") {
         // Try with lower constraints for older devices
         try {
@@ -145,6 +183,8 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
             setIsCameraActive(true)
             setShowCameraSelector(false)
             setError("")
+            setCameraInUse(false)
+            setRetryCount(0)
 
             videoRef.current.onloadedmetadata = () => {
               console.log("Video stream started with fallback constraints")
@@ -155,7 +195,7 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
           return
         } catch (fallbackErr) {
           console.error("Fallback camera error:", fallbackErr)
-          errorMessage = "Camera not supported on this device. Try manual entry."
+          errorMessage = "Camera not supported on this device. Please use manual entry below."
         }
       } else {
         errorMessage = `Camera error: ${err.message || err.name}`
@@ -176,6 +216,10 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
     if (scanLoopRef.current) {
       cancelAnimationFrame(scanLoopRef.current)
       scanLoopRef.current = null
+    }
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current)
+      retryTimeoutRef.current = null
     }
     setIsCameraActive(false)
   }
@@ -322,6 +366,8 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
     setManualQRInput("")
     setError("")
     setPermissionDenied(false)
+    setCameraInUse(false)
+    setRetryCount(0)
     isProcessingRef.current = false
   }
 
@@ -389,24 +435,33 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
                   </div>
                 )}
 
-                <Button
-                  onClick={() => startCamera(selectedCamera)}
-                  disabled={isLoading}
-                  className="w-full text-xs sm:text-sm h-8 sm:h-10"
-                  size="sm"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin flex-shrink-0" />
-                      <span>Requesting Camera...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Camera className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
-                      <span>Enable Camera</span>
-                    </>
-                  )}
-                </Button>
+                {cameraInUse && retryCount >= maxRetries ? (
+                  <Alert className="bg-orange-50 border-orange-200">
+                    <AlertCircle className="h-4 w-4 text-orange-600" />
+                    <AlertDescription className="text-orange-800 text-xs sm:text-sm ml-2">
+                      Camera still in use. Please close other apps and try manual entry below.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <Button
+                    onClick={() => startCamera(selectedCamera)}
+                    disabled={isLoading}
+                    className="w-full text-xs sm:text-sm h-9 sm:h-10"
+                    size="sm"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin flex-shrink-0" />
+                        <span>{retryCount > 0 ? `Retrying... (${retryCount}/${maxRetries})` : "Requesting Camera..."}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
+                        <span>{cameraInUse ? "Retry Camera" : "Enable Camera"}</span>
+                      </>
+                    )}
+                  </Button>
+                )}
 
                 {cameraDevices.length > 1 && (
                   <Button
@@ -420,16 +475,13 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
                   </Button>
                 )}
 
-                <div className="relative my-2">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300" />
-                  </div>
-                  <div className="relative flex justify-center">
-                    <span className="px-2 bg-white text-gray-500 text-xs">Or enter manually</span>
-                  </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3">
+                  <p className="text-xs sm:text-sm text-blue-900 font-medium mb-1">Alternative Option:</p>
+                  <p className="text-xs text-blue-800">If camera doesn't work, enter the QR token manually below</p>
                 </div>
 
                 <div className="space-y-1 sm:space-y-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700">QR Token</label>
                   <Input
                     placeholder="Paste QR token (EVT-...)"
                     value={manualQRInput}
@@ -439,13 +491,14 @@ export function QRScanner({ onScanSuccess, onScanError, title = "QR Code Scanner
                         handleManualInput()
                       }
                     }}
-                    className="font-mono text-xs sm:text-sm h-8 sm:h-10"
+                    className="font-mono text-xs sm:text-sm h-9 sm:h-10"
                   />
                   <Button
                     onClick={handleManualInput}
                     disabled={!manualQRInput.trim()}
-                    className="w-full text-xs sm:text-sm h-8 sm:h-10"
+                    className="w-full text-xs sm:text-sm h-9 sm:h-10"
                     size="sm"
+                    variant="secondary"
                   >
                     Verify QR Token
                   </Button>

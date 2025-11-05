@@ -28,10 +28,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    const { bloodGroup, quantity, urgency, reason, hospitalLocation } = await request.json()
+    const { 
+      bloodGroup, 
+      quantity, 
+      urgency, 
+      reason, 
+      hospitalLocation,
+      requestType = "self",
+      patientName,
+      patientPhone,
+      hospitalDocumentImage,
+      hospitalDocumentFileName,
+    } = await request.json()
 
     if (!bloodGroup || !quantity || !hospitalLocation) {
       return NextResponse.json({ error: "Blood group, quantity, and hospital location are required" }, { status: 400 })
+    }
+
+    if (!hospitalDocumentImage) {
+      return NextResponse.json({ error: "Hospital document image is required" }, { status: 400 })
+    }
+
+    if (requestType === "others") {
+      if (!patientName || !patientPhone) {
+        return NextResponse.json({ error: "Patient name and phone are required when requesting for others" }, { status: 400 })
+      }
     }
 
     const bloodRequestsCollection = db.collection("bloodRequests")
@@ -40,12 +61,18 @@ export async function POST(request: NextRequest) {
       userName: user.name || "Unknown",
       userEmail: user.email,
       userPhone: user.phone || "",
+      requestType: requestType || "self",
+      patientName: requestType === "others" ? patientName : null,
+      patientPhone: requestType === "others" ? patientPhone : null,
       bloodGroup,
       quantity,
       urgency: urgency || "normal", // low, normal, high, critical
       reason: reason || "",
       hospitalLocation,
+      hospitalDocumentImage,
+      hospitalDocumentFileName,
       status: "active", // active, fulfilled, cancelled
+      verified: false, // document needs to be verified by admin
       createdAt: new Date(),
       updatedAt: new Date(),
     })
