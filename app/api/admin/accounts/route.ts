@@ -72,7 +72,21 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { email, password, name, permissions } = await request.json()
+    const body = await request.json()
+
+    const {
+      email,
+      password,
+      name,
+      permissions = [],
+      isNgoAccount = false,
+    } = body as {
+      email?: string
+      password?: string
+      name?: string
+      permissions?: string[]
+      isNgoAccount?: boolean
+    }
 
     if (!email || !password || !name) {
       return NextResponse.json(
@@ -85,6 +99,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Permissions must be an array" },
         { status: 400 },
+      )
+    }
+
+    const ngoPermission = ADMIN_PERMISSIONS.MANAGE_EVENT_DONATION_BLOOD_LABELS
+    const eventDonorPermission = ADMIN_PERMISSIONS.VIEW_EVENT_DONORS
+
+    let sanitizedPermissions = permissions.filter((perm) => typeof perm === "string")
+
+    if (isNgoAccount) {
+      sanitizedPermissions = Array.from(
+        new Set([...sanitizedPermissions, ngoPermission, eventDonorPermission]),
+      )
+    } else {
+      sanitizedPermissions = sanitizedPermissions.filter(
+        (perm) => perm !== ngoPermission,
       )
     }
 
@@ -109,7 +138,8 @@ export async function POST(request: NextRequest) {
       password: hashedPassword,
       name,
       role: "admin",
-      permissions,
+      permissions: sanitizedPermissions,
+      isNgoAccount,
       status: "active",
       createdBy: verification.admin._id,
       createdAt: new Date(),
@@ -126,7 +156,8 @@ export async function POST(request: NextRequest) {
           email,
           name,
           role: "admin",
-          permissions,
+          permissions: sanitizedPermissions,
+          isNgoAccount,
           status: "active",
         },
       },

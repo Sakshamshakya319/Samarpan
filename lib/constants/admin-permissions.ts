@@ -37,6 +37,7 @@ export const ADMIN_PERMISSIONS = {
 
   // Event donors
   VIEW_EVENT_DONORS: "view_event_donors",
+  MANAGE_EVENT_DONATION_BLOOD_LABELS: "manage_event_donation_blood_labels",
 
   // Blog management
   MANAGE_BLOGS: "manage_blogs",
@@ -70,7 +71,7 @@ export const PERMISSION_GROUPS = {
   images: [ADMIN_PERMISSIONS.VIEW_DONATION_IMAGES],
   contacts: [ADMIN_PERMISSIONS.VIEW_CONTACT_SUBMISSIONS],
   qr: [ADMIN_PERMISSIONS.CHECK_QR_CODES],
-  event_donors: [ADMIN_PERMISSIONS.VIEW_EVENT_DONORS],
+  event_donors: [ADMIN_PERMISSIONS.VIEW_EVENT_DONORS, ADMIN_PERMISSIONS.MANAGE_EVENT_DONATION_BLOOD_LABELS],
   admin_management: [ADMIN_PERMISSIONS.MANAGE_ADMIN_ACCOUNTS],
 } as const
 
@@ -93,5 +94,6 @@ export const PERMISSION_LABELS: Record<string, string> = {
   view_contact_submissions: "View Contact Submissions",
   check_qr_codes: "Check QR Codes",
   view_event_donors: "View Event Donors",
+  manage_event_donation_blood_labels: "Manage Event Donation Blood Labels",
   manage_admin_accounts: "Manage Admin Accounts",
 }

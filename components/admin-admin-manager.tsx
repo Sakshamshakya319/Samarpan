@@ -76,6 +76,7 @@ export function AdminAdminManager({ token }: AdminAdminManagerProps) {
     password: "",
     name: "",
     permissions: [] as string[],
+    isNgoAccount: false,
   })
 
   const [showPassword, setShowPassword] = useState(false)
@@ -122,7 +123,7 @@ export function AdminAdminManager({ token }: AdminAdminManagerProps) {
   const handleOpenDialog = () => {
     setIsEditMode(false)
     setEditingAdmin(null)
-    setFormData({ email: "", password: "", name: "", permissions: [] })
+    setFormData({ email: "", password: "", name: "", permissions: [], isNgoAccount: false })
     setError("")
     setIsDialogOpen(true)
   }
@@ -135,6 +136,7 @@ export function AdminAdminManager({ token }: AdminAdminManagerProps) {
       password: "",
       name: admin.name,
       permissions: admin.permissions,
+      isNgoAccount: admin.permissions?.includes("manage_event_donation_blood_labels") || false,
     })
     setError("")
     setIsDialogOpen(true)
@@ -235,6 +237,16 @@ export function AdminAdminManager({ token }: AdminAdminManagerProps) {
       permissions: prev.permissions.includes(permissionId)
         ? prev.permissions.filter((p) => p !== permissionId)
         : [...prev.permissions, permissionId],
+    }))
+  }
+
+  const handleNgoAccountToggle = (isNgo: boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      isNgoAccount: isNgo,
+      permissions: isNgo
+        ? [...new Set([...prev.permissions, "manage_event_donation_blood_labels"])]
+        : prev.permissions.filter((p) => p !== "manage_event_donation_blood_labels"),
     }))
   }
 
@@ -465,6 +477,27 @@ export function AdminAdminManager({ token }: AdminAdminManagerProps) {
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* NGO Account */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="ngo-account"
+                  checked={formData.isNgoAccount}
+                  onCheckedChange={(checked) => handleNgoAccountToggle(checked as boolean)}
+                  disabled={isCreating}
+                />
+                <label
+                  htmlFor="ngo-account"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  NGO Account
+                </label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                NGO accounts can only manage event donation blood labels. This will automatically assign the required permission.
+              </p>
             </div>
 
             {/* Permissions */}

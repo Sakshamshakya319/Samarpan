@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyAdminPermission } from "@/lib/admin-utils"
 import { hashPassword } from "@/lib/auth"
+import { ADMIN_PERMISSIONS } from "@/lib/constants/admin-permissions"
 
 /**
  * GET /api/admin/accounts/[id]
