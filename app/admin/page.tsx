@@ -18,13 +18,23 @@ import { AdminTransportationManager } from "@/components/admin-transportation-ma
 import { AdminContactSubmissionsManager } from "@/components/admin-contact-submissions-manager"
 import { AdminQRChecker } from "@/components/admin-qr-checker"
 import { AdminEventDonors } from "@/components/admin-event-donors"
-import { LogOut, LayoutDashboard, Calendar, Truck, Mail, QrCode, Users } from "lucide-react"
+import { AdminBlogManager } from "@/components/admin-blog-manager"
+import { LogOut, LayoutDashboard, Calendar, Truck, Mail, QrCode, Users, BookOpen, Droplets } from "lucide-react"
+import { ADMIN_PERMISSIONS } from "@/lib/constants/admin-permissions"
 
 interface Admin {
   id: string
   email: string
   name: string
   role: string
+  permissions: string[]
+}
+
+interface TabConfig {
+  id: string
+  label: string
+  icon?: React.ReactNode
+  permissions: string[]
 }
 
 interface User {
@@ -47,12 +57,99 @@ export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [token, setToken] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState("users")
+  const [activeTab, setActiveTab] = useState("")
+  const [availableTabs, setAvailableTabs] = useState<TabConfig[]>([])
+
+  const tabConfigs: TabConfig[] = [
+    {
+      id: "users",
+      label: "Users Management",
+      permissions: [ADMIN_PERMISSIONS.VIEW_USERS],
+    },
+    {
+      id: "notifications",
+      label: "Send Notifications",
+      permissions: [ADMIN_PERMISSIONS.SEND_NOTIFICATIONS],
+    },
+    {
+      id: "certificates",
+      label: "Generate Certificates",
+      permissions: [ADMIN_PERMISSIONS.GENERATE_CERTIFICATES],
+    },
+    {
+      id: "donations",
+      label: "Manage Donations",
+      permissions: [ADMIN_PERMISSIONS.VIEW_DONATIONS],
+    },
+    {
+      id: "images",
+      label: "Donation Images",
+      permissions: [ADMIN_PERMISSIONS.VIEW_DONATION_IMAGES],
+    },
+    {
+      id: "blood-requests",
+      label: "Blood Requests",
+      permissions: [ADMIN_PERMISSIONS.VIEW_BLOOD_REQUESTS],
+    },
+    {
+      id: "blood-history",
+      label: "Blood History",
+      permissions: [ADMIN_PERMISSIONS.VIEW_BLOOD_REQUESTS],
+    },
+    {
+      id: "events",
+      label: "Events",
+      icon: <Calendar className="w-4 h-4" />,
+      permissions: [ADMIN_PERMISSIONS.VIEW_EVENTS],
+    },
+    {
+      id: "transportation",
+      label: "Transportation",
+      icon: <Truck className="w-4 h-4" />,
+      permissions: [ADMIN_PERMISSIONS.VIEW_TRANSPORTATION],
+    },
+    {
+      id: "contacts",
+      label: "Contact Submissions",
+      icon: <Mail className="w-4 h-4" />,
+      permissions: [ADMIN_PERMISSIONS.VIEW_CONTACT_SUBMISSIONS],
+    },
+    {
+      id: "token-verifier",
+      label: "Token Verifier",
+      icon: <QrCode className="w-4 h-4" />,
+      permissions: [ADMIN_PERMISSIONS.CHECK_QR_CODES],
+    },
+    {
+      id: "event-donors",
+      label: "Event Donors",
+      icon: <Users className="w-4 h-4" />,
+      permissions: [ADMIN_PERMISSIONS.VIEW_EVENT_DONORS],
+    },
+    {
+      id: "blogs",
+      label: "Blog Management",
+      icon: <BookOpen className="w-4 h-4" />,
+      permissions: [ADMIN_PERMISSIONS.MANAGE_BLOGS, ADMIN_PERMISSIONS.VIEW_BLOGS],
+    },
+    {
+      id: "blood-history",
+      label: "Blood Donation History",
+      icon: <Droplets className="w-4 h-4" />,
+      permissions: [ADMIN_PERMISSIONS.VIEW_DONATIONS],
+    },
+  ]
+
+  const hasPermission = (permissions: string[], adminPermissions: string[]): boolean => {
+    if (adminPermissions.length === 0) return false
+    return permissions.some((permission) => adminPermissions.includes(permission))
+  }
 
   useEffect(() => {
     const adminToken = localStorage.getItem("adminToken")
     const adminEmail = localStorage.getItem("adminEmail")
     const adminRole = localStorage.getItem("adminRole")
+    const adminPermissionsStr = localStorage.getItem("adminPermissions")
 
     if (!adminToken || !adminEmail) {
       router.push("/admin/login")
@@ -69,13 +166,34 @@ export default function AdminPage() {
       return
     }
 
-    setToken(adminToken)
-    setAdmin({
+    let permissions: string[] = []
+    try {
+      permissions = adminPermissionsStr ? JSON.parse(adminPermissionsStr) : []
+    } catch (err) {
+      console.error("Failed to parse admin permissions:", err)
+    }
+
+    const adminData: Admin = {
       id: "",
       email: adminEmail,
       name: "Admin",
       role: adminRole || "admin",
-    })
+      permissions,
+    }
+
+    setAdmin(adminData)
+    setToken(adminToken)
+
+    // Filter tabs based on permissions
+    const filtered = tabConfigs.filter((tab) =>
+      hasPermission(tab.permissions, permissions)
+    )
+    setAvailableTabs(filtered)
+
+    // Set the first available tab as active, or redirect if no tabs available
+    if (filtered.length > 0) {
+      setActiveTab(filtered[0].id)
+    }
 
     fetchUsers(adminToken).finally(() => setIsLoading(false))
   }, [router])
@@ -147,131 +265,26 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tab Navigation */}
         <div className="flex gap-4 mb-8 border-b border-border overflow-x-auto pb-2">
-          <button
-            onClick={() => setActiveTab("users")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap ${
-              activeTab === "users"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Users Management
-          </button>
-          <button
-            onClick={() => setActiveTab("notifications")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap ${
-              activeTab === "notifications"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Send Notifications
-          </button>
-          <button
-            onClick={() => setActiveTab("certificates")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap ${
-              activeTab === "certificates"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Generate Certificates
-          </button>
-          <button
-            onClick={() => setActiveTab("donations")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap ${
-              activeTab === "donations"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Manage Donations
-          </button>
-          <button
-            onClick={() => setActiveTab("images")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap ${
-              activeTab === "images"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Donation Images
-          </button>
-          <button
-            onClick={() => setActiveTab("blood-requests")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap ${
-              activeTab === "blood-requests"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Blood Requests
-          </button>
-          <button
-            onClick={() => setActiveTab("blood-history")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap ${
-              activeTab === "blood-history"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Blood History
-          </button>
-          <button
-            onClick={() => setActiveTab("events")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "events"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            Events
-          </button>
-          <button
-            onClick={() => setActiveTab("transportation")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "transportation"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Truck className="w-4 h-4" />
-            Transportation
-          </button>
-          <button
-            onClick={() => setActiveTab("contacts")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "contacts"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Mail className="w-4 h-4" />
-            Contact Submissions
-          </button>
-          <button
-            onClick={() => setActiveTab("token-verifier")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "token-verifier"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <QrCode className="w-4 h-4" />
-            Token Verifier
-          </button>
-          <button
-            onClick={() => setActiveTab("event-donors")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "event-donors"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            Event Donors
-          </button>
+          {availableTabs.length === 0 ? (
+            <div className="text-muted-foreground text-sm">
+              No features available with your current permissions
+            </div>
+          ) : (
+            availableTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
+                  activeTab === tab.id
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))
+          )}
         </div>
 
         {/* Tab Content */}
@@ -344,6 +357,18 @@ export default function AdminPage() {
         {activeTab === "event-donors" && (
           <div className="grid grid-cols-1 gap-6">
             {token && <AdminEventDonors token={token} />}
+          </div>
+        )}
+
+        {activeTab === "blogs" && (
+          <div className="grid grid-cols-1 gap-6">
+            {token && <AdminBlogManager token={token} />}
+          </div>
+        )}
+
+        {activeTab === "blood-history" && (
+          <div className="grid grid-cols-1 gap-6">
+            {token && <AdminBloodHistory token={token} />}
           </div>
         )}
       </div>
