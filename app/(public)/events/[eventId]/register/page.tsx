@@ -74,6 +74,8 @@ export default function EventRegistrationPage() {
   const [isSuccess, setIsSuccess] = useState(false)
   const [timeSlots, setTimeSlots] = useState<string[]>([])
   const [phoneNumber, setPhoneNumber] = useState("")
+  const [isCheckingRegistration, setIsCheckingRegistration] = useState(true)
+  const [isAlreadyRegistered, setIsAlreadyRegistered] = useState(false)
 
   const { data: user } = useAppSelector((state) => state.user)
   const { isAuthenticated, token } = useAppSelector((state) => state.auth)
@@ -139,6 +141,34 @@ export default function EventRegistrationPage() {
 
     fetchUserProfile()
   }, [token])
+
+  // Check if user is already registered for this event
+  useEffect(() => {
+    if (!eventId || !token) {
+      setIsCheckingRegistration(false)
+      return
+    }
+
+    const checkUserRegistration = async () => {
+      try {
+        const response = await fetch(`/api/event-registrations?eventId=${eventId}&checkUser=true`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        if (response.ok) {
+          const data = await response.json()
+          setIsAlreadyRegistered(data.isRegistered || false)
+        }
+      } catch (err) {
+        console.error("Error checking registration status:", err)
+      } finally {
+        setIsCheckingRegistration(false)
+      }
+    }
+
+    checkUserRegistration()
+  }, [eventId, token])
 
   const handleSubmit = async () => {
     if (!token) {
@@ -400,6 +430,16 @@ export default function EventRegistrationPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Already Registered Message */}
+                {isAlreadyRegistered && (
+                  <Alert className="bg-blue-50 border-blue-200">
+                    <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-blue-800">
+                      You are already registered for this event. Thank you for your participation!
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 {/* Success Message */}
                 {isSuccess && (
                   <Alert className="bg-green-50 border-green-200">
@@ -428,7 +468,7 @@ export default function EventRegistrationPage() {
                   </Alert>
                 )}
 
-                {!isFull && (
+                {!isFull && !isAlreadyRegistered && (
                   <>
                     {/* Registration Number Input - FIRST */}
                     <div>

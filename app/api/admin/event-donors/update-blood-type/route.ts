@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
-import { verifyAdminToken } from "@/lib/auth"
+import { verifyAdminPermission } from "@/lib/admin-utils-server"
+import { ADMIN_PERMISSIONS } from "@/lib/constants/admin-permissions"
 import { ObjectId } from "mongodb"
 
 /**
@@ -24,18 +25,15 @@ export async function POST(request: NextRequest) {
   const requestId = Math.random().toString(36).substring(7)
 
   try {
-    // Authentication
-    const token = request.headers.get("authorization")?.split(" ")[1]
-    if (!token) {
-      console.warn(`[UPDATE-BLOOD-TYPE] Missing authentication token - Request ID: ${requestId}`)
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    // Authentication and permission verification
+    const verification = await verifyAdminPermission(request, ADMIN_PERMISSIONS.MANAGE_EVENT_DONATION_BLOOD_LABELS)
+    
+    if (!verification.valid) {
+      console.warn(`[UPDATE-BLOOD-TYPE] Permission denied - Request ID: ${requestId}`)
+      return NextResponse.json({ error: verification.error }, { status: verification.status || 403 })
     }
-
-    const decoded = verifyAdminToken(token)
-    if (!decoded || (decoded.role !== "admin" && decoded.role !== "superadmin")) {
-      console.warn(`[UPDATE-BLOOD-TYPE] Invalid admin token - Request ID: ${requestId}`)
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 })
-    }
+    
+    const decoded = verification.admin as any
 
     // Request body validation
     let body
@@ -71,6 +69,7 @@ export async function POST(request: NextRequest) {
     const usersCollection = db.collection("users")
 
     console.log(`[UPDATE-BLOOD-TYPE] Admin ${decoded.email} updating blood type - Request ID: ${requestId}`)
+    console.log(`[UPDATE-BLOOD-TYPE] Admin ID: ${decoded._id || decoded.adminId} - Request ID: ${requestId}`)
 
     // Find the registration
     const registration = await registrationsCollection.findOne({
@@ -90,7 +89,7 @@ export async function POST(request: NextRequest) {
           bloodType: bloodType.toUpperCase(),
           bloodTestCompleted: true,
           bloodTestUpdatedAt: new Date(),
-          bloodTestUpdatedBy: decoded.adminId,
+          bloodTestUpdatedBy: decoded._id?.toString() || decoded.adminId,
           updatedAt: new Date(),
         },
       }
