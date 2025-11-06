@@ -78,31 +78,47 @@ export async function GET(request: NextRequest) {
       })
     })
 
-    // Process event donations
-    completedEvents.forEach((event: any) => {
-      if (event.donors && event.donors.length > 0) {
-        event.donors.forEach((donor: any) => {
-          if (donor.status === "completed") {
-            donationHistory.push({
-              _id: donor._id || `${event._id}-${donor.donorId}`,
-              userId: donor.donorId,
-              userName: donor.donorName || donor.name || "Unknown Donor",
-              userEmail: donor.donorEmail || donor.email || "",
-              userPhone: donor.donorPhone || donor.phone || "",
-              bloodGroup: donor.donorBloodGroup || donor.bloodGroup,
-              quantity: donor.quantity || 1,
-              donationDate: donor.donationDate || event.eventDate,
-              donationType: "event",
-              eventId: event._id.toString(),
-              pointsAwarded: donor.pointsAwarded || 0,
-              certificateIssued: donor.certificateIssued || false,
-              status: "completed",
-              notes: `Event: ${event.title}`,
-            })
-          }
-        })
+    // Process event donations from verified registrations
+    const verifiedEventRegistrations = await db.collection("event_registrations")
+      .find({ tokenVerified: true })
+      .sort({ verifiedAt: -1 })
+      .toArray()
+
+    // Get user details for each registration
+    for (const registration of verifiedEventRegistrations) {
+      let userDetails = null
+      try {
+        userDetails = await db.collection("users").findOne({ _id: registration.userId })
+      } catch (err) {
+        console.error("Error fetching user details:", err)
       }
-    })
+
+      // Get event details
+      let eventDetails = null
+      try {
+        eventDetails = await db.collection("events").findOne({ _id: registration.eventId })
+      } catch (err) {
+        console.error("Error fetching event details:", err)
+      }
+
+      donationHistory.push({
+        _id: registration._id.toString(),
+        userId: registration.userId.toString(),
+        userName: userDetails?.name || registration.name || "Unknown Donor",
+        userEmail: userDetails?.email || registration.email || "",
+        userPhone: userDetails?.phone || registration.phone || "",
+        bloodGroup: userDetails?.bloodGroup || "Unknown",
+        quantity: 1, // Standard donation quantity
+        donationDate: registration.verifiedAt || registration.createdAt,
+        donationType: "event",
+        eventId: registration.eventId.toString(),
+        registrationId: registration._id.toString(),
+        pointsAwarded: 10, // Award 10 points for event donations
+        certificateIssued: false,
+        status: "completed",
+        notes: `Event: ${eventDetails?.title || "Unknown Event"} - Token: ${registration.alphanumericToken}`,
+      })
+    }
 
     // Sort by donation date (newest first)
     donationHistory.sort((a, b) => new Date(b.donationDate).getTime() - new Date(a.donationDate).getTime())

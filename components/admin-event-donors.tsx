@@ -30,7 +30,7 @@ interface DonorRecord {
   phone?: string
   registrationNumber: string
   timeSlot: string
-  qrVerified: boolean
+  tokenVerified: boolean
   donationStatus: string
   verifiedAt?: string
   verifiedBy?: string
@@ -245,13 +245,13 @@ export function AdminEventDonors({ eventId, token }: AdminEventDonorsProps) {
       donor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       donor.registrationNumber.includes(searchTerm)
 
-    if (filterStatus === "completed") return matchesSearch && donor.qrVerified
-    if (filterStatus === "pending") return matchesSearch && !donor.qrVerified
+    if (filterStatus === "completed") return matchesSearch && donor.tokenVerified
+    if (filterStatus === "pending") return matchesSearch && !donor.tokenVerified
     return matchesSearch
   })
 
-  const completedCount = donors.filter((d) => d.qrVerified).length
-  const pendingCount = donors.filter((d) => !d.qrVerified).length
+  const completedCount = donors.filter((d) => d.tokenVerified).length
+  const pendingCount = donors.filter((d) => !d.tokenVerified).length
 
   return (
     <Card>
@@ -434,11 +434,14 @@ export function AdminEventDonors({ eventId, token }: AdminEventDonorsProps) {
                             </div>
                           ) : (
                             <div className="flex items-center gap-2">
-                              <span className={`font-medium ${donor.bloodType ? 'text-green-700' : 'text-gray-400'}`}>
-                                {donor.bloodType || "Not tested"}
+                              <span className={`font-medium ${donor.bloodType ? 'text-green-700' : donor.userBloodGroup ? 'text-blue-700' : 'text-gray-400'}`}>
+                                {donor.bloodType || donor.userBloodGroup || "Not set"}
                               </span>
                               {donor.bloodTestCompleted && (
                                 <CheckCircle2 className="w-3 h-3 text-green-600" />
+                              )}
+                              {donor.userBloodGroup && !donor.bloodType && (
+                                <span className="text-xs text-blue-600 bg-blue-50 px-1 py-0.5 rounded">From profile</span>
                               )}
                               <Button
                                 size="sm"
@@ -457,7 +460,7 @@ export function AdminEventDonors({ eventId, token }: AdminEventDonorsProps) {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          {donor.qrVerified ? (
+                          {donor.tokenVerified ? (
                             <CheckCircle2 className="w-4 h-4 text-green-600 mx-auto" />
                           ) : (
                             <div className="w-4 h-4 border-2 border-amber-400 rounded-full mx-auto" />

@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { AlertCircle, CheckCircle2, Loader2, QrCode } from "lucide-react"
-import { QRRegistrationScanner } from "@/components/qr-registration-scanner"
+
 
 interface EventRegistrationFormProps {
   eventId: string
@@ -40,13 +40,7 @@ const generateTimeSlots = () => {
 
 const TIME_SLOTS = generateTimeSlots()
 
-interface QRRegistrationData {
-  registrationNumber: string
-  name: string
-  email?: string
-  phone?: string
-  bloodType?: string
-}
+
 
 export function EventRegistrationForm({
   eventId,
@@ -62,7 +56,8 @@ export function EventRegistrationForm({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
-  const [scannedData, setScannedData] = useState<QRRegistrationData | null>(null)
+  const [alphanumericToken, setAlphanumericToken] = useState("")
+
 
   const { user } = useAppSelector((state) => state.user)
   const { isAuthenticated } = useAppSelector((state) => state.auth)
@@ -71,15 +66,7 @@ export function EventRegistrationForm({
   const isFull = availableSlots <= 0
   const canRegister = isAuthenticated && token && !isFull
 
-  const handleQRScanSuccess = (data: QRRegistrationData) => {
-    setScannedData(data)
-    setRegistrationNumber(data.registrationNumber)
-    setError("")
-  }
 
-  const handleQRScanError = (error: string) => {
-    setError(`QR Scan Error: ${error}`)
-  }
 
   const handleSubmit = async () => {
     if (!token) {
@@ -121,11 +108,12 @@ export function EventRegistrationForm({
       })
 
       if (response.ok) {
+        const data = await response.json()
+        setAlphanumericToken(data.alphanumericToken)
         setSuccess(true)
         setShowDialog(false)
         setRegistrationNumber("")
         setSelectedTimeSlot("")
-        setScannedData(null)
         // Refresh page to show updated registration count
         window.location.reload()
       } else {
@@ -193,9 +181,18 @@ export function EventRegistrationForm({
             )}
 
             {success && (
-              <div className="p-3 bg-green-100 text-green-800 rounded-md text-sm flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" />
-                Registration successful!
+              <div className="p-3 bg-green-100 text-green-800 rounded-md text-sm">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Registration successful!</span>
+                </div>
+                {alphanumericToken && (
+                  <div className="mt-2 p-2 bg-white rounded border">
+                    <p className="text-xs text-gray-600 mb-1">Your verification token:</p>
+                    <code className="font-mono text-lg font-bold text-green-700">{alphanumericToken}</code>
+                    <p className="text-xs text-gray-600 mt-1">Keep this token safe - you'll need it for donation verification.</p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -252,33 +249,13 @@ export function EventRegistrationForm({
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium">Registration Number *</label>
-                <QRRegistrationScanner
-                  onScanSuccess={handleQRScanSuccess}
-                  onScanError={handleQRScanError}
-                  title="Scan Registration QR Code"
-                  description="Scan the QR code from your registration card"
-                />
-              </div>
+              <label className="text-sm font-medium">Registration Number *</label>
               <Input
                 type="text"
-                placeholder="Enter your registration number or scan QR code"
+                placeholder="Enter your registration number"
                 value={registrationNumber}
                 onChange={(e) => setRegistrationNumber(e.target.value)}
-                className={scannedData ? "border-green-500 bg-green-50" : ""}
               />
-              {scannedData && (
-                <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
-                  <div className="flex items-center gap-2 text-sm text-green-800">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>QR code scanned successfully</span>
-                  </div>
-                  <div className="text-xs text-green-700 mt-1">
-                    <strong>Scanned:</strong> {scannedData.name} ({scannedData.registrationNumber})
-                  </div>
-                </div>
-              )}
             </div>
 
             <div>

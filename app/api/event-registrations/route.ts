@@ -17,9 +17,14 @@ interface RegistrationData {
   email?: string
 }
 
-// Generate a unique QR code token
-function generateQRToken(): string {
-  return `EVT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+// Generate a unique 6-digit alphanumeric token
+function generateAlphanumericToken(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let result = ''
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return result
 }
 
 // POST: User registers for an event
@@ -81,13 +86,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No more volunteer slots available for this event" }, { status: 400 })
     }
 
-    // Generate QR code token
-    const qrToken = generateQRToken()
+    // Generate alphanumeric token
+    const alphanumericToken = generateAlphanumericToken()
 
-    // Validate QR token was generated
-    if (!qrToken || qrToken.trim() === "") {
+    // Validate token was generated
+    if (!alphanumericToken || alphanumericToken.trim() === "") {
       return NextResponse.json(
-        { error: "Failed to generate QR token" },
+        { error: "Failed to generate registration token" },
         { status: 500 }
       )
     }
@@ -102,10 +107,10 @@ export async function POST(request: NextRequest) {
       name,
       timeSlot,
       status: "Registered", // Default role/status
-      qrToken, // Unique QR code identifier
-      qrVerified: false, // Track if QR has been verified/scanned
+      alphanumericToken, // Unique 6-digit alphanumeric identifier
+      tokenVerified: false, // Track if token has been verified
       donationStatus: "Pending", // Track donation status: Pending, Completed, Cancelled
-      verifiedAt: null, // When QR was verified
+      verifiedAt: null, // When token was verified
       verifiedBy: null, // Admin who verified
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -133,7 +138,7 @@ export async function POST(request: NextRequest) {
       {
         message: "Registration successful",
         registrationId: result.insertedId,
-        qrToken,
+        alphanumericToken,
       },
       { status: 201 }
     )
@@ -168,21 +173,21 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Registration not found" }, { status: 404 })
       }
 
-      // CRITICAL FIX: Generate qrToken if missing (handles legacy registrations)
-      if (!registration.qrToken || registration.qrToken.trim() === "") {
-        const newQrToken = generateQRToken()
+      // CRITICAL FIX: Generate alphanumericToken if missing (handles legacy registrations)
+      if (!registration.alphanumericToken || registration.alphanumericToken.trim() === "") {
+        const newToken = generateAlphanumericToken()
         await registrationsCollection.updateOne(
           { _id: new ObjectId(registrationId) },
           {
             $set: {
-              qrToken: newQrToken,
-              qrVerified: false,
+              alphanumericToken: newToken,
+              tokenVerified: false,
               updatedAt: new Date(),
             }
           }
         )
-        registration.qrToken = newQrToken
-        registration.qrVerified = false
+        registration.alphanumericToken = newToken
+        registration.tokenVerified = false
       }
 
       return NextResponse.json({
@@ -210,21 +215,21 @@ export async function GET(request: NextRequest) {
       // Enrich with event data
       let enrichedRegistration = null
       if (userRegistration) {
-        // CRITICAL FIX: Generate qrToken if missing (handles legacy registrations)
-        if (!userRegistration.qrToken || userRegistration.qrToken.trim() === "") {
-          const newQrToken = generateQRToken()
+        // CRITICAL FIX: Generate alphanumericToken if missing (handles legacy registrations)
+        if (!userRegistration.alphanumericToken || userRegistration.alphanumericToken.trim() === "") {
+          const newToken = generateAlphanumericToken()
           await registrationsCollection.updateOne(
             { _id: userRegistration._id },
             {
               $set: {
-                qrToken: newQrToken,
-                qrVerified: false,
+                alphanumericToken: newToken,
+                tokenVerified: false,
                 updatedAt: new Date(),
               }
             }
           )
-          userRegistration.qrToken = newQrToken
-          userRegistration.qrVerified = false
+          userRegistration.alphanumericToken = newToken
+          userRegistration.tokenVerified = false
         }
 
         const eventsCollection = db.collection("events")
@@ -256,26 +261,26 @@ export async function GET(request: NextRequest) {
     const eventsCollection = db.collection("events")
     const event = await eventsCollection.findOne({ _id: new ObjectId(eventId) })
 
-    // CRITICAL FIX: Ensure all registrations have qrToken (batch update legacy registrations)
-    const registrationsNeedingQRToken = registrations.filter(
-      (reg) => !reg.qrToken || reg.qrToken.trim() === ""
+    // CRITICAL FIX: Ensure all registrations have alphanumericToken (batch update legacy registrations)
+    const registrationsNeedingToken = registrations.filter(
+      (reg) => !reg.alphanumericToken || reg.alphanumericToken.trim() === ""
     )
 
-    if (registrationsNeedingQRToken.length > 0) {
-      for (const reg of registrationsNeedingQRToken) {
-        const newQrToken = generateQRToken()
+    if (registrationsNeedingToken.length > 0) {
+      for (const reg of registrationsNeedingToken) {
+        const newToken = generateAlphanumericToken()
         await registrationsCollection.updateOne(
           { _id: reg._id },
           {
             $set: {
-              qrToken: newQrToken,
-              qrVerified: false,
+              alphanumericToken: newToken,
+              tokenVerified: false,
               updatedAt: new Date(),
             }
           }
         )
-        reg.qrToken = newQrToken
-        reg.qrVerified = false
+        reg.alphanumericToken = newToken
+        reg.tokenVerified = false
       }
     }
 

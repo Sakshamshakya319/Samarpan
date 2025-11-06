@@ -16,6 +16,7 @@ import { AdminTransportationManager } from "@/components/admin-transportation-ma
 import { AdminContactSubmissionsManager } from "@/components/admin-contact-submissions-manager"
 import { AdminQRChecker } from "@/components/admin-qr-checker"
 import { AdminEventDonors } from "@/components/admin-event-donors"
+import { AdminBloodHistory } from "@/components/admin-blood-history"
 import { AdminAdminManager } from "@/components/admin-admin-manager"
 import { AdminBlogManager } from "@/components/admin-blog-manager"
 import { AdminChangePasswordDialog } from "@/components/admin-change-password-dialog"
@@ -30,6 +31,7 @@ import {
   Shield,
   BookOpen,
   Lock,
+  History,
 } from "lucide-react"
 
 interface Admin {
@@ -243,6 +245,17 @@ export default function SuperAdminPage() {
             Blood Requests
           </button>
           <button
+            onClick={() => setActiveTab("blood-history")}
+            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "blood-history"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <History className="w-4 h-4" />
+            Blood History
+          </button>
+          <button
             onClick={() => setActiveTab("events")}
             className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
               activeTab === "events"
@@ -351,6 +364,12 @@ export default function SuperAdminPage() {
         {activeTab === "blood-requests" && (
           <div className="grid grid-cols-1 gap-6">
             {token && <AdminBloodRequestsManager token={token} />}
+          </div>
+        )}
+
+        {activeTab === "blood-history" && (
+          <div className="grid grid-cols-1 gap-6">
+            {token && <AdminBloodHistory token={token} />}
           </div>
         )}
 

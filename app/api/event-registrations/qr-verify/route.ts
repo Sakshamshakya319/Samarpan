@@ -61,8 +61,8 @@ function sanitizeInput(input: string): string {
   return input.trim().replace(/[<>"'&]/g, '');
 }
 
-function validateQRToken(qrToken: string): boolean {
-  return /^[a-zA-Z0-9_-]{10,}$/.test(qrToken);
+function validateAlphanumericToken(token: string): boolean {
+  return /^[A-Z0-9]{6}$/.test(token);
 }
 
 function validateObjectId(id: string): boolean {
@@ -107,28 +107,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
 
-    const { qrToken, registrationId } = body as {
-      qrToken?: string
+    const { alphanumericToken, registrationId } = body as {
+      alphanumericToken?: string
       registrationId?: string
     }
 
     // Input validation
-    if (!qrToken && !registrationId) {
+    if (!alphanumericToken && !registrationId) {
       return NextResponse.json(
-        { error: "QR token or registration ID is required" },
+        { error: "Alphanumeric token or registration ID is required" },
         { status: 400 }
       )
     }
 
     // Sanitize and validate inputs
-    let sanitizedQrToken: string | undefined;
+    let sanitizedToken: string | undefined;
     let sanitizedRegistrationId: string | undefined;
 
-    if (qrToken) {
-      sanitizedQrToken = sanitizeInput(qrToken);
-      if (!validateQRToken(sanitizedQrToken)) {
-        console.warn(`[QR-VERIFY] Invalid QR token format - Request ID: ${requestId}`);
-        return NextResponse.json({ error: "Invalid QR token format" }, { status: 400 });
+    if (alphanumericToken) {
+      sanitizedToken = sanitizeInput(alphanumericToken).toUpperCase();
+      if (!validateAlphanumericToken(sanitizedToken)) {
+        console.warn(`[QR-VERIFY] Invalid alphanumeric token format - Request ID: ${requestId}`);
+        return NextResponse.json({ error: "Invalid alphanumeric token format" }, { status: 400 });
       }
     }
 
@@ -149,9 +149,9 @@ export async function POST(request: NextRequest) {
     // Find registration
     let registration
     try {
-      if (sanitizedQrToken) {
-        registration = await registrationsCollection.findOne({ qrToken: sanitizedQrToken })
-        console.log(`[QR-VERIFY] Searching by QR token: ${sanitizedQrToken} - Request ID: ${requestId}`);
+      if (sanitizedToken) {
+        registration = await registrationsCollection.findOne({ alphanumericToken: sanitizedToken })
+        console.log(`[QR-VERIFY] Searching by alphanumeric token: ${sanitizedToken} - Request ID: ${requestId}`);
       } else if (sanitizedRegistrationId) {
         registration = await registrationsCollection.findOne({
           _id: new ObjectId(sanitizedRegistrationId),
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Registration not found" }, { status: 404 })
     }
 
-    if (registration.qrVerified) {
+    if (registration.tokenVerified) {
       console.warn(`[QR-VERIFY] Registration already verified - Request ID: ${requestId}`);
       return NextResponse.json(
         { error: "This registration has already been verified" },
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
         { _id: registration._id },
         {
           $set: {
-            qrVerified: true,
+            tokenVerified: true,
             donationStatus: "Completed",
             verifiedAt: new Date(),
             verifiedBy: decoded.adminId,
@@ -347,13 +347,13 @@ export async function GET(request: NextRequest) {
     }
 
     const url = new URL(request.url)
-    const qrToken = url.searchParams.get("qrToken")
+    const alphanumericToken = url.searchParams.get("alphanumericToken")
 
-    if (!qrToken) {
-      console.warn(`[QR-VERIFY-GET] Missing QR token - Request ID: ${requestId}`);
-      return NextResponse.json({ 
+    if (!alphanumericToken) {
+      console.warn(`[QR-VERIFY-GET] Missing alphanumeric token - Request ID: ${requestId}`);
+      return NextResponse.json({
         success: false,
-        error: "QR token is required",
+        error: "Alphanumeric token is required",
         metadata: {
           requestId,
           responseTime: `${Date.now() - startTime}ms`
@@ -361,13 +361,13 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Validate QR token format
-    const sanitizedQrToken = sanitizeInput(qrToken);
-    if (!validateQRToken(sanitizedQrToken)) {
-      console.warn(`[QR-VERIFY-GET] Invalid QR token format - Request ID: ${requestId}`);
-      return NextResponse.json({ 
+    // Validate alphanumeric token format
+    const sanitizedToken = sanitizeInput(alphanumericToken).toUpperCase();
+    if (!validateAlphanumericToken(sanitizedToken)) {
+      console.warn(`[QR-VERIFY-GET] Invalid alphanumeric token format - Request ID: ${requestId}`);
+      return NextResponse.json({
         success: false,
-        error: "Invalid QR token format",
+        error: "Invalid alphanumeric token format",
         metadata: {
           requestId,
           responseTime: `${Date.now() - startTime}ms`
@@ -382,11 +382,11 @@ export async function GET(request: NextRequest) {
 
     let registration;
     try {
-      registration = await registrationsCollection.findOne({ qrToken: sanitizedQrToken })
+      registration = await registrationsCollection.findOne({ alphanumericToken: sanitizedToken })
       console.log(`[QR-VERIFY-GET] Registration lookup completed - Request ID: ${requestId}`);
     } catch (dbError) {
       console.error(`[QR-VERIFY-GET] Database error during registration lookup - Request ID: ${requestId}:`, dbError);
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
         error: "Database error",
         metadata: {
@@ -444,7 +444,7 @@ export async function GET(request: NextRequest) {
         email: registration.email,
         phone: userPhone,
         timeSlot: registration.timeSlot,
-        qrVerified: registration.qrVerified,
+        tokenVerified: registration.tokenVerified,
         donationStatus: registration.donationStatus,
         createdAt: registration.createdAt,
         event: event ? { title: event.title, location: event.location, date: event.eventDate } : null,

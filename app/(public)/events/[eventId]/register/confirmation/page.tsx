@@ -6,8 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, CheckCircle2, AlertCircle, ArrowLeft, Download, QrCode } from "lucide-react"
-import QRCode from "qrcode.react"
+import { Loader2, CheckCircle2, AlertCircle, ArrowLeft, Copy, Key } from "lucide-react"
 
 interface Registration {
   _id: string
@@ -15,7 +14,7 @@ interface Registration {
   email: string
   registrationNumber: string
   timeSlot: string
-  qrToken: string
+  alphanumericToken: string
   donationStatus: string
   createdAt: string
 }
@@ -81,20 +80,7 @@ export default function RegistrationConfirmationPage() {
     fetchRegistrationDetails()
   }, [registrationId, eventId])
 
-  const handleDownloadQR = () => {
-    if (!registration) return
 
-    const qrElement = document.getElementById("qr-code")
-    if (qrElement) {
-      const canvas = qrElement.querySelector("canvas")
-      if (canvas) {
-        const link = document.createElement("a")
-        link.href = canvas.toDataURL("image/png")
-        link.download = `registration-${registration.registrationNumber}-qr.png`
-        link.click()
-      }
-    }
-  }
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-US", {
@@ -159,7 +145,7 @@ export default function RegistrationConfirmationPage() {
             <div>
               <h2 className="font-semibold text-green-900 mb-1">Registration Successful!</h2>
               <p className="text-sm text-green-800">
-                Your registration has been confirmed. Please save your QR code for event check-in.
+                Your registration has been confirmed. Please save your alphanumeric token for event check-in.
               </p>
             </div>
           </CardContent>
@@ -171,7 +157,7 @@ export default function RegistrationConfirmationPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2 text-emerald-900">
-                  <QrCode className="w-5 h-5" />
+                  <Key className="w-5 h-5" />
                   Registration Confirmation
                 </CardTitle>
                 <CardDescription>Event Volunteer Registration</CardDescription>
@@ -229,28 +215,30 @@ export default function RegistrationConfirmationPage() {
                 </div>
               </div>
 
-              {/* Right Column - QR Code */}
+              {/* Right Column - Alphanumeric Token */}
               <div className="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-sm font-medium text-gray-600 mb-4">Your QR Code</p>
-                <div id="qr-code" className="p-4 bg-white rounded-lg border border-gray-300 shadow-md">
-                  <QRCode
-                    value={registration.qrToken}
-                    size={256}
-                    level="H"
-                    includeMargin={true}
-                  />
+                <p className="text-sm font-medium text-gray-600 mb-4">Your Verification Token</p>
+                <div className="p-6 bg-white rounded-lg border border-gray-300 shadow-md">
+                  <div className="text-center">
+                    <Key className="w-12 h-12 text-emerald-600 mx-auto mb-3" />
+                    <p className="text-2xl font-mono font-bold text-emerald-700 tracking-wider">
+                      {registration.alphanumericToken}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-600 mt-4 text-center font-mono">
-                  {registration.qrToken}
+                <p className="text-xs text-gray-600 mt-4 text-center">
+                  Keep this token safe - you'll need it for donation verification
                 </p>
                 <Button
-                  onClick={handleDownloadQR}
+                  onClick={() => {
+                    navigator.clipboard.writeText(registration.alphanumericToken)
+                  }}
                   variant="outline"
                   size="sm"
                   className="mt-4 gap-2"
                 >
-                  <Download className="w-4 h-4" />
-                  Download QR Code
+                  <Copy className="w-4 h-4" />
+                  Copy Token
                 </Button>
               </div>
             </div>
@@ -265,15 +253,15 @@ export default function RegistrationConfirmationPage() {
           <CardContent className="space-y-3 text-sm text-amber-900">
             <div className="flex gap-3">
               <span className="font-bold flex-shrink-0">1.</span>
-              <span>Screenshot or download your QR code for the event.</span>
+              <span>Copy and save your 6-digit alphanumeric token securely.</span>
             </div>
             <div className="flex gap-3">
               <span className="font-bold flex-shrink-0">2.</span>
-              <span>Present this QR code at the event during check-in.</span>
+              <span>Present this token at the event during check-in.</span>
             </div>
             <div className="flex gap-3">
               <span className="font-bold flex-shrink-0">3.</span>
-              <span>The admin will scan your QR code to verify your participation.</span>
+              <span>The admin will enter your token to verify your participation.</span>
             </div>
             <div className="flex gap-3">
               <span className="font-bold flex-shrink-0">4.</span>

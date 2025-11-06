@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
             phone: { $ifNull: ["$user.phone", { $ifNull: ["$phone", ""] }] },
             registrationNumber: { $ifNull: ["$registrationNumber", ""] },
             timeSlot: { $ifNull: ["$timeSlot", ""] },
-            qrVerified: { $ifNull: ["$qrVerified", false] },
+            tokenVerified: { $ifNull: ["$tokenVerified", false] },
             donationStatus: { $ifNull: ["$donationStatus", "Pending"] },
             verifiedAt: "$verifiedAt",
             verifiedBy: "$verifiedBy",
@@ -83,8 +83,8 @@ export async function GET(request: NextRequest) {
       {
         donors: donors || [],
         total: donors.length,
-        completedCount: donors.filter((d: any) => d.qrVerified).length,
-        pendingCount: donors.filter((d: any) => !d.qrVerified).length,
+        completedCount: donors.filter((d: any) => d.tokenVerified).length,
+        pendingCount: donors.filter((d: any) => !d.tokenVerified).length,
       },
       { status: 200 }
     )

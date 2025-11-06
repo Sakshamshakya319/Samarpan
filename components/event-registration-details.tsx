@@ -13,15 +13,14 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  QrCode,
-  Download,
+  Key,
+  Copy,
   Mail,
   User,
   Hash,
   Eye,
   X,
 } from "lucide-react"
-import QRCode from "qrcode.react"
 
 interface EventDetails {
   _id: string
@@ -31,8 +30,8 @@ interface EventDetails {
   registrationNumber: string
   timeSlot: string
   status: string
-  qrToken?: string
-  qrVerified: boolean
+  alphanumericToken?: string
+  tokenVerified: boolean
   donationStatus: string
   createdAt: string
   event?: {
@@ -52,26 +51,19 @@ export function EventRegistrationDetails({ registration }: EventRegistrationDeta
   const [isOpen, setIsOpen] = useState(false)
   const [isRegenerating, setIsRegenerating] = useState(false)
 
-  const handleDownloadQR = () => {
-    const qrElement = document.getElementById(`qr-detail-${registration._id}`)
-    if (qrElement) {
-      const canvas = qrElement.querySelector("canvas")
-      if (canvas) {
-        const link = document.createElement("a")
-        link.href = canvas.toDataURL("image/png")
-        link.download = `${registration.registrationNumber}-qr.png`
-        link.click()
-      }
+  const handleCopyToken = () => {
+    if (registration.alphanumericToken) {
+      navigator.clipboard.writeText(registration.alphanumericToken)
     }
   }
 
-  const handleRegenerateQR = async () => {
+  const handleRegenerateToken = async () => {
     setIsRegenerating(true)
     try {
       // Refresh the page to fetch updated registration data
       window.location.reload()
     } catch (err) {
-      console.error("Error regenerating QR:", err)
+      console.error("Error regenerating token:", err)
     } finally {
       setIsRegenerating(false)
     }
@@ -116,10 +108,10 @@ export function EventRegistrationDetails({ registration }: EventRegistrationDeta
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <QrCode className="w-5 h-5" />
+              <Key className="w-5 h-5" />
               Registration Details
             </DialogTitle>
-            <DialogDescription>Complete information and QR code for your event registration</DialogDescription>
+            <DialogDescription>Complete information and verification token for your event registration</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
@@ -196,7 +188,7 @@ export function EventRegistrationDetails({ registration }: EventRegistrationDeta
                 <div>
                   <p className="text-xs text-gray-600 mb-2">Verification Status</p>
                   <div className="flex items-center gap-2">
-                    {registration.qrVerified ? (
+                    {registration.tokenVerified ? (
                       <>
                         <CheckCircle2 className="w-4 h-4 text-green-600" />
                         <span className="text-sm font-medium text-green-700">Verified</span>
@@ -214,36 +206,34 @@ export function EventRegistrationDetails({ registration }: EventRegistrationDeta
 
             <Separator />
 
-            {/* QR Code Section */}
-            {!registration.qrVerified && registration.qrToken && (
+            {/* Alphanumeric Token Section */}
+            {!registration.tokenVerified && registration.alphanumericToken && (
               <>
                 <div>
-                  <h3 className="font-semibold mb-3">QR Code for Check-in</h3>
+                  <h3 className="font-semibold mb-3">Verification Token for Check-in</h3>
                   <div className="flex flex-col items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <div id={`qr-detail-${registration._id}`} className="p-2 bg-white rounded-lg">
-                      <QRCode
-                        value={registration.qrToken || ""}
-                        size={200}
-                        level="H"
-                        includeMargin={true}
-                      />
+                    <div className="p-4 bg-white rounded-lg border border-blue-300">
+                      <Key className="w-12 h-12 text-blue-600 mx-auto mb-2" />
+                      <p className="text-2xl font-mono font-bold text-center text-blue-700">
+                        {registration.alphanumericToken}
+                      </p>
                     </div>
                     <div className="text-center">
-                      <p className="text-sm text-gray-700 mb-2 font-medium">QR Token:</p>
-                      <code className="text-xs bg-white p-3 rounded block border border-blue-300 font-mono overflow-auto max-w-full">
-                        {registration.qrToken}
+                      <p className="text-sm text-gray-700 mb-2 font-medium">Verification Token:</p>
+                      <code className="text-sm bg-white p-3 rounded block border border-blue-300 font-mono overflow-auto max-w-full text-center">
+                        {registration.alphanumericToken}
                       </code>
                     </div>
-                    <Button onClick={handleDownloadQR} className="w-full">
-                      <Download className="w-4 h-4 mr-2" />
-                      Download QR Code
+                    <Button onClick={handleCopyToken} className="w-full">
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy Token
                     </Button>
                   </div>
 
                   <Alert className="bg-blue-50 border-blue-200 mt-4">
                     <AlertCircle className="h-4 w-4 text-blue-600" />
                     <AlertDescription className="text-blue-800">
-                      Please present this QR code at the event check-in for verification. You can download it for offline access.
+                      Please present this verification token at the event check-in for verification. You can copy it for easy access.
                     </AlertDescription>
                   </Alert>
                 </div>
@@ -252,21 +242,21 @@ export function EventRegistrationDetails({ registration }: EventRegistrationDeta
               </>
             )}
 
-            {/* QR Code Not Available Fallback */}
-            {!registration.qrVerified && !registration.qrToken && (
+            {/* Token Not Available Fallback */}
+            {!registration.tokenVerified && !registration.alphanumericToken && (
               <>
                 <div>
-                  <h3 className="font-semibold mb-3">QR Code for Check-in</h3>
+                  <h3 className="font-semibold mb-3">Verification Token for Check-in</h3>
                   <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 flex items-center justify-between gap-4">
                     <div className="flex items-start gap-3 flex-1">
                       <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-amber-900">QR Code Not Available</p>
-                        <p className="text-sm text-amber-800 mt-1">Your QR code is being generated. Click the button below to regenerate it or refresh the page.</p>
+                        <p className="text-sm font-medium text-amber-900">Token Not Available</p>
+                        <p className="text-sm text-amber-800 mt-1">Your verification token is being generated. Click the button below to regenerate it or refresh the page.</p>
                       </div>
                     </div>
-                    <Button 
-                      onClick={handleRegenerateQR} 
+                    <Button
+                      onClick={handleRegenerateToken}
                       disabled={isRegenerating}
                       variant="outline"
                       className="flex-shrink-0 whitespace-nowrap"
@@ -280,7 +270,7 @@ export function EventRegistrationDetails({ registration }: EventRegistrationDeta
               </>
             )}
 
-            {registration.qrVerified && (
+            {registration.tokenVerified && (
               <Alert className="bg-green-50 border-green-200">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-800">

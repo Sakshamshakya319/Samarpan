@@ -5,10 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Calendar, MapPin, Clock, CheckCircle2, AlertCircle, QrCode, Download, Eye } from "lucide-react"
+import { Loader2, Calendar, MapPin, Clock, CheckCircle2, AlertCircle, Key, Copy, Eye } from "lucide-react"
 import { useAppSelector } from "@/lib/hooks"
 import Link from "next/link"
-import QRCode from "qrcode.react"
 import { EventRegistrationDetails } from "@/components/event-registration-details"
 
 interface EventRegistration {
@@ -19,8 +18,8 @@ interface EventRegistration {
   registrationNumber: string
   timeSlot: string
   status: string
-  qrToken?: string
-  qrVerified: boolean
+  alphanumericToken?: string
+  tokenVerified: boolean
   donationStatus: string
   createdAt: string
   event?: {
@@ -67,21 +66,12 @@ export function UserEventRegistrations() {
     }
   }
 
-  const handleDownloadQR = (registration: EventRegistration) => {
-    const qrElement = document.getElementById(`qr-${registration._id}`)
-    if (qrElement) {
-      const canvas = qrElement.querySelector("canvas")
-      if (canvas) {
-        const link = document.createElement("a")
-        link.href = canvas.toDataURL("image/png")
-        link.download = `registration-${registration.registrationNumber}-qr.png`
-        link.click()
-      }
-    }
+  const handleCopyToken = (token: string) => {
+    navigator.clipboard.writeText(token)
   }
 
-  const handleRefreshQR = async () => {
-    // Refetch registrations to get updated QR codes
+  const handleRefreshToken = async () => {
+    // Refetch registrations to get updated tokens
     setIsLoading(true)
     await fetchRegistrations()
   }
@@ -222,7 +212,7 @@ export function UserEventRegistrations() {
                   <span className="truncate">{registration.timeSlot}</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs sm:text-sm">
-                  {registration.qrVerified ? (
+                  {registration.tokenVerified ? (
                     <>
                       <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 text-green-600 flex-shrink-0" />
                       <span className="text-green-700">Verified</span>
@@ -236,51 +226,43 @@ export function UserEventRegistrations() {
                 </div>
               </div>
 
-              {/* QR Code Section - Mobile Optimized */}
-              {!registration.qrVerified && registration.qrToken && (
+              {/* Alphanumeric Token Section - Mobile Optimized */}
+              {!registration.tokenVerified && registration.alphanumericToken && (
                 <div className="flex flex-col gap-3 bg-blue-50 p-2 sm:p-3 rounded-lg border border-blue-200 mb-3">
                   <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                    <div
-                      id={`qr-${registration._id}`}
-                      className="flex-shrink-0 p-2 bg-white rounded border border-blue-300"
-                    >
-                      <QRCode
-                        value={registration.qrToken || ""}
-                        size={60}
-                        level="H"
-                        includeMargin={true}
-                      />
+                    <div className="flex-shrink-0 p-3 bg-white rounded border border-blue-300">
+                      <Key className="w-8 h-8 text-blue-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-700 mb-1">QR Token:</p>
-                      <code className="text-xs bg-white p-1.5 sm:p-2 rounded block overflow-auto border border-blue-300 font-mono break-all">
-                        {registration.qrToken}
+                      <p className="text-xs font-medium text-gray-700 mb-1">Verification Token:</p>
+                      <code className="text-lg font-mono font-bold bg-white p-2 rounded block text-center border border-blue-300 text-blue-700">
+                        {registration.alphanumericToken}
                       </code>
                     </div>
                   </div>
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => handleDownloadQR(registration)}
+                    onClick={() => handleCopyToken(registration.alphanumericToken!)}
                     className="w-full sm:w-auto text-xs sm:text-sm"
                   >
-                    <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                    Download
+                    <Copy className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                    Copy Token
                   </Button>
                 </div>
               )}
 
-              {/* Fallback when QR Token is not available */}
-              {!registration.qrVerified && !registration.qrToken && (
+              {/* Fallback when Token is not available */}
+              {!registration.tokenVerified && !registration.alphanumericToken && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 sm:p-3 mb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-3 h-3 sm:h-4 sm:w-4 text-amber-600 flex-shrink-0" />
-                    <p className="text-xs sm:text-sm text-amber-800">QR code is being generated. Click refresh to try again.</p>
+                    <p className="text-xs sm:text-sm text-amber-800">Token is being generated. Click refresh to try again.</p>
                   </div>
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={handleRefreshQR}
+                    onClick={handleRefreshToken}
                     className="flex-shrink-0 text-xs sm:text-sm"
                   >
                     Refresh
@@ -288,7 +270,7 @@ export function UserEventRegistrations() {
                 </div>
               )}
 
-              {registration.qrVerified && (
+              {registration.tokenVerified && (
                 <Alert className="bg-green-50 border-green-200 mb-3">
                   <CheckCircle2 className="h-3 h-3 sm:h-4 sm:w-4 text-green-600" />
                   <AlertDescription className="text-xs sm:text-sm text-green-800">

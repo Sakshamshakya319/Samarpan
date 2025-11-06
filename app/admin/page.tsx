@@ -251,15 +251,15 @@ export default function AdminPage() {
             Contact Submissions
           </button>
           <button
-            onClick={() => setActiveTab("qr-checker")}
+            onClick={() => setActiveTab("token-verifier")}
             className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "qr-checker"
+              activeTab === "token-verifier"
                 ? "text-primary border-b-2 border-primary"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <QrCode className="w-4 h-4" />
-            QR Checker
+            Token Verifier
           </button>
           <button
             onClick={() => setActiveTab("event-donors")}
@@ -335,7 +335,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {activeTab === "qr-checker" && (
+        {activeTab === "token-verifier" && (
           <div className="grid grid-cols-1 gap-6">
             {token && <AdminQRChecker token={token} />}
           </div>

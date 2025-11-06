@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, QrCode, CheckCircle2, AlertCircle, Copy, Camera, RefreshCw } from "lucide-react"
-import { AdminQRScannerModern } from "@/components/admin-qr-scanner-modern"
+import { Loader2, QrCode, CheckCircle2, AlertCircle, Copy, RefreshCw } from "lucide-react"
+
 
 interface AdminQRCheckerProps {
   token: string
@@ -20,7 +20,7 @@ interface RegistrationDetails {
   email: string
   phone?: string
   timeSlot: string
-  qrVerified: boolean
+  tokenVerified: boolean
   donationStatus: string
   createdAt: string
   event?: {
@@ -53,7 +53,7 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
 
     try {
       const response = await fetch(
-        `/api/event-registrations/qr-verify?qrToken=${encodeURIComponent(tokenToSearch)}`,
+        `/api/event-registrations/qr-verify?alphanumericToken=${encodeURIComponent(tokenToSearch)}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -96,7 +96,7 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          qrToken: qrInput,
+          alphanumericToken: qrInput,
           registrationId: registrationDetails._id,
         }),
       })
@@ -144,10 +144,10 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <QrCode className="w-5 h-5" />
-            QR Code Verification
+            Alphanumeric Token Verification
           </CardTitle>
           <CardDescription>
-            Scan or enter QR tokens to verify blood donations
+            Enter 6-digit alphanumeric tokens to verify blood donations
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -166,25 +166,26 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
           )}
 
           <div className="space-y-3">
-            <label className="block text-sm font-medium">QR Token</label>
-            
+            <label className="block text-sm font-medium">Alphanumeric Token</label>
+
             {/* Input and Buttons */}
             <div className="flex gap-2">
               <Input
-                placeholder="Paste QR token (EVT-...)"
+                placeholder="Enter 6-digit token (e.g., ABC123)"
                 value={qrInput}
-                onChange={(e) => setQrInput(e.target.value)}
+                onChange={(e) => setQrInput(e.target.value.toUpperCase())}
                 onKeyPress={(e) => {
                   if (e.key === "Enter" && qrInput.trim()) {
                     handleSearchQR()
                   }
                 }}
                 className="font-mono flex-1"
+                maxLength={6}
               />
               <Button
                 onClick={() => handleSearchQR()}
                 disabled={isLoading || !qrInput.trim()}
-                title="Search for this QR token"
+                title="Search for this alphanumeric token"
               >
                 {isLoading ? (
                   <>
@@ -195,21 +196,7 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
                   "Search"
                 )}
               </Button>
-              <AdminQRScannerModern
-                onScanSuccess={(qrData) => {
-                  console.log("QR scanned by admin:", qrData)
-                  setQrInput(qrData)
-                  // Auto-search after a brief delay to let state update
-                  setTimeout(() => {
-                    handleSearchQR(qrData)
-                  }, 200)
-                }}
-                onError={(error) => {
-                  console.error("Scanner error:", error)
-                  setErrorMessage(error)
-                }}
-                title="Scan Donor QR Code"
-              />
+
             </div>
           </div>
         </CardContent>
@@ -223,13 +210,13 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
               <div>
                 <CardTitle>Registration Details</CardTitle>
                 <CardDescription className="text-xs mt-1">
-                  Scanned QR Token: {qrInput}
+                  Token: {qrInput}
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
                 <Badge
                   variant={
-                    registrationDetails.qrVerified ? "default" : "secondary"
+                    registrationDetails.tokenVerified ? "default" : "secondary"
                   }
                 >
                   {registrationDetails.donationStatus}
@@ -243,7 +230,7 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
                   }}
                   variant="outline"
                   size="sm"
-                  title="Clear and scan another QR"
+                  title="Clear and enter another token"
                 >
                   <RefreshCw className="w-4 h-4" />
                 </Button>
@@ -296,9 +283,9 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
               </div>
             </div>
 
-            {/* QR Token Display */}
+            {/* Token Display */}
             <div className="bg-white p-3 rounded-lg border border-gray-200 mt-4">
-              <p className="text-xs text-gray-600 mb-1 font-medium">QR Token:</p>
+              <p className="text-xs text-gray-600 mb-1 font-medium">Token:</p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 font-mono text-sm bg-gray-100 p-2 rounded overflow-auto">
                   {qrInput}
@@ -314,7 +301,7 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
             </div>
 
             {/* Status Display */}
-            {registrationDetails.qrVerified && (
+            {registrationDetails.tokenVerified && (
               <Alert className="bg-green-50 border-green-200">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-800">
@@ -324,7 +311,7 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
             )}
 
             {/* Action Buttons */}
-            {!registrationDetails.qrVerified && (
+            {!registrationDetails.tokenVerified && (
               <Button
                 onClick={handleVerifyQR}
                 disabled={isVerifying}

@@ -37,8 +37,8 @@ export function AdminBloodHistory({ token }: AdminBloodHistoryProps) {
   const [error, setError] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
-  const [bloodGroupFilter, setBloodGroupFilter] = useState("")
-  const [typeFilter, setTypeFilter] = useState("")
+  const [bloodGroupFilter, setBloodGroupFilter] = useState("all")
+  const [typeFilter, setTypeFilter] = useState("all")
 
   useEffect(() => {
     fetchDonationHistory()
@@ -101,16 +101,16 @@ export function AdminBloodHistory({ token }: AdminBloodHistoryProps) {
     const matchesSearch = donation.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          donation.userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          donation.bloodGroup.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesBloodGroup = !bloodGroupFilter || donation.bloodGroup === bloodGroupFilter
-    const matchesType = !typeFilter || donation.donationType === typeFilter
-    
+
+    const matchesBloodGroup = bloodGroupFilter === "all" || !bloodGroupFilter || donation.bloodGroup === bloodGroupFilter
+    const matchesType = typeFilter === "all" || donation.donationType === typeFilter
+
     return matchesSearch && matchesBloodGroup && matchesType
   })
 
   const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
   const donationTypes = [
-    { value: "", label: "All Types" },
+    { value: "all", label: "All Types" },
     { value: "request", label: "Request Response" },
     { value: "event", label: "Event Donation" },
     { value: "direct", label: "Direct Donation" }
@@ -169,7 +169,7 @@ export function AdminBloodHistory({ token }: AdminBloodHistoryProps) {
                 <SelectValue placeholder="Blood Group" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Groups</SelectItem>
+                <SelectItem value="all">All Groups</SelectItem>
                 {bloodGroups.map(group => (
                   <SelectItem key={group} value={group}>{group}</SelectItem>
                 ))}
@@ -267,6 +267,9 @@ export function AdminBloodHistory({ token }: AdminBloodHistoryProps) {
                         <div>
                           <p className="font-medium">{donation.userName}</p>
                           <p className="text-sm text-gray-500">{donation.userEmail}</p>
+                          {donation.userPhone && (
+                            <p className="text-sm text-gray-500">{donation.userPhone}</p>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -311,14 +314,14 @@ export function AdminBloodHistory({ token }: AdminBloodHistoryProps) {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          {donation.status === "completed" && donation.pointsAwarded === 0 && (
+                          {donation.status === "completed" && donation.donationType === "event" && donation.pointsAwarded < 10 && (
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleAwardPoints(donation._id, donation.userId)}
                               className="text-blue-600 border-blue-300 hover:bg-blue-50"
                             >
-                              Award 10 Points
+                              Award {10 - donation.pointsAwarded} Points
                             </Button>
                           )}
                         </div>

@@ -179,8 +179,8 @@ export default function AdminDashboard() {
       icon: Mail,
     },
     {
-      id: "qr-checker",
-      label: "QR Checker",
+      id: "token-verifier",
+      label: "Token Verifier",
       permission: ADMIN_PERMISSIONS.CHECK_QR_CODES,
       enabled: availableFeatures.qrChecker,
       icon: QrCode,
@@ -372,7 +372,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {activeTab === "qr-checker" && enabledTabs.some((t) => t.id === "qr-checker") && (
+        {activeTab === "token-verifier" && enabledTabs.some((t) => t.id === "token-verifier") && (
           <div className="grid grid-cols-1 gap-6">
             {token && <AdminQRChecker token={token} />}
           </div>
