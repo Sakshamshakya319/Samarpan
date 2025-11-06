@@ -1,13 +1,14 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { ReduxProvider } from "@/components/redux-provider"
 import { Toaster } from "@/components/ui/sonner"
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+// NOTE: Removed Google font imports (Geist, Geist Mono) to avoid
+// build-time network fetches in restricted/offline environments.
+// The app will use system fonts via Tailwind's `font-sans` and
+// monospace fallbacks defined in globals.css.
 
 export const metadata: Metadata = {
   title: "Samarpan - Blood Donor Platform",

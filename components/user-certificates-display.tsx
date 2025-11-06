@@ -132,11 +132,11 @@ export function UserCertificatesDisplay() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
           <Award className="w-5 h-5 text-yellow-600" />
           Your Certificates
         </CardTitle>
-        <CardDescription>Recognition of your generous donations</CardDescription>
+        <CardDescription className="text-xs sm:text-sm">Recognition of your generous donations</CardDescription>
       </CardHeader>
       <CardContent>
         {error && <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm mb-4">{error}</div>}
@@ -145,14 +145,17 @@ export function UserCertificatesDisplay() {
           {certificates.map((cert) => (
             <div
               key={cert._id}
-              className="p-4 bg-gradient-to-r from-yellow-50 to-red-50 rounded-lg border border-yellow-200 hover:border-yellow-300 transition"
+              className="p-3 sm:p-4 bg-gradient-to-r from-yellow-50 to-red-50 rounded-lg border border-yellow-200 hover:border-yellow-300 transition"
             >
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
-                      <Award className="w-3 h-3 mr-1" />
-                      Certificate #{cert.certificateId}
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <Badge
+                      variant="outline"
+                      className="bg-yellow-100 text-yellow-800 border-yellow-300 break-all max-w-full"
+                    >
+                      <Award className="w-3 h-3 mr-1 flex-shrink-0" />
+                      <span className="text-[12px] sm:text-xs">Certificate #{cert.certificateId}</span>
                     </Badge>
                     {cert.donationCount >= 5 && (
                       <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300">
@@ -161,10 +164,10 @@ export function UserCertificatesDisplay() {
                     )}
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-[13px] sm:text-sm font-medium text-gray-900">
                       {cert.donationCount} {cert.donationCount === 1 ? "donation" : "donations"}
                     </p>
-                    <p className="text-xs text-gray-600">
+                    <p className="text-[11px] sm:text-xs text-gray-600">
                       Issued on {new Date(cert.issuedDate).toLocaleDateString("en-US", {
                         year: "numeric",
                         month: "long",
@@ -177,7 +180,7 @@ export function UserCertificatesDisplay() {
                   onClick={() => handleDownloadCertificate(cert._id, cert.certificateId)}
                   disabled={downloadingId === cert._id}
                   size="sm"
-                  className="gap-2 bg-blue-600 hover:bg-blue-700"
+                  className="gap-2 bg-blue-600 hover:bg-blue-700 w-full sm:w-auto justify-center min-w-[140px]"
                 >
                   {downloadingId === cert._id ? (
                     <>
@@ -187,7 +190,7 @@ export function UserCertificatesDisplay() {
                   ) : (
                     <>
                       <Download className="w-4 h-4" />
-                      Download
+                      <span className="text-sm">Download</span>
                     </>
                   )}
                 </Button>
@@ -197,7 +200,7 @@ export function UserCertificatesDisplay() {
         </div>
 
         <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm text-blue-900">
+          <p className="text-[13px] sm:text-sm text-blue-900">
             <strong>📜 Certificates:</strong> You have earned {certificates.length} {certificates.length === 1 ? "certificate" : "certificates"} for your{" "}
             {certificates.reduce((sum, c) => sum + c.donationCount, 0)} generous blood donations!
           </p>
