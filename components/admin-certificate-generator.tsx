@@ -157,7 +157,7 @@ export function AdminCertificateGenerator({ users, token }: AdminCertificateGene
           <Award className="w-5 h-5" />
           Generate Certificate
         </CardTitle>
-        <CardDescription>Create and send certificates to donors</CardDescription>
+        <CardDescription>Create and send modern landscape certificates with verification QR codes to donors</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleGenerateCertificate} className="space-y-4">
@@ -283,6 +283,17 @@ export function AdminCertificateGenerator({ users, token }: AdminCertificateGene
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? "Generating..." : "Generate Certificate"}
           </Button>
+
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+            <p className="font-semibold mb-2">📋 Certificate Format Information</p>
+            <ul className="space-y-1 text-xs">
+              <li>✓ <strong>Modern Landscape Size:</strong> 11" x 8.5" (landscape orientation)</li>
+              <li>✓ <strong>Professional Design:</strong> Modern blue color scheme with elegant styling</li>
+              <li>✓ <strong>QR Code Verification:</strong> Auto-generated QR code for easy verification</li>
+              <li>✓ <strong>Unique Token:</strong> Each certificate has a unique verification token</li>
+              <li>✓ <strong>Verification Link:</strong> Recipients can verify at /verify-certificate</li>
+            </ul>
+          </div>
         </form>
       </CardContent>
     </Card>

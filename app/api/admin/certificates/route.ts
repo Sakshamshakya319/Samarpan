@@ -2,6 +2,11 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyAdminToken } from "@/lib/auth"
 import { ObjectId } from "mongodb"
+import crypto from "crypto"
+
+function generateVerificationToken(): string {
+  return crypto.randomBytes(16).toString("hex")
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,28 +38,28 @@ export async function POST(request: NextRequest) {
 
     const certificatesCollection = db.collection("certificates")
     const certificateId = `CERT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+    const verificationToken = generateVerificationToken()
 
     const certificateData: any = {
       userId: new ObjectId(userId),
       certificateId,
+      verificationToken,
       donationCount,
       issuedDate: new Date(),
       createdBy: new ObjectId(decoded.adminId),
+      status: "active",
     }
 
-    // Add image data if provided
     if (imageData) {
       certificateData.imageData = imageData
     }
 
-    // Add signature data if provided
     if (signatureData) {
       certificateData.signatureData = signatureData
     }
 
     const result = await certificatesCollection.insertOne(certificateData)
 
-    // Send notification to user
     const notificationsCollection = db.collection("notifications")
     await notificationsCollection.insertOne({
       userId: new ObjectId(userId),

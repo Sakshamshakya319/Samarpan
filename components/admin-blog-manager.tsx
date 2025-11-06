@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { AlertCircle, Loader2, Trash2, Edit2, Image as ImageIcon, Eye, MessageSquare, Heart, MessageCircle, X } from "lucide-react"
+import { TiptapEditor } from "@/components/tiptap-editor"
 import {
   Dialog,
   DialogContent,
@@ -452,11 +453,10 @@ export function AdminBlogManager() {
             {/* Content */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Content *</label>
-              <Textarea
+              <TiptapEditor
                 value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                placeholder="Enter blog content"
-                rows={6}
+                onChange={(content) => setFormData({ ...formData, content })}
+                placeholder="Start typing your blog content..."
               />
             </div>
 

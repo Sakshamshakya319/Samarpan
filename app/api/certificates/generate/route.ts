@@ -2,14 +2,13 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyToken } from "@/lib/auth"
 import { ObjectId } from "mongodb"
-import { PDFDocument, rgb } from "pdf-lib"
+import { PDFDocument, rgb, PDFPage } from "pdf-lib"
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = await params
     const token = request.headers.get("authorization")?.split(" ")[1]
 
     if (!token) {
@@ -26,7 +25,7 @@ export async function GET(
     const usersCollection = db.collection("users")
 
     const certificate = await certificatesCollection.findOne({
-      _id: new ObjectId(id),
+      _id: new ObjectId(params),
       userId: new ObjectId(decoded.userId),
     })
 
@@ -42,7 +41,7 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    const pdfBytes = await generateCertificatePDF(certificate, user, {
+    const pdfBytes = await generateSimpleCertificate(certificate, user, {
       logoData: certificate.imageData || null,
       signatureData: certificate.signatureData || null,
     })
@@ -56,12 +55,12 @@ export async function GET(
       },
     })
   } catch (error) {
-    console.error("Download certificate error:", error)
+    console.error("Certificate generation error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 
-async function generateCertificatePDF(
+async function generateSimpleCertificate(
   certificate: any,
   user: any,
   options?: { logoData?: string | null; signatureData?: string | null },

@@ -15,7 +15,8 @@
     "setup:admin": "tsx scripts/setup-admin-system.ts",
     "setup:superadmin": "tsx scripts/upgrade-to-superadmin.ts",
     "start": "next start",
-    "test:email": "tsx scripts/test-email.ts"
+    "test:email": "tsx scripts/test-email.ts",
+    "test:certificate": "tsx scripts/create-test-certificate.ts"
   },
   "dependencies": {
     "@aws-sdk/credential-providers": "latest",
@@ -49,6 +50,12 @@
     "@radix-ui/react-toggle-group": "1.1.1",
     "@radix-ui/react-tooltip": "1.1.6",
     "@reduxjs/toolkit": "latest",
+    "@tiptap/extension-image": "^3.10.2",
+    "@tiptap/extension-link": "^3.10.2",
+    "@tiptap/extension-underline": "^3.10.2",
+    "@tiptap/pm": "^3.10.2",
+    "@tiptap/react": "^3.10.2",
+    "@tiptap/starter-kit": "^3.10.2",
     "@vercel/analytics": "latest",
     "@yudiel/react-qr-scanner": "^2.4.1",
     "autoprefixer": "^10.4.20",
@@ -75,6 +82,7 @@
     "pdf-lib": "^1.17.1",
     "pdfkit": "^0.17.2",
     "qr-scanner": "^1.4.2",
+    "qrcode": "^1.5.4",
     "qrcode.react": "^1.0.1",
     "react": "19.2.0",
     "react-day-picker": "9.8.0",
