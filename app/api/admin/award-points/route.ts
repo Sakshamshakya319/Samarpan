@@ -87,6 +87,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Try to update in Event Registrations
+    const eventRegistration = await db.collection("event_registrations").findOne({ _id: new ObjectId(donationId) })
+    if (eventRegistration) {
+      await db.collection("event_registrations").updateOne(
+        { _id: new ObjectId(donationId) },
+        { $inc: { pointsAwarded: points } }
+      )
+    }
+
     // Create notification for the user
     try {
       const notificationResponse = await fetch(`${process.env.NEXTAUTH_URL}/api/notifications`, {
