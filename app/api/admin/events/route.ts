@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyAdminToken } from "@/lib/auth"
 import { ObjectId } from "mongodb"
+import { logAdminAction } from "@/lib/admin-actions"
 
 /**
  * Admin Events Management
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
       volunteerSlotsNeeded: volunteerSlotsNeeded || 0,
       eventType: eventType || "donation_camp", // donation_camp, awareness_seminar, donor_appreciation, etc.
       status: "active", // active, completed, cancelled
-      allowRegistrations: allowRegistrations !== false, // Default to true if not specified
+      allowRegistrations: allowRegistrations === true, // Default to false if not specified
       ngoName: ngoName || "", // NGO name (optional)
       ngoLogo: ngoLogo || "", // NGO logo URL (optional)
       ngoWebsite: ngoWebsite || "", // NGO website (optional)
@@ -55,6 +56,8 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date(),
       imageUrl: "", // Can be added later
     })
+
+    await logAdminAction(decoded.adminId, "create_event", { eventId: result.insertedId, title });
 
     return NextResponse.json(
       {
@@ -84,10 +87,15 @@ export async function GET(request: NextRequest) {
     const db = await getDatabase()
     const eventsCollection = db.collection("events")
     const url = new URL(request.url)
-    const status = url.searchParams.get("status") || "active"
+    const status = url.searchParams.get("status")
+
+    let query = {}
+    if (status) {
+      query = { status }
+    }
 
     const events = await eventsCollection
-      .find({ status })
+      .find(query)
       .sort({ eventDate: -1 })
       .toArray()
 
@@ -133,7 +141,9 @@ export async function PUT(request: NextRequest) {
     if (expectedAttendees !== undefined) updateData.expectedAttendees = expectedAttendees
     if (volunteerSlotsNeeded !== undefined) updateData.volunteerSlotsNeeded = volunteerSlotsNeeded
     if (status) updateData.status = status
-    if (allowRegistrations !== undefined) updateData.allowRegistrations = allowRegistrations
+    if (allowRegistrations !== undefined) {
+      updateData.allowRegistrations = allowRegistrations === true;
+    }
     if (ngoName !== undefined) updateData.ngoName = ngoName
     if (ngoLogo !== undefined) updateData.ngoLogo = ngoLogo
     if (ngoWebsite !== undefined) updateData.ngoWebsite = ngoWebsite
@@ -148,12 +158,9 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 })
     }
 
-    return NextResponse.json(
-      {
-        message: "Event updated successfully",
-      },
-      { status: 200 }
-    )
+    await logAdminAction(decoded.adminId, "update_event", { eventId, ...updateData });
+
+    return NextResponse.json({ message: "Event updated successfully" });
   } catch (error) {
     console.error("Update event error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
@@ -182,20 +189,17 @@ export async function DELETE(request: NextRequest) {
 
     const eventsCollection = db.collection("events")
 
-    const result = await eventsCollection.deleteOne({ _id: new ObjectId(eventId) })
+    const result = await eventsCollection.deleteOne({ _id: new ObjectId(eventId) });
 
     if (result.deletedCount === 0) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 })
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    return NextResponse.json(
-      {
-        message: "Event deleted successfully",
-      },
-      { status: 200 }
-    )
+    await logAdminAction(decoded.adminId, "delete_event", { eventId });
+
+    return NextResponse.json({ message: "Event deleted successfully" });
   } catch (error) {
-    console.error("Delete event error:", error)
+    console.error("Delete event error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

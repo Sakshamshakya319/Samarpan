@@ -19,7 +19,8 @@ import { AdminEventDonors } from "@/components/admin-event-donors"
 import { AdminBlogManager } from "@/components/admin-blog-manager"
 import { AdminChangePasswordDialog } from "@/components/admin-change-password-dialog"
 import { AdminBloodHistory } from "@/components/admin-blood-history"
-import { LogOut, LayoutDashboard, Calendar, Truck, Mail, QrCode, Users, BookOpen, Lock, Droplets } from "lucide-react"
+import { AdminActionHistory } from "@/components/admin-action-history" // Import the new component
+import { LogOut, LayoutDashboard, Calendar, Truck, Mail, QrCode, Users, BookOpen, Lock, Droplets, History } from "lucide-react"
 import { getAvailableFeatures, hasPermission } from "@/lib/admin-utils"
 import { ADMIN_PERMISSIONS } from "@/lib/constants/admin-permissions"
 
@@ -198,6 +199,13 @@ export default function AdminDashboard() {
       permission: [ADMIN_PERMISSIONS.MANAGE_BLOGS, ADMIN_PERMISSIONS.VIEW_BLOGS],
       enabled: availableFeatures.blogs,
       icon: BookOpen,
+    },
+    {
+      id: "action-history",
+      label: "Action History",
+      permission: ADMIN_PERMISSIONS.VIEW_ACTION_HISTORY, // Assuming you have this permission
+      enabled: admin?.role === "superadmin", // Only for super admins
+      icon: History, // You might need to import this icon
     },
     {
       id: "blood-history",
@@ -393,6 +401,12 @@ export default function AdminDashboard() {
         {activeTab === "blood-history" && enabledTabs.some((t) => t.id === "blood-history") && (
           <div className="grid grid-cols-1 gap-6">
             {token && <AdminBloodHistory token={token} />}
+          </div>
+        )}
+
+        {activeTab === "action-history" && enabledTabs.some((t) => t.id === "action-history") && (
+          <div className="grid grid-cols-1 gap-6">
+            {token && <AdminActionHistory token={token} />}
           </div>
         )}
       </div>

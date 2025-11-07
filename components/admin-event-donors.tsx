@@ -63,13 +63,15 @@ export function AdminEventDonors({ eventId, token }: AdminEventDonorsProps) {
   const bloodTypeOptions = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
 
   useEffect(() => {
-    if (!eventId) {
+    if (token && !eventId) {
+      console.log("useEffect: Calling fetchEvents as token exists and eventId is not provided.")
       fetchEvents()
     }
   }, [token, eventId])
 
   useEffect(() => {
     if (selectedEventId) {
+      console.log("useEffect: Calling fetchDonors for selectedEventId:", selectedEventId)
       const event = events.find(e => e._id === selectedEventId)
       setSelectedEvent(event)
       fetchDonors()
@@ -90,6 +92,7 @@ export function AdminEventDonors({ eventId, token }: AdminEventDonorsProps) {
 
       if (response.ok) {
         const data = await response.json()
+        console.log("fetchEvents success, data:", data)
         setEvents(data.events || [])
       }
     } catch (err) {
@@ -112,6 +115,7 @@ export function AdminEventDonors({ eventId, token }: AdminEventDonorsProps) {
 
       if (response.ok) {
         const data = await response.json()
+        console.log("fetchDonors success, data:", data)
         setDonors(data.donors || [])
         // When loaded via direct eventId, set event details from API
         if (data.event) {

@@ -1,15 +1,13 @@
 import { MongoClient } from "mongodb"
 
-const MONGODB_URI = process.env.MONGODB_URL
-
-if (!MONGODB_URI) {
-  throw new Error("Please define the MONGODB_URL environment variable")
-}
-
 let cachedClient: MongoClient | null = null
 let cachedDb: any = null
 
 export async function connectToDatabase() {
+  const MONGODB_URI = process.env.MONGODB_URL
+  if (!MONGODB_URI) {
+    throw new Error("Please define the MONGODB_URL environment variable")
+  }
   // Check if cached connection is still valid
   if (cachedClient && cachedDb) {
     try {

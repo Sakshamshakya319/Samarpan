@@ -322,8 +322,8 @@ export function AdminEventsManager({ token }: AdminEventsManagerProps) {
                     </div>
                     <div className="flex gap-2">
                       <Badge className="bg-blue-100 text-blue-800 capitalize">{event.eventType}</Badge>
-                      <Badge className={event.allowRegistrations !== false ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
-                        {event.allowRegistrations !== false ? "Registrations Open" : "Closed"}
+                      <Badge className={event.allowRegistrations === true ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
+                        {event.allowRegistrations === true ? "Registrations Open" : "Registration Closed"}
                       </Badge>
                     </div>
                   </div>

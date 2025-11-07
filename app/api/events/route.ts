@@ -18,10 +18,11 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url)
     const eventId = url.searchParams.get("id")
 
-    let query: any = { status: "active" }
+    let query: any = { status: "active", eventDate: { $gte: new Date() } }
     if (eventId) {
       try {
         query._id = new ObjectId(eventId)
+        delete query.eventDate // Allow fetching a specific event even if it's in the past
       } catch {
         return NextResponse.json({ error: "Invalid event ID" }, { status: 400 })
       }
@@ -40,6 +41,9 @@ export async function GET(request: NextRequest) {
           eventId: event._id,
         })
 
+        const eventDate = new Date(event.eventDate)
+        const isPastEvent = eventDate < new Date()
+
         return {
           _id: event._id,
           title: event.title,
@@ -53,7 +57,7 @@ export async function GET(request: NextRequest) {
           registeredVolunteers: registrationCount,
           eventType: event.eventType,
           imageUrl: event.imageUrl || "",
-          allowRegistrations: event.allowRegistrations !== false, // Default to true if not specified
+          allowRegistrations: event.allowRegistrations !== false && !isPastEvent,
           ngoName: event.ngoName || "", // NGO name
           ngoLogo: event.ngoLogo || "", // NGO logo URL
           ngoWebsite: event.ngoWebsite || "", // NGO website

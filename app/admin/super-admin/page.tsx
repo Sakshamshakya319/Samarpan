@@ -19,6 +19,7 @@ import { AdminEventDonors } from "@/components/admin-event-donors"
 import { AdminBloodHistory } from "@/components/admin-blood-history"
 import { AdminAdminManager } from "@/components/admin-admin-manager"
 import { AdminBlogManager } from "@/components/admin-blog-manager"
+import { AdminActionHistory } from "@/components/admin-action-history"
 import { AdminChangePasswordDialog } from "@/components/admin-change-password-dialog"
 import {
   LogOut,
@@ -61,8 +62,19 @@ export default function SuperAdminPage() {
   const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [token, setToken] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState("admin-accounts")
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("superAdminActiveTab") || "admins";
+    }
+    return "admins";
+  });
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("superAdminActiveTab", activeTab);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     const adminToken = localStorage.getItem("adminToken")
@@ -321,6 +333,17 @@ export default function SuperAdminPage() {
             <BookOpen className="w-4 h-4" />
             Blog Management
           </button>
+          <button
+            onClick={() => setActiveTab("action-history")}
+            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "action-history"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <History className="w-4 h-4" />
+            Action History
+          </button>
         </div>
       </div>
 
@@ -399,13 +422,18 @@ export default function SuperAdminPage() {
 
         {activeTab === "event-donors" && (
           <div className="grid grid-cols-1 gap-6">
-            {token && <AdminEventDonors />}
+            {token && <AdminEventDonors token={token} />}
           </div>
         )}
 
         {activeTab === "blogs" && (
           <div className="grid grid-cols-1 gap-6">
             <AdminBlogManager />
+          </div>
+        )}
+        {activeTab === "action-history" && (
+          <div className="grid grid-cols-1 gap-6">
+            {token && <AdminActionHistory token={token} />}
           </div>
         )}
       </div>
