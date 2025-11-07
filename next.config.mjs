@@ -4,13 +4,24 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
+    // Keep unoptimized to avoid requiring the built-in optimizer for blob previews,
+    // but enable modern formats when optimization is available in production.
     unoptimized: true,
+    formats: ["image/avif", "image/webp"],
   },
   onDemandEntries: {
     maxInactiveAge: 15000,
     pagesBufferLength: 2,
   },
   turbopack: {},
+  experimental: {
+    // Reduce client bundle size by rewriting package imports to per-module imports
+    optimizePackageImports: ["lucide-react"],
+  },
+  compiler: {
+    // Drop console.* in production builds to reduce bundle noise
+    removeConsole: process.env.NODE_ENV === "production",
+  },
   async headers() {
     return [
       {

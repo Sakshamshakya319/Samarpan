@@ -30,6 +30,10 @@ export async function GET(request: NextRequest) {
 
     const db = await getDatabase()
     const registrationsCollection = db.collection("event_registrations")
+    const eventsCollection = db.collection("events")
+
+    // Fetch event metadata so admins can see event name and details
+    const event = await eventsCollection.findOne({ _id: new ObjectId(eventId) })
 
     // Fetch all registrations for the event with user details
     const donors = await registrationsCollection
@@ -85,6 +89,20 @@ export async function GET(request: NextRequest) {
         total: donors.length,
         completedCount: donors.filter((d: any) => d.tokenVerified).length,
         pendingCount: donors.filter((d: any) => !d.tokenVerified).length,
+        event: event
+          ? {
+              _id: event._id,
+              title: event.title,
+              description: event.description,
+              eventDate: event.eventDate,
+              startTime: event.startTime,
+              endTime: event.endTime,
+              location: event.location,
+              expectedAttendees: event.expectedAttendees,
+              eventType: event.eventType,
+              status: event.status,
+            }
+          : null,
       },
       { status: 200 }
     )

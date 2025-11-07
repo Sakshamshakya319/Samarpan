@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Award, Upload, Loader2 } from "lucide-react"
+import Image from "next/image"
 
 interface User {
   _id: string
@@ -232,7 +233,14 @@ export function AdminCertificateGenerator({ users, token }: AdminCertificateGene
             {certificateImagePreview && (
               <div className="mt-2 p-2 border rounded-md bg-gray-50">
                 <div className="text-xs text-gray-600 mb-2">Logo Preview:</div>
-                <img src={certificateImagePreview} alt="Certificate logo preview" className="h-16 object-contain" />
+                <Image
+                  src={certificateImagePreview}
+                  alt="Certificate logo preview"
+                  width={256}
+                  height={64}
+                  className="h-16 w-auto object-contain"
+                  unoptimized
+                />
                 <button
                   type="button"
                   onClick={() => {
@@ -264,7 +272,14 @@ export function AdminCertificateGenerator({ users, token }: AdminCertificateGene
             {signatureImagePreview && (
               <div className="mt-2 p-2 border rounded-md bg-gray-50">
                 <div className="text-xs text-gray-600 mb-2">Signature Preview:</div>
-                <img src={signatureImagePreview} alt="Authorized signature preview" className="h-12 object-contain" />
+                <Image
+                  src={signatureImagePreview}
+                  alt="Authorized signature preview"
+                  width={192}
+                  height={48}
+                  className="h-12 w-auto object-contain"
+                  unoptimized
+                />
                 <button
                   type="button"
                   onClick={() => {

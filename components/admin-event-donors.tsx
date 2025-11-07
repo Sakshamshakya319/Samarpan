@@ -113,6 +113,10 @@ export function AdminEventDonors({ eventId, token }: AdminEventDonorsProps) {
       if (response.ok) {
         const data = await response.json()
         setDonors(data.donors || [])
+        // When loaded via direct eventId, set event details from API
+        if (data.event) {
+          setSelectedEvent(data.event)
+        }
         // Reset editing state when fetching new data
         setEditingBloodType(null)
         setBloodTypeInput("")
@@ -155,7 +159,7 @@ export function AdminEventDonors({ eventId, token }: AdminEventDonorsProps) {
         donor.phone || "-",
         donor.timeSlot,
         donor.donationStatus,
-        donor.qrVerified ? "Yes" : "No",
+        donor.tokenVerified ? "Yes" : "No",
         donor.verifiedAt ? new Date(donor.verifiedAt).toLocaleString() : "-",
         new Date(donor.createdAt).toLocaleString(),
       ])

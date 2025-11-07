@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { AlertCircle, Camera, MapPin, Check, Loader2 } from "lucide-react"
+import Image from "next/image"
 import { useAppSelector } from "@/lib/hooks"
 import { useGeolocation } from "@/hooks/use-geolocation"
 
@@ -231,7 +232,14 @@ export function DonationImageUpload({ acceptedRequestId }: DonationImageUploadPr
             {imagePreview && (
               <div className="p-3 border rounded-md bg-gray-50">
                 <div className="text-xs text-gray-600 mb-2">Image Preview:</div>
-                <img src={imagePreview} alt="Donation proof preview" className="h-32 object-cover rounded" />
+                <Image
+                  src={imagePreview}
+                  alt="Donation proof preview"
+                  width={256}
+                  height={128}
+                  className="object-cover rounded"
+                  unoptimized
+                />
                 <button
                   type="button"
                   onClick={() => {
