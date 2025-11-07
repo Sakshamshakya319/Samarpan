@@ -1,59 +1,6 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { verifyToken } from "@/lib/auth"
-import { ObjectId } from "mongodb"
-import { generateCertificateDesign } from "@/lib/certificate-generator"
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib"
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } },
-) {
-  try {
-    const token = request.headers.get("authorization")?.split(" ")[1]
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
-    }
-
-    const db = await getDatabase()
-    const certificates = db.collection("certificates")
-    const users = db.collection("users")
-
-    const certificate = await certificates.findOne({
-      userId: new ObjectId(decoded.userId),
-    })
-
-    if (!certificate)
-      return NextResponse.json({ error: "Certificate not found" }, { status: 404 })
-
-    const user = await users.findOne({ _id: new ObjectId(decoded.userId) })
-    if (!user)
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-
-    const pdfBytes = await generateCertificateDesign(certificate, user, {
-      logoData: certificate.imageData || null,
-      signatureData: certificate.signatureData || null,
-    })
-
-    return new NextResponse(pdfBytes, {
-      status: 200,
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="certificate-${certificate.certificateId}.pdf"`,
-      },
-    })
-  } catch (error) {
-    console.error("Certificate generation error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
-  }
-}
-
-// design function moved to shared lib
-/*async function generateCertificateDesign(
+export async function generateCertificateDesign(
   certificate: any,
   user: any,
   options?: { logoData?: string | null; signatureData?: string | null },
@@ -74,7 +21,7 @@ export async function GET(
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
 
-  // Outer Frame
+  // === Outer Frames ===
   page.drawRectangle({
     x: margin - 20 * scale,
     y: margin - 20 * scale,
@@ -92,7 +39,7 @@ export async function GET(
     borderWidth: 1 * scale,
   })
 
-  // Top Accent Bar
+  // === Header Bar ===
   const barHeight = 120 * scale
   page.drawRectangle({
     x: margin,
@@ -102,7 +49,7 @@ export async function GET(
     color: rgb(0.96, 0.98, 1),
   })
 
-  // Logo (auto-managed)
+  // === Logo ===
   if (options?.logoData) {
     try {
       const isPng = options.logoData.startsWith("data:image/png")
@@ -110,9 +57,7 @@ export async function GET(
         options.logoData.replace(/^data:image\/\w+;base64,/, ""),
         "base64",
       )
-      const logo = isPng
-        ? await pdfDoc.embedPng(logoBytes)
-        : await pdfDoc.embedJpg(logoBytes)
+      const logo = isPng ? await pdfDoc.embedPng(logoBytes) : await pdfDoc.embedJpg(logoBytes)
       page.drawImage(logo, {
         x: margin + 30 * scale,
         y: height - margin - barHeight + 10 * scale,
@@ -124,12 +69,12 @@ export async function GET(
     }
   }
 
-  // Title
+  // === Title ===
   const title = "CERTIFICATE OF APPRECIATION"
-  const titleSize = 40 // fixed px
+  const titleSize = 60
   const titleWidth = fontBold.widthOfTextAtSize(title, titleSize)
   const titleX = margin + (innerWidth - titleWidth) / 2
-  const titleY = height - margin - barHeight / 2 + 5 * scale
+  const titleY = height - margin - barHeight / 2 + 10 * scale
   page.drawText(title, {
     x: titleX,
     y: titleY,
@@ -138,10 +83,10 @@ export async function GET(
     color: primaryBlue,
   })
 
-  // Underline accent
-  const underlineWidth = titleWidth * 0.5
+  // Underline Accent
+  const underlineWidth = titleWidth * 0.55
   const underlineX = margin + (innerWidth - underlineWidth) / 2
-  const underlineY = titleY - 8 * scale
+  const underlineY = titleY - 10 * scale
   page.drawLine({
     start: { x: underlineX, y: underlineY },
     end: { x: underlineX + underlineWidth, y: underlineY },
@@ -149,8 +94,8 @@ export async function GET(
     thickness: 2 * scale,
   })
 
-  // Body
-  let currentY = height - margin - barHeight - 100 * scale // decreased margin
+  // === Body Section ===
+  let currentY = height - margin - barHeight - 110 * scale
 
   const subtitle = "This is to certify that"
   const subtitleSize = 16 * scale
@@ -191,7 +136,7 @@ export async function GET(
 
   currentY -= 90 * scale
 
-  // Donation Pill
+  // === Donation Box ===
   const pillWidth = 360 * scale
   const pillHeight = 45 * scale
   const pillX = margin + (innerWidth - pillWidth) / 2
@@ -204,27 +149,26 @@ export async function GET(
     color: primaryBlue,
   })
   const pillText = `Total Donations: ${certificate.donationCount}`
-  const pillTextSize = 20 * scale
+  const pillTextSize = 18 * scale
   const pillTextWidth = fontBold.widthOfTextAtSize(pillText, pillTextSize)
   page.drawText(pillText, {
     x: margin + (innerWidth - pillTextWidth) / 2,
-    y: pillY + 13 * scale,
+    y: pillY + 12 * scale,
     size: pillTextSize,
     font: fontBold,
     color: white,
   })
 
-  // Footer
-  currentY -= 140 * scale
+  // === Footer Section ===
+  currentY -= 130 * scale
   const leftX = margin + 25 * scale
-  const rightX = width - margin - 300 * scale
-
   const issuedDate = new Date(certificate.issuedDate).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
   })
 
+  // Certificate details block
   page.drawText(`Certificate ID: ${certificate.certificateId}`, {
     x: leftX,
     y: currentY,
@@ -232,77 +176,78 @@ export async function GET(
     font,
     color: lightGray,
   })
+
+  if (certificate.verificationToken) {
+    page.drawText(`Verification Token: ${certificate.verificationToken}`, {
+      x: leftX,
+      y: currentY - 18 * scale,
+      size: 12 * scale,
+      font,
+      color: lightGray,
+    })
+    currentY -= 18 * scale
+  }
+
   page.drawText(`Issued Date: ${issuedDate}`, {
     x: leftX,
-    y: currentY - 18 * scale,
+    y: currentY - 22 * scale,
     size: 12 * scale,
     font,
     color: lightGray,
   })
 
-  page.drawText("To Verify Certificate:", {
-    x: rightX,
-    y: currentY,
-    size: 12 * scale,
-    font,
-    color: darkGray,
-  })
-  page.drawText("Visit: /verify-certificate", {
-    x: rightX,
-    y: currentY - 18 * scale,
-    size: 12 * scale,
-    font,
-    color: primaryBlue,
-  })
-
-  // Signature
-  currentY -= 80 * scale
-  page.drawLine({
-    start: { x: leftX, y: currentY },
-    end: { x: leftX + 200 * scale, y: currentY },
-    color: rgb(0, 0, 0),
-    thickness: 1.2 * scale,
-  })
-  page.drawText("Authorized Signature", {
+  page.drawText("Verify Certificate: /verify-certificate", {
     x: leftX,
-    y: currentY - 20 * scale,
-    size: 10 * scale,
+    y: currentY - 44 * scale,
+    size: 12 * scale,
     font,
-    color: darkGray,
-  })
-
-  // Footer line
-  currentY -= 60 * scale
-  page.drawLine({
-    start: { x: margin + 25 * scale, y: currentY },
-    end: { x: width - margin - 25 * scale, y: currentY },
-    color: primaryBlue,
-    thickness: 2 * scale,
-  })
-
-  currentY -= 30 * scale
-  const org = "Samarpan: Be a Real Life Hero"
-  const orgSize = 14 * scale
-  const orgWidth = fontBold.widthOfTextAtSize(org, orgSize)
-  page.drawText(org, {
-    x: margin + (innerWidth - orgWidth) / 2,
-    y: currentY,
-    size: orgSize,
-    font: fontBold,
     color: primaryBlue,
   })
 
-  currentY -= 16 * scale
-  const tagline = "Dedicated to Saving Lives Through Samarpan"
-  const tagSize = 10 * scale
-  const tagWidth = font.widthOfTextAtSize(tagline, tagSize)
-  page.drawText(tagline, {
-    x: margin + (innerWidth - tagWidth) / 2,
-    y: currentY,
-    size: tagSize,
-    font,
-    color: lightGray,
-  })
+  // === Signature (Updated alignment) ===
+  if (options?.signatureData) {
+    try {
+      const isPng = options.signatureData.startsWith("data:image/png")
+      const sigBytes = Buffer.from(
+        options.signatureData.replace(/^data:image\/\w+;base64,/, ""),
+        "base64",
+      )
+      const sigImg = isPng
+        ? await pdfDoc.embedPng(sigBytes)
+        : await pdfDoc.embedJpg(sigBytes)
+
+      // Aligned image and text perfectly on the same horizontal line
+      const sigWidth = 180 * scale
+      const sigHeight = 60 * scale
+      const sigX = width - margin - 270 * scale
+      const sigY = margin + 60 * scale
+
+      // Draw the signature image
+      page.drawImage(sigImg, {
+        x: sigX,
+        y: sigY,
+        width: sigWidth,
+        height: sigHeight,
+      })
+
+      // Draw “Authorized Signature” aligned horizontally beside image bottom edge
+      const text = "Authorized Signature"
+      const textSize = 12 * scale
+      const textWidth = font.widthOfTextAtSize(text, textSize)
+      const textX = sigX + (sigWidth - textWidth) / 2 // horizontally centered under signature
+      const textY = sigY - 10 * scale // adjusted upward so line alignment matches image bottom
+
+      page.drawText(text, {
+        x: textX,
+        y: textY,
+        size: textSize,
+        font,
+        color: darkGray,
+      })
+    } catch (err) {
+      console.error("Error embedding signature:", err)
+    }
+  }
 
   return await pdfDoc.save()
-}*/
+}
