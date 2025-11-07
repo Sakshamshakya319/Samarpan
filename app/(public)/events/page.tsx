@@ -127,6 +127,17 @@ export default function Events() {
               {events.map((event) => {
                 const availableSlots = event.volunteerSlotsNeeded - event.registeredVolunteers
                 const isFull = availableSlots <= 0
+                const registrationsOpen = event.allowRegistrations !== false
+                const isRegistered = userRegistrations[event._id]
+                const buttonDisabled = !registrationsOpen || isFull || isRegistered
+                const buttonClass = isRegistered || !registrationsOpen ? "bg-gray-400" : isFull ? "" : "bg-green-600 hover:bg-green-700"
+                const buttonLabel = isRegistered
+                  ? "Already Registered"
+                  : !registrationsOpen
+                    ? "Registrations Closed"
+                    : isFull
+                      ? "Event Full"
+                      : "Register as Donor"
                 return (
                   <Card key={event._id} className="p-8 hover:border-primary/50 transition">
                     {/* NGO Section - Top */}
@@ -217,37 +228,33 @@ export default function Events() {
                       </div>
 
                       {/* Register Button - Inside Card */}
-                      {event.volunteerSlotsNeeded > 0 && event.allowRegistrations && (
+                      {event.volunteerSlotsNeeded > 0 && (
                         <div className="flex flex-col gap-2">
-                          {isFull && (
+                          {!registrationsOpen && (
+                            <div className="text-sm font-medium text-destructive">Registrations Closed</div>
+                          )}
+                          {registrationsOpen && isFull && (
                             <div className="text-sm font-medium text-destructive">Event is Full</div>
                           )}
-                          {userRegistrations[event._id] && (
+                          {isRegistered && (
                             <div className="text-sm font-medium text-green-600">Already Registered</div>
                           )}
                           <Button
                             onClick={() => {
+                              if (!registrationsOpen || isFull || isRegistered) {
+                                return
+                              }
                               if (!isAuthenticated) {
                                 router.push("/login")
-                              } else if (!userRegistrations[event._id]) {
+                              } else {
                                 router.push(`/events/${event._id}/register`)
                               }
                             }}
-                            disabled={isFull || userRegistrations[event._id]}
+                            disabled={buttonDisabled}
                             size="lg"
-                            className={
-                              userRegistrations[event._id]
-                                ? "bg-gray-400"
-                                : isFull
-                                  ? ""
-                                  : "bg-green-600 hover:bg-green-700"
-                            }
+                            className={buttonClass}
                           >
-                            {userRegistrations[event._id]
-                              ? "Already Registered"
-                              : isFull
-                                ? "Event Full"
-                                : "Register as Donor"}
+                            {buttonLabel}
                           </Button>
                         </div>
                       )}
