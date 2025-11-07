@@ -13,6 +13,21 @@ export async function GET(request: NextRequest) {
     }
 
     const db = await getDatabase()
+    const url = new URL(request.url)
+    const eventId = url.searchParams.get("eventId")
+
+    // If eventId is provided, filter by event donors
+    let eventDonorUserIds = []
+    if (eventId) {
+      try {
+        const eventDonors = await db.collection("event_registrations")
+          .find({ eventId: new ObjectId(eventId) })
+          .toArray()
+        eventDonorUserIds = eventDonors.map(d => d.userId)
+      } catch (err) {
+        console.error("Error fetching event donors:", err)
+      }
+    }
 
     // Fetch all completed blood donations from various sources
     const completedRequests = await db.collection("bloodRequests")
@@ -38,6 +53,10 @@ export async function GET(request: NextRequest) {
       if (request.acceptedBy && request.acceptedBy.length > 0) {
         request.acceptedBy.forEach((acceptance: any) => {
           if (acceptance.status === "completed") {
+            // Filter by event donors if eventId is provided
+            if (eventId && !eventDonorUserIds.some(id => id.toString() === acceptance.userId?.toString())) {
+              return
+            }
             donationHistory.push({
               _id: acceptance._id || `${request._id}-${acceptance.userId}`,
               userId: acceptance.userId,
@@ -61,6 +80,10 @@ export async function GET(request: NextRequest) {
 
     // Process direct donations
     completedDonations.forEach((donation: any) => {
+      // Filter by event donors if eventId is provided
+      if (eventId && !eventDonorUserIds.some(id => id.toString() === donation.donorId?.toString())) {
+        return
+      }
       donationHistory.push({
         _id: donation._id.toString(),
         userId: donation.donorId,
@@ -79,8 +102,13 @@ export async function GET(request: NextRequest) {
     })
 
     // Process event donations from verified registrations
+    let eventRegistrationQuery = { tokenVerified: true }
+    if (eventId) {
+      eventRegistrationQuery = { ...eventRegistrationQuery, eventId: new ObjectId(eventId) }
+    }
+    
     const verifiedEventRegistrations = await db.collection("event_registrations")
-      .find({ tokenVerified: true })
+      .find(eventRegistrationQuery)
       .sort({ verifiedAt: -1 })
       .toArray()
 
@@ -108,12 +136,13 @@ export async function GET(request: NextRequest) {
         userEmail: userDetails?.email || registration.email || "",
         userPhone: userDetails?.phone || registration.phone || "",
         bloodGroup: userDetails?.bloodGroup || "Unknown",
-        quantity: 1, // Standard donation quantity
+        quantity: 1,
         donationDate: registration.verifiedAt || registration.createdAt,
         donationType: "event",
         eventId: registration.eventId.toString(),
+        eventName: eventDetails?.title || "Unknown Event",
         registrationId: registration._id.toString(),
-        pointsAwarded: 10, // Award 10 points for event donations
+        pointsAwarded: 10,
         certificateIssued: false,
         status: "completed",
         notes: `Event: ${eventDetails?.title || "Unknown Event"} - Token: ${registration.alphanumericToken}`,

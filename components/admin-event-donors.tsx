@@ -51,6 +51,7 @@ export function AdminEventDonors({ eventId, token }: AdminEventDonorsProps) {
   const [donors, setDonors] = useState<DonorRecord[]>([])
   const [events, setEvents] = useState<any[]>([])
   const [selectedEventId, setSelectedEventId] = useState(eventId || "")
+  const [selectedEvent, setSelectedEvent] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
@@ -69,15 +70,19 @@ export function AdminEventDonors({ eventId, token }: AdminEventDonorsProps) {
 
   useEffect(() => {
     if (selectedEventId) {
+      const event = events.find(e => e._id === selectedEventId)
+      setSelectedEvent(event)
       fetchDonors()
+    } else {
+      setSelectedEvent(null)
     }
-  }, [selectedEventId])
+  }, [selectedEventId, events])
 
   const fetchEvents = async () => {
     if (!token) return
 
     try {
-      const response = await fetch("/api/events", {
+      const response = await fetch("/api/admin/events", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -260,7 +265,28 @@ export function AdminEventDonors({ eventId, token }: AdminEventDonorsProps) {
           <Users className="w-5 h-5" />
           Event Donors
         </CardTitle>
-        <CardDescription>View and manage donors who participated in blood donation events</CardDescription>
+        <CardDescription>
+          {selectedEvent ? (
+            <div className="space-y-1">
+              <p>View and manage donors who participated in blood donation events</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mt-3">
+                <h3 className="font-semibold text-blue-900">{selectedEvent.title}</h3>
+                <div className="text-sm text-blue-700 space-y-1">
+                  <p><strong>Date:</strong> {new Date(selectedEvent.eventDate).toLocaleDateString()}</p>
+                  <p><strong>Location:</strong> {selectedEvent.location}</p>
+                  {selectedEvent.startTime && selectedEvent.endTime && (
+                    <p><strong>Time:</strong> {selectedEvent.startTime} - {selectedEvent.endTime}</p>
+                  )}
+                  {selectedEvent.expectedAttendees && (
+                    <p><strong>Expected Attendees:</strong> {selectedEvent.expectedAttendees}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            "View and manage donors who participated in blood donation events"
+          )}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Event Selection */}
@@ -274,7 +300,12 @@ export function AdminEventDonors({ eventId, token }: AdminEventDonorsProps) {
               <SelectContent>
                 {events.map((event) => (
                   <SelectItem key={event._id} value={event._id}>
-                    {event.title} - {new Date(event.eventDate).toLocaleDateString()}
+                    <div className="flex flex-col">
+                      <span className="font-medium">{event.title}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {new Date(event.eventDate).toLocaleDateString()} • {event.location}
+                      </span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>

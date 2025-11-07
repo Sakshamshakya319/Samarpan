@@ -21,6 +21,7 @@ interface BloodDonationHistory {
   donationType: "request" | "event" | "direct"
   requestId?: string
   eventId?: string
+  eventName?: string
   pointsAwarded: number
   certificateIssued: boolean
   status: "completed" | "pending" | "cancelled"
@@ -31,25 +32,58 @@ interface AdminBloodHistoryProps {
   token: string
 }
 
+interface Event {
+  _id: string
+  title: string
+  eventDate: string
+}
+
 export function AdminBloodHistory({ token }: AdminBloodHistoryProps) {
   const [donations, setDonations] = useState<BloodDonationHistory[]>([])
+  const [events, setEvents] = useState<Event[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [bloodGroupFilter, setBloodGroupFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
+  const [eventFilter, setEventFilter] = useState("all")
+
+  useEffect(() => {
+    fetchEvents()
+    fetchDonationHistory()
+  }, [token])
 
   useEffect(() => {
     fetchDonationHistory()
-  }, [token])
+  }, [eventFilter, token])
+
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch("/api/events", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setEvents(data.events || [])
+      }
+    } catch (err) {
+      console.error("Error fetching events:", err)
+    }
+  }
 
   const fetchDonationHistory = async () => {
     setIsLoading(true)
     setError("")
 
     try {
-      const response = await fetch("/api/admin/blood-history", {
+      const url = new URL("/api/admin/blood-history", window.location.origin)
+      if (eventFilter && eventFilter !== "all") {
+        url.searchParams.append("eventId", eventFilter)
+      }
+
+      const response = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
       })
 
@@ -164,6 +198,19 @@ export function AdminBloodHistory({ token }: AdminBloodHistoryProps) {
                 className="pl-10"
               />
             </div>
+            <Select value={eventFilter} onValueChange={setEventFilter}>
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="Filter by Event" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Donations</SelectItem>
+                {events.map(event => (
+                  <SelectItem key={event._id} value={event._id}>
+                    {event.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={bloodGroupFilter} onValueChange={setBloodGroupFilter}>
               <SelectTrigger className="w-32">
                 <SelectValue placeholder="Blood Group" />
@@ -254,6 +301,7 @@ export function AdminBloodHistory({ token }: AdminBloodHistoryProps) {
                     <TableHead>Quantity</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Type</TableHead>
+                    <TableHead>Event / Source</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Points</TableHead>
                     <TableHead>Certificate</TableHead>
@@ -289,6 +337,15 @@ export function AdminBloodHistory({ token }: AdminBloodHistoryProps) {
                           {donation.donationType === "request" ? "Request" : 
                            donation.donationType === "event" ? "Event" : "Direct"}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {donation.eventName ? (
+                          <span className="font-medium text-blue-700">{donation.eventName}</span>
+                        ) : donation.donationType === "request" ? (
+                          <span className="text-gray-600">Blood Request</span>
+                        ) : (
+                          <span className="text-gray-500">-</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge 
