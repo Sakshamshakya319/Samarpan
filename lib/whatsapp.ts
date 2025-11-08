@@ -1,5 +1,3 @@
-import fetch from "node-fetch"
-
 /**
  * WhatsApp Cloud API Sender
  * Minimal helper to send WhatsApp messages via Meta Graph API.

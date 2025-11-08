@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 import { verifyAdminPermission } from "@/lib/admin-utils-server"
+import { sendWhatsAppNotification } from "@/lib/whatsapp"
 
 export async function POST(request: NextRequest) {
   try {
@@ -114,6 +115,19 @@ export async function POST(request: NextRequest) {
 
       if (!notificationResponse.ok) {
         console.warn("Failed to create notification for points award")
+      }
+
+      // Send WhatsApp to user (best-effort)
+      try {
+        if (user?.phone) {
+          await sendWhatsAppNotification({
+            phone: user.phone,
+            title: "Points Awarded!",
+            message: `You have been awarded ${points} points for your blood donation. Keep saving lives!`,
+          })
+        }
+      } catch (waErr) {
+        console.error("[Award Points] WhatsApp send error:", waErr)
       }
     } catch (notificationError) {
       console.error("Error creating notification:", notificationError)
