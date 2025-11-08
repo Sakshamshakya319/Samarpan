@@ -4,7 +4,10 @@ import { useEffect, useState, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Truck, MapPin, Loader2, AlertCircle, PhoneIcon, CheckCircle2, RefreshCw } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Truck, MapPin, Loader2, AlertCircle, PhoneIcon, CheckCircle2, RefreshCw, Edit3 } from "lucide-react"
 import { useAppSelector } from "@/lib/hooks"
 
 interface TransportationDetails {
@@ -26,6 +29,10 @@ export function DriverDetailsDisplay() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState("")
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [newPickupLocation, setNewPickupLocation] = useState("")
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [successMessage, setSuccessMessage] = useState("")
   const { token } = useAppSelector((state) => state.auth)
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -104,6 +111,54 @@ export function DriverDetailsDisplay() {
         return "bg-red-100 text-red-800"
       default:
         return "bg-gray-100 text-gray-800"
+    }
+  }
+
+  const handleEditPickupLocation = () => {
+    if (transportationDetails) {
+      setNewPickupLocation(transportationDetails.pickupLocation)
+      setShowEditDialog(true)
+    }
+  }
+
+  const handleUpdatePickupLocation = async () => {
+    if (!newPickupLocation.trim()) {
+      setError("Please enter a valid pickup location")
+      return
+    }
+
+    setIsUpdating(true)
+    setError("")
+
+    try {
+      const response = await fetch("/api/transportation-request/update-pickup", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          pickupLocation: newPickupLocation,
+        }),
+      })
+
+      if (response.ok) {
+        // Update local state
+        setTransportationDetails(prev => 
+          prev ? { ...prev, pickupLocation: newPickupLocation } : null
+        )
+        setShowEditDialog(false)
+        setSuccessMessage("Pickup location updated successfully!")
+        setTimeout(() => setSuccessMessage(""), 3000)
+      } else {
+        const data = await response.json()
+        setError(data.error || "Failed to update pickup location")
+      }
+    } catch (err) {
+      console.error("Failed to update pickup location:", err)
+      setError("Error updating pickup location")
+    } finally {
+      setIsUpdating(false)
     }
   }
 
@@ -204,15 +259,85 @@ export function DriverDetailsDisplay() {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Success Message */}
+        {successMessage && (
+          <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+            <p className="text-sm text-green-800 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              {successMessage}
+            </p>
+          </div>
+        )}
         {/* Pickup Location */}
         <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-red-600" />
-            Pickup Location (Your Address)
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-red-600" />
+              Pickup Location (Your Address)
+            </label>
+            {transportationDetails.status === "pending" && (
+              <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-7 px-2" onClick={handleEditPickupLocation}>
+                    <Edit3 className="w-3 h-3 mr-1" />
+                    Edit
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Update Pickup Location</DialogTitle>
+                    <DialogDescription>
+                      Enter your new pickup location. The driver will pick you up from this address.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="pickupLocation">Pickup Address</Label>
+                      <Input
+                        id="pickupLocation"
+                        placeholder="e.g., 123 Main Street, City, ZIP Code"
+                        value={newPickupLocation}
+                        onChange={(e) => setNewPickupLocation(e.target.value)}
+                        className="col-span-3"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowEditDialog(false)}
+                      disabled={isUpdating}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleUpdatePickupLocation}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Updating...
+                        </>
+                      ) : (
+                        "Update Location"
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
           <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
             <p className="text-sm font-medium text-gray-900">{transportationDetails.pickupLocation}</p>
-            <p className="text-xs text-gray-500 mt-1">Driver will pick up donation from this location</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {transportationDetails.status === "pending" 
+                ? "Driver will pick up donation from this location - You can edit this while request is pending"
+                : "Driver will pick up donation from this location"
+              }
+            </p>
           </div>
         </div>
 

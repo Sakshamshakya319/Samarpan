@@ -28,6 +28,7 @@ export const ADMIN_PERMISSIONS = {
 
   // Donation images
   VIEW_DONATION_IMAGES: "view_donation_images",
+  MANAGE_DONATION_IMAGES: "manage_donation_images",
 
   // Contact submissions
   VIEW_CONTACT_SUBMISSIONS: "view_contact_submissions",
@@ -68,7 +69,7 @@ export const PERMISSION_GROUPS = {
   blogs: [ADMIN_PERMISSIONS.MANAGE_BLOGS, ADMIN_PERMISSIONS.VIEW_BLOGS],
   certificates: [ADMIN_PERMISSIONS.GENERATE_CERTIFICATES],
   notifications: [ADMIN_PERMISSIONS.SEND_NOTIFICATIONS],
-  images: [ADMIN_PERMISSIONS.VIEW_DONATION_IMAGES],
+  images: [ADMIN_PERMISSIONS.VIEW_DONATION_IMAGES, ADMIN_PERMISSIONS.MANAGE_DONATION_IMAGES],
   contacts: [ADMIN_PERMISSIONS.VIEW_CONTACT_SUBMISSIONS],
   qr: [ADMIN_PERMISSIONS.CHECK_QR_CODES],
   event_donors: [ADMIN_PERMISSIONS.VIEW_EVENT_DONORS, ADMIN_PERMISSIONS.MANAGE_EVENT_DONATION_BLOOD_LABELS],
@@ -91,6 +92,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   generate_certificates: "Generate Certificates",
   send_notifications: "Send Notifications",
   view_donation_images: "View Donation Images",
+  manage_donation_images: "Manage Donation Images",
   view_contact_submissions: "View Contact Submissions",
   check_qr_codes: "Check QR Codes",
   view_event_donors: "View Event Donors",

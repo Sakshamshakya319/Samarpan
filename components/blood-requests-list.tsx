@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { AlertCircle, Droplet, CheckCircle2, Truck } from "lucide-react"
 import { useAppSelector } from "@/lib/hooks"
 import {
@@ -81,6 +82,9 @@ export function BloodRequestsList() {
   })
   const [successMessage, setSuccessMessage] = useState("")
   const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(null)
+  const [showAcceptDialog, setShowAcceptDialog] = useState(false)
+  const [selectedRequestForAccept, setSelectedRequestForAccept] = useState<BloodRequest | null>(null)
+  const [needsTransportation, setNeedsTransportation] = useState(false)
   const [cancelingRequestId, setCancelingRequestId] = useState<string | null>(null)
   const [showTransportDialog, setShowTransportDialog] = useState(false)
   const [selectedRequestForTransport, setSelectedRequestForTransport] = useState<BloodRequest | null>(null)
@@ -167,7 +171,18 @@ export function BloodRequestsList() {
   const handleAcceptRequest = async (requestId: string, request: BloodRequest) => {
     if (!token) return
 
+    // Show accept dialog with transportation checkbox
+    setSelectedRequestForAccept(request)
+    setShowAcceptDialog(true)
+  }
+
+  const confirmAcceptRequest = async () => {
+    if (!token || !selectedRequestForAccept) return
+
+    const requestId = selectedRequestForAccept._id
+    setShowAcceptDialog(false)
     setAcceptingRequestId(requestId)
+    
     try {
       const response = await fetch("/api/blood-request/accept", {
         method: "POST",
@@ -175,7 +190,10 @@ export function BloodRequestsList() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ bloodRequestId: requestId }),
+        body: JSON.stringify({ 
+          bloodRequestId: requestId,
+          needsTransportation: needsTransportation 
+        }),
       })
 
       const data = await response.json()
@@ -185,12 +203,16 @@ export function BloodRequestsList() {
         setAcceptingRequestId(null)
         fetchRequests()
         fetchAcceptedDonations()
-        // Show transport dialog after accepting
-        setSelectedRequestForTransport(request)
-        setPickupLocation("")
-        setDropLocation(request.hospitalLocation) // Set drop location to hospital location (fixed)
-        setHospitalName("")
-        setShowTransportDialog(true)
+        
+        // Show transport dialog only if user didn't request transportation
+        if (!needsTransportation) {
+          setSelectedRequestForTransport(selectedRequestForAccept)
+          setPickupLocation("")
+          setDropLocation(selectedRequestForAccept.hospitalLocation) // Set drop location to hospital location (fixed)
+          setHospitalName("")
+          setShowTransportDialog(true)
+        }
+        
         setTimeout(() => setSuccessMessage(""), 3000)
       } else if (response.status === 400 && data.canDonate === false) {
         // Show 3-month validation warning
@@ -489,7 +511,80 @@ export function BloodRequestsList() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Transportation Arrangement Dialog */}
+      {/* Accept Blood Request Dialog */}
+      <Dialog open={showAcceptDialog} onOpenChange={setShowAcceptDialog}>
+        <DialogContent className="bg-white max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <Droplet className="w-5 h-5 text-red-600" />
+              <DialogTitle>Accept Blood Donation Request</DialogTitle>
+            </div>
+            <DialogDescription>
+              Confirm your willingness to donate blood for this request
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="text-2xl font-bold text-red-600">{selectedRequestForAccept?.bloodGroup}</div>
+                <div className="text-sm text-gray-600">({selectedRequestForAccept?.quantity} units)</div>
+              </div>
+              <p className="text-sm text-gray-700">
+                <span className="font-medium">Hospital:</span> {selectedRequestForAccept?.hospitalLocation}
+              </p>
+              <p className="text-sm text-gray-700">
+                <span className="font-medium">Requested by:</span> {selectedRequestForAccept?.userName}
+              </p>
+            </div>
+
+            <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <Checkbox
+                id="needsTransportation"
+                checked={needsTransportation}
+                onCheckedChange={(checked) => setNeedsTransportation(checked as boolean)}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <label
+                  htmlFor="needsTransportation"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  I need transportation to the hospital
+                </label>
+                <p className="text-sm text-muted-foreground">
+                  Check this box if you need transportation assistance to reach the hospital for your donation.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-yellow-600" />
+                <p className="text-sm font-medium text-yellow-800">Important Information</p>
+              </div>
+              <p className="text-sm text-yellow-700 mt-1">
+                By accepting this request, you commit to donating blood. Please ensure you meet all eligibility criteria and can reach the hospital on time.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-2 justify-end mt-6">
+            <Button
+              onClick={() => setShowAcceptDialog(false)}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmAcceptRequest}
+              disabled={acceptingRequestId === selectedRequestForAccept?._id}
+              className="bg-red-600 hover:bg-red-700 gap-2"
+            >
+              {acceptingRequestId === selectedRequestForAccept?._id ? "Accepting..." : "Accept Blood Donation"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <Dialog open={showTransportDialog} onOpenChange={setShowTransportDialog}>
         <DialogContent className="bg-white max-w-md">
           <DialogHeader>

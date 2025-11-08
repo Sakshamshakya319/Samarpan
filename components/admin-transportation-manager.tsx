@@ -44,6 +44,58 @@ const STATUS_COLORS = {
   cancelled: "bg-red-100 text-red-800",
 }
 
+const STATUS_TIMELINE = [
+  { key: "pending", label: "Request Pending", icon: "⏳" },
+  { key: "assigned", label: "Driver Assigned", icon: "🚚" },
+  { key: "completed", label: "Blood Donation Completed", icon: "✅" },
+]
+
+function TransportationTimeline({ currentStatus }: { currentStatus: string }) {
+  const currentIndex = STATUS_TIMELINE.findIndex(step => step.key === currentStatus)
+  
+  return (
+    <div className="w-full">
+      <div className="flex items-center justify-between relative">
+        <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200 rounded-full" />
+        
+        {STATUS_TIMELINE.map((step, index) => {
+          const isActive = index <= currentIndex
+          const isCurrent = index === currentIndex
+          
+          return (
+            <div key={step.key} className="relative z-10 flex flex-col items-center">
+              <div className={`
+                w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium
+                transition-all duration-300
+                ${isActive 
+                  ? isCurrent 
+                    ? 'bg-blue-600 text-white shadow-lg scale-110' 
+                    : 'bg-green-600 text-white'
+                  : 'bg-gray-300 text-gray-600'
+                }
+              `}>
+                {step.icon}
+              </div>
+              <span className={`
+                text-xs mt-2 text-center max-w-20
+                ${isActive ? 'text-gray-900 font-medium' : 'text-gray-500'}
+              `}>
+                {step.label}
+              </span>
+            </div>
+          )
+        })}
+        
+        {/* Progress line */}
+        <div 
+          className="absolute top-5 left-0 h-1 bg-blue-600 rounded-full transition-all duration-500"
+          style={{ width: `${((currentIndex + 1) / STATUS_TIMELINE.length) * 100}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
 interface AdminTransportationManagerProps {
   token: string
 }
@@ -240,6 +292,11 @@ export function AdminTransportationManager({ token }: AdminTransportationManager
 
               <CardContent>
                 <div className="space-y-4">
+                  {/* Amazon-style Timeline */}
+                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <p className="text-sm font-semibold text-gray-900 mb-3">Blood Donation Progress</p>
+                    <TransportationTimeline currentStatus={request.status} />
+                  </div>
                   {/* User Information */}
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded">
                     <p className="font-semibold text-gray-900 mb-2">User Information</p>

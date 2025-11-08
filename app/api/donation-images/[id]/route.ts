@@ -4,6 +4,7 @@ import { verifyAdminToken } from "@/lib/auth"
 import { verifyAdminPermission } from "@/lib/admin-utils-server"
 import { ObjectId } from "mongodb"
 import { sendWhatsAppNotification } from "@/lib/whatsapp"
+import { ADMIN_PERMISSIONS } from "@/lib/constants/admin-permissions"
 
 export async function PATCH(
   request: NextRequest,
@@ -13,7 +14,7 @@ export async function PATCH(
     const { id } = await params
 
     // Robust admin verification: supports Authorization header or adminToken cookie
-    const auth = await verifyAdminPermission(request)
+    const auth = await verifyAdminPermission(request, ADMIN_PERMISSIONS.MANAGE_DONATION_IMAGES)
     if (!auth.valid) {
       return NextResponse.json({ error: auth.error || "Invalid token or insufficient permissions" }, { status: auth.status || 401 })
     }

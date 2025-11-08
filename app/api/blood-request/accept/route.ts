@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
 
-    const { bloodRequestId } = await request.json()
+    const { bloodRequestId, needsTransportation = false } = await request.json()
 
     if (!bloodRequestId) {
       return NextResponse.json({ error: "Blood request ID is required" }, { status: 400 })
@@ -101,12 +101,97 @@ export async function POST(request: NextRequest) {
       quantity: bloodRequest.quantity,
       acceptedAt: new Date(),
       status: "accepted", // accepted → transportation_needed → image_uploaded → fulfilled
-      needsTransportation: false, // Admin will set this when creating transport request
+      needsTransportation: needsTransportation, // User can request transportation
       updatedAt: new Date(),
     })
 
+    // Send notifications to all users about the blood request acceptance
+    try {
+      const allUsers = await usersCollection.find({}).toArray()
+      const notificationsCollection = db.collection("notifications")
+      
+      // Create in-app notifications for all users
+      const notifications = allUsers.map(user => ({
+        userId: user._id,
+        title: "Blood Request Accepted",
+        message: `A blood request for ${bloodRequest.bloodGroup} blood has been accepted by ${user.name || 'a donor'}. Thank you for your interest in helping!`,
+        read: false,
+        createdAt: new Date(),
+        type: "blood_request_accepted",
+        relatedId: bloodRequestId
+      }))
+      
+      await notificationsCollection.insertMany(notifications)
+
+      // Send email notifications to users who have email addresses
+      const usersWithEmail = allUsers.filter(u => u.email)
+      if (usersWithEmail.length > 0) {
+        const { sendEmailNotification } = await import("@/lib/email")
+        await Promise.allSettled(
+          usersWithEmail.map(user => 
+            sendEmailNotification({
+              to: user.email,
+              subject: "Blood Request Accepted",
+              text: `A blood request for ${bloodRequest.bloodGroup} blood has been accepted. Thank you for your interest in helping save lives!`,
+              html: `<p>A blood request for <strong>${bloodRequest.bloodGroup}</strong> blood has been accepted by a donor.</p><p>Thank you for your interest in helping save lives!</p>`
+            })
+          )
+        )
+      }
+
+      // Send WhatsApp notifications to users who have phone numbers
+      const usersWithPhone = allUsers.filter(u => u.phone)
+      if (usersWithPhone.length > 0) {
+        const { sendWhatsAppNotification } = await import("@/lib/whatsapp")
+        await Promise.allSettled(
+          usersWithPhone.map(user => 
+            sendWhatsAppNotification({
+              phone: user.phone,
+              title: "Blood Request Accepted",
+              message: `A blood request for ${bloodRequest.bloodGroup} blood has been accepted by a donor. Thank you for your willingness to help!`
+            })
+          )
+        )
+      }
+    } catch (notificationError) {
+      console.error("Error sending notifications:", notificationError)
+      // Don't fail the main request if notifications fail
+    }
+
     // Update blood request status if needed (optional - can be marked as fulfilled)
     // For now, we'll leave it as active so multiple donors can accept if needed
+
+    // If user requested transportation, automatically create a transportation request
+    if (needsTransportation) {
+      try {
+        const transportationCollection = db.collection("transportationRequests")
+        
+        await transportationCollection.insertOne({
+          userId: new ObjectId(decoded.userId),
+          bloodRequestId: new ObjectId(bloodRequestId),
+          pickupLocation: "To be provided by donor", // User will update this later
+          dropLocation: bloodRequest.hospitalLocation,
+          hospitalLocation: bloodRequest.hospitalLocation,
+          hospitalName: bloodRequest.hospitalName || "",
+          status: "pending",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          createdBy: new ObjectId(decoded.userId), // User created this transport request
+        })
+
+        // Create notification for user about transportation request
+        await notificationsCollection.insertOne({
+          userId: new ObjectId(decoded.userId),
+          title: "Transportation Request Created",
+          message: "A transportation request has been created for your blood donation. Please update your pickup location.",
+          read: false,
+          createdAt: new Date(),
+        })
+      } catch (transportError) {
+        console.error("Error creating transportation request:", transportError)
+        // Don't fail the main request if transportation creation fails
+      }
+    }
 
     return NextResponse.json(
       {
