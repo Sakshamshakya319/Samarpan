@@ -410,9 +410,27 @@ AWS_REGION=us-east-1
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 
 # Admin Credentials (for initialization)
-ADMIN_EMAIL=admin@samarpan.com
+ADMIN_EMAIL=samarpan.com
 ADMIN_PASSWORD=strong-password
+ 
+
+# WhatsApp (Optional)
+WHATSAPP_ENABLED=true
+WHATSAPP_TOKEN=your-meta-whatsapp-token
+WHATSAPP_PHONE_NUMBER_ID=your-phone-number-id
+WHATSAPP_DEFAULT_COUNTRY_CODE=91
 ```
+
+### WhatsApp Setup
+
+Enable WhatsApp notifications alongside in‑app notifications and email:
+
+- Set `WHATSAPP_ENABLED` to `true` to activate WhatsApp sending.
+- Provide `WHATSAPP_TOKEN` from your Meta WhatsApp Business Cloud API.
+- Set `WHATSAPP_PHONE_NUMBER_ID` to the sender phone number ID from Meta.
+- Optionally set `WHATSAPP_DEFAULT_COUNTRY_CODE` (e.g., `91`) if your users store local numbers without a country code.
+
+When enabled, flows such as blood requests, admin broadcasts, event registrations, QR verification, donation image reviews, certificate generation, transportation creation and status updates attempt best‑effort WhatsApp delivery if the user has a `phone` saved.
 
 ---
 

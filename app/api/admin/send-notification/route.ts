@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyAdminToken } from "@/lib/auth"
 import { sendEmail, generateNotificationEmailHTML } from "@/lib/email"
+import { sendWhatsAppBulk } from "@/lib/whatsapp"
 import { ObjectId } from "mongodb"
 
 export async function POST(request: NextRequest) {
@@ -99,6 +100,20 @@ export async function POST(request: NextRequest) {
             console.error("[Admin Notification] Error sending emails:", err)
           })
         }
+      }
+
+      // Send WhatsApp to recipients who have phone numbers (best-effort)
+      try {
+        const phones = recipientUsers
+          .map((u) => u.phone)
+          .filter((p): p is string => typeof p === "string" && p.trim().length > 0)
+        if (phones.length > 0) {
+          const text = `${title}\n\n${message}`
+          const { sent, failed } = await sendWhatsAppBulk(phones, text)
+          console.log(`[Admin Notification] WhatsApp sent=${sent} failed=${failed}`)
+        }
+      } catch (waErr) {
+        console.error("[Admin Notification] WhatsApp send error:", waErr)
       }
     }
 

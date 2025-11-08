@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyAdminToken, verifyToken } from "@/lib/auth"
 import { ObjectId } from "mongodb"
+import { sendWhatsAppNotification } from "@/lib/whatsapp"
 
 export async function POST(request: NextRequest) {
   try {
@@ -84,6 +85,21 @@ export async function POST(request: NextRequest) {
       read: false,
       createdAt: new Date(),
     })
+
+    // Send WhatsApp to user (best-effort)
+    try {
+      const usersCollection = db.collection("users")
+      const userDoc = await usersCollection.findOne({ _id: new ObjectId(requestUserId) })
+      if (userDoc?.phone) {
+        await sendWhatsAppNotification({
+          phone: userDoc.phone,
+          title: "Transportation Arranged",
+          message: `Pickup: ${pickupLocation}\nDrop: ${dropLocation}${hospitalName ? `\nHospital: ${hospitalName}` : ""}`,
+        })
+      }
+    } catch (waErr) {
+      console.error("[Transportation] WhatsApp send error (POST):", waErr)
+    }
 
     return NextResponse.json(
       {
@@ -235,6 +251,21 @@ export async function PATCH(request: NextRequest) {
         read: false,
         createdAt: new Date(),
       })
+
+      // Send WhatsApp to user (best-effort)
+      try {
+        const usersCollection = db.collection("users")
+        const userDoc = await usersCollection.findOne({ _id: updatedTransport.userId })
+        if (userDoc?.phone) {
+          await sendWhatsAppNotification({
+            phone: userDoc.phone,
+            title: `Transportation Status: ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+            message,
+          })
+        }
+      } catch (waErr) {
+        console.error("[Transportation] WhatsApp send error (PATCH):", waErr)
+      }
     }
 
     return NextResponse.json(

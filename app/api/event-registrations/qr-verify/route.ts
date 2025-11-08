@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyAdminToken } from "@/lib/auth"
 import { ObjectId } from "mongodb"
+import { sendWhatsAppNotification } from "@/lib/whatsapp"
 
 /**
  * QR Code Verification API - Production Ready
@@ -250,6 +251,21 @@ export async function POST(request: NextRequest) {
         createdAt: new Date(),
       })
       console.log(`[QR-VERIFY] Notification created - Request ID: ${requestId}`);
+
+      // Send WhatsApp to user (best-effort)
+      try {
+        const usersCollection = db.collection("users")
+        const userDoc = await usersCollection.findOne({ _id: new ObjectId(registration.userId) })
+        if (userDoc?.phone) {
+          await sendWhatsAppNotification({
+            phone: userDoc.phone,
+            title: "Event Participation Verified",
+            message: `Your blood donation at ${event?.title || 'the event'} has been verified and recorded.`,
+          })
+        }
+      } catch (waErr) {
+        console.error("[QR-VERIFY] WhatsApp send error:", waErr)
+      }
     } catch (notificationError) {
       console.error(`[QR-VERIFY] Error creating notification - Request ID: ${requestId}:`, notificationError)
     }

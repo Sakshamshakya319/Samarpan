@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyToken } from "@/lib/auth"
 import { sendEmail, generateBloodRequestEmailHTML } from "@/lib/email"
+import { sendWhatsAppBulk } from "@/lib/whatsapp"
 import { ObjectId } from "mongodb"
 import { verifyAdminPermission } from "@/lib/admin-utils-server"
 
@@ -124,6 +125,20 @@ export async function POST(request: NextRequest) {
       if (notifications.length > 0) {
         await notificationsCollection.insertMany(notifications)
         console.log(`[Blood Request] Created ${notifications.length} in-app notifications`)
+      }
+
+      // Send WhatsApp notifications to matching users (best-effort)
+      try {
+        const phones = matchingUsers
+          .map((u) => u.phone)
+          .filter((p): p is string => typeof p === "string" && p.trim().length > 0)
+        if (phones.length > 0) {
+          const text = `Blood Request - ${bloodGroup} Needed\n\nLocation: ${hospitalLocation}\nUrgency: ${urgency || "Normal"}\nQuantity: ${quantity}\nReason: ${reason || "N/A"}`
+          const { sent, failed } = await sendWhatsAppBulk(phones, text)
+          console.log(`[Blood Request] WhatsApp sent=${sent} failed=${failed}`)
+        }
+      } catch (waErr) {
+        console.error("[Blood Request] WhatsApp send error:", waErr)
       }
     }
 

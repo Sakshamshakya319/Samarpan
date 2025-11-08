@@ -1,7 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyAdminToken } from "@/lib/auth"
+import { verifyAdminPermission } from "@/lib/admin-utils-server"
 import { ObjectId } from "mongodb"
+import { sendWhatsAppNotification } from "@/lib/whatsapp"
 
 export async function PATCH(
   request: NextRequest,
@@ -10,14 +12,10 @@ export async function PATCH(
   try {
     const { id } = await params
 
-    const token = request.headers.get("authorization")?.split(" ")[1]
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const decoded = verifyAdminToken(token)
-    if (!decoded || decoded.role !== "admin") {
-      return NextResponse.json({ error: "Invalid token or insufficient permissions" }, { status: 401 })
+    // Robust admin verification: supports Authorization header or adminToken cookie
+    const auth = await verifyAdminPermission(request)
+    if (!auth.valid) {
+      return NextResponse.json({ error: auth.error || "Invalid token or insufficient permissions" }, { status: auth.status || 401 })
     }
 
     const db = await getDatabase()
@@ -34,7 +32,7 @@ export async function PATCH(
         $set: {
           status,
           updatedAt: new Date(),
-          updatedBy: new ObjectId(decoded.adminId),
+          updatedBy: new ObjectId(auth.admin._id),
         },
       },
     )
@@ -59,6 +57,21 @@ export async function PATCH(
         read: false,
         createdAt: new Date(),
       })
+
+      // Send WhatsApp to user (best-effort)
+      try {
+        const usersCollection = db.collection("users")
+        const user = await usersCollection.findOne({ _id: image.userId })
+        if (user?.phone) {
+          await sendWhatsAppNotification({
+            phone: user.phone,
+            title: `Donation Image ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+            message,
+          })
+        }
+      } catch (waErr) {
+        console.error("[Donation Images] WhatsApp send error:", waErr)
+      }
     }
 
     return NextResponse.json({

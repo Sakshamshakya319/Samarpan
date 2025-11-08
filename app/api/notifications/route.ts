@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyToken } from "@/lib/auth"
 import { sendEmail, generateNotificationEmailHTML } from "@/lib/email"
+import { sendWhatsAppNotification } from "@/lib/whatsapp"
 import { ObjectId } from "mongodb"
 
 export async function GET(request: NextRequest) {
@@ -94,11 +95,25 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Send WhatsApp (best-effort) if recipient has phone
+    try {
+      if (recipientUser.phone) {
+        await sendWhatsAppNotification({
+          phone: recipientUser.phone,
+          title,
+          message,
+        })
+      }
+    } catch (waErr) {
+      console.error("[Notification] WhatsApp send error:", waErr)
+    }
+
     return NextResponse.json(
       {
         message: "Notification sent successfully",
         notificationId: result.insertedId,
         emailSent: shouldSendEmail && !!recipientUser.email,
+        whatsappAttempted: !!recipientUser.phone,
       },
       { status: 201 },
     )

@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyToken } from "@/lib/auth"
 import { ObjectId } from "mongodb"
+import { sendWhatsAppNotification } from "@/lib/whatsapp"
 
 /**
  * Event Registrations API
@@ -129,6 +130,21 @@ export async function POST(request: NextRequest) {
         read: false,
         createdAt: new Date(),
       })
+
+      // Send WhatsApp to user (best-effort)
+      try {
+        const usersCollection = db.collection("users")
+        const userDoc = await usersCollection.findOne({ _id: new ObjectId(decoded.userId) })
+        if (userDoc?.phone) {
+          await sendWhatsAppNotification({
+            phone: userDoc.phone,
+            title: "Registration Confirmed",
+            message: `You have been registered for ${event.title} at ${event.location} in ${timeSlot}`,
+          })
+        }
+      } catch (waErr) {
+        console.error("[Event Registration] WhatsApp send error:", waErr)
+      }
     } catch (notificationError) {
       console.error("Error creating notification:", notificationError)
       // Don't fail the registration if notification fails

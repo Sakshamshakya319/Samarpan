@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyAdminToken } from "@/lib/auth"
 import { ObjectId } from "mongodb"
+import { sendWhatsAppNotification } from "@/lib/whatsapp"
 import crypto from "crypto"
 
 function generateVerificationToken(): string {
@@ -68,6 +69,21 @@ export async function POST(request: NextRequest) {
       read: false,
       createdAt: new Date(),
     })
+
+    // Send WhatsApp to user (best-effort)
+    try {
+      const usersCollection = db.collection("users")
+      const userDoc = await usersCollection.findOne({ _id: new ObjectId(userId) })
+      if (userDoc?.phone) {
+        await sendWhatsAppNotification({
+          phone: userDoc.phone,
+          title: "Certificate Generated",
+          message: `Your donation certificate #${certificateId} has been generated for ${donationCount} donations. Keep saving lives!`,
+        })
+      }
+    } catch (waErr) {
+      console.error("[Certificates] WhatsApp send error:", waErr)
+    }
 
     return NextResponse.json(
       {
