@@ -21,6 +21,7 @@ import { AdminAdminManager } from "@/components/admin-admin-manager"
 import { AdminBlogManager } from "@/components/admin-blog-manager"
 import { AdminActionHistory } from "@/components/admin-action-history"
 import { AdminChangePasswordDialog } from "@/components/admin-change-password-dialog"
+import { MaintenanceModeManager } from "@/components/maintenance-mode-manager"
 import {
   LogOut,
   LayoutDashboard,
@@ -344,6 +345,17 @@ export default function SuperAdminPage() {
             <History className="w-4 h-4" />
             Action History
           </button>
+          <button
+            onClick={() => setActiveTab("maintenance")}
+            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "maintenance"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Lock className="w-4 h-4" />
+            Maintenance
+          </button>
         </div>
       </div>
 
@@ -434,6 +446,11 @@ export default function SuperAdminPage() {
         {activeTab === "action-history" && (
           <div className="grid grid-cols-1 gap-6">
             {token && <AdminActionHistory token={token} />}
+          </div>
+        )}
+        {activeTab === "maintenance" && (
+          <div className="grid grid-cols-1 gap-6">
+            <MaintenanceModeManager />
           </div>
         )}
       </div>
