@@ -17,6 +17,7 @@
     "start": "next start",
     "test:email": "tsx scripts/test-email.ts",
     "test:whatsapp": "tsx scripts/test-whatsapp.ts",
+    "test:twilio-whatsapp": "tsx scripts/test-twilio-whatsapp.ts",
     "test:certificate": "tsx scripts/create-test-certificate.ts"
   },
   "dependencies": {
@@ -99,6 +100,7 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "ts-node": "^10.9.2",
+    "twilio": "^5.10.4",
     "vaul": "^0.9.9",
     "zod": "3.25.76"
   },
