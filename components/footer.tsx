@@ -61,12 +61,12 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition">
+                <a href="/faq" className="text-sm text-muted-foreground hover:text-foreground transition">
                   FAQ
                 </a>
               </li>
               <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition">
+                <a href="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground transition">
                   Privacy Policy
                 </a>
               </li>
@@ -102,15 +102,15 @@ export function Footer() {
 
         <div className="border-t border-border pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-muted-foreground">© 2025 Aster Minds. All rights reserved.</p>
+            <p className="text-sm text-muted-foreground">© 2025 Saksham Shakya. All rights reserved.</p>
             <div className="flex gap-6">
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition">
+              <a href="/terms-of-service" className="text-sm text-muted-foreground hover:text-foreground transition">
                 Terms of Service
               </a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition">
+              <a href="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground transition">
                 Privacy Policy
               </a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition">
+              <a href="/cookie-policy" className="text-sm text-muted-foreground hover:text-foreground transition">
                 Cookie Policy
               </a>
             </div>
