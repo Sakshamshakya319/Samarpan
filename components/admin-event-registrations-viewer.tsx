@@ -29,7 +29,9 @@ interface Registration {
   registrationNumber: string
   name: string
   email: string
+  phone?: string
   timeSlot: string
+  participantType?: string
   status: string
   qrToken?: string
   qrVerified?: boolean
@@ -152,6 +154,7 @@ export function AdminEventRegistrationsViewer({
                     <TableHead>Reg #</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Participant</TableHead>
                     <TableHead>Time Slot</TableHead>
                     <TableHead>Donation</TableHead>
                     <TableHead>QR Code</TableHead>
@@ -163,6 +166,7 @@ export function AdminEventRegistrationsViewer({
                       <TableCell className="font-medium text-sm">{reg.registrationNumber}</TableCell>
                       <TableCell className="text-sm">{reg.name}</TableCell>
                       <TableCell className="text-sm">{reg.email}</TableCell>
+                      <TableCell className="text-sm capitalize">{reg.participantType || "other"}</TableCell>
                       <TableCell className="text-sm">{reg.timeSlot}</TableCell>
                       <TableCell>
                         <Badge className={getStatusColor(reg.donationStatus || "Pending")} variant="outline">

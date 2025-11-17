@@ -16,6 +16,8 @@ interface RegistrationData {
   timeSlot: string // e.g., "09:00-11:00", "11:00-13:00", etc.
   userId?: string
   email?: string
+  // New: participant type and optional identifier
+  participantType?: "student" | "staff" | "other"
 }
 
 // Generate a unique 6-digit alphanumeric token
@@ -42,12 +44,30 @@ export async function POST(request: NextRequest) {
     }
 
     const db = await getDatabase()
-    const { eventId, registrationNumber, name, timeSlot } = (await request.json()) as RegistrationData
+    const { eventId, registrationNumber, name, timeSlot, participantType } = (await request.json()) as RegistrationData
 
     // Validation
-    if (!eventId || !registrationNumber || !name || !timeSlot) {
+    if (!eventId || !name || !timeSlot) {
       return NextResponse.json(
-        { error: "Event ID, registration number, name, and time slot are required" },
+        { error: "Event ID, name, and time slot are required" },
+        { status: 400 }
+      )
+    }
+
+    // Validate participant type and identifier rules
+    const allowedTypes = ["student", "staff", "other"] as const
+    const participant = (participantType || "other").toLowerCase()
+    if (!allowedTypes.includes(participant as any)) {
+      return NextResponse.json(
+        { error: "Invalid participant type. Must be student, staff, or other" },
+        { status: 400 }
+      )
+    }
+
+    // For student/staff, identifier (registrationNumber) is required; for other it is optional
+    if ((participant === "student" || participant === "staff") && (!registrationNumber || !registrationNumber.trim())) {
+      return NextResponse.json(
+        { error: participant === "student" ? "Registration number is required for LPU Student" : "UID is required for LPU Staff" },
         { status: 400 }
       )
     }
@@ -107,6 +127,7 @@ export async function POST(request: NextRequest) {
       registrationNumber,
       name,
       timeSlot,
+      participantType: participant,
       status: "Registered", // Default role/status
       alphanumericToken, // Unique 6-digit alphanumeric identifier
       tokenVerified: false, // Track if token has been verified
@@ -170,16 +191,11 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url)
     const eventId = url.searchParams.get("eventId")
     const checkUserRegistration = url.searchParams.get("checkUser") === "true"
-
-    if (!eventId) {
-      return NextResponse.json({ error: "Event ID is required" }, { status: 400 })
-    }
-
+    const registrationId = url.searchParams.get("registrationId")
     const db = await getDatabase()
     const registrationsCollection = db.collection("event_registrations")
 
-    // Check if getting specific registration details
-    const registrationId = url.searchParams.get("registrationId")
+    // Allow fetching a specific registration by ID without requiring eventId
     if (registrationId) {
       let registration = await registrationsCollection.findOne({
         _id: new ObjectId(registrationId),
@@ -209,6 +225,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         registration,
       })
+    }
+
+    // For other queries (list by event or check user), eventId is required
+    if (!eventId) {
+      return NextResponse.json({ error: "Event ID is required" }, { status: 400 })
     }
 
     // If checking current user's registration status

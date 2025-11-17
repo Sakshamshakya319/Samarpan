@@ -459,6 +459,7 @@ export async function GET(request: NextRequest) {
         registrationNumber: registration.registrationNumber,
         email: registration.email,
         phone: userPhone,
+        participantType: registration.participantType || "other",
         timeSlot: registration.timeSlot,
         tokenVerified: registration.tokenVerified,
         donationStatus: registration.donationStatus,

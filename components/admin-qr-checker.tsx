@@ -19,6 +19,7 @@ interface RegistrationDetails {
   registrationNumber: string
   email: string
   phone?: string
+  participantType?: "student" | "staff" | "other"
   timeSlot: string
   tokenVerified: boolean
   donationStatus: string
@@ -246,6 +247,12 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
               <div>
                 <p className="text-sm text-gray-600 mb-1">Full Name</p>
                 <p className="font-semibold">{registrationDetails.name}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Participant Type</p>
+                <p className="capitalize font-semibold">
+                  {registrationDetails.participantType || "other"}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-gray-600 mb-1">Email</p>

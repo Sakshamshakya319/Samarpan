@@ -53,6 +53,7 @@ export function EventRegistrationForm({
   const [showDialog, setShowDialog] = useState(false)
   const [registrationNumber, setRegistrationNumber] = useState("")
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("")
+  const [participantType, setParticipantType] = useState<"student" | "staff" | "other" | "">("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
@@ -74,8 +75,13 @@ export function EventRegistrationForm({
       return
     }
 
-    if (!registrationNumber.trim()) {
-      setError("Registration number is required")
+    if (!participantType) {
+      setError("Please select participant type")
+      return
+    }
+
+    if ((participantType === "student" || participantType === "staff") && !registrationNumber.trim()) {
+      setError(participantType === "student" ? "Registration number is required for LPU Student" : "UID is required for LPU Staff")
       return
     }
 
@@ -102,6 +108,7 @@ export function EventRegistrationForm({
         body: JSON.stringify({
           eventId,
           registrationNumber,
+          participantType,
           name: user.name,
           timeSlot: selectedTimeSlot,
         }),
@@ -113,6 +120,7 @@ export function EventRegistrationForm({
         setSuccess(true)
         setShowDialog(false)
         setRegistrationNumber("")
+        setParticipantType("")
         setSelectedTimeSlot("")
         // Refresh page to show updated registration count
         window.location.reload()
@@ -248,14 +256,67 @@ export function EventRegistrationForm({
               <p className="text-xs text-muted-foreground mt-1">Auto-filled from event</p>
             </div>
 
+            {/* Participant Type Selection */}
             <div>
-              <label className="text-sm font-medium">Registration Number *</label>
-              <Input
-                type="text"
-                placeholder="Enter your registration number"
-                value={registrationNumber}
-                onChange={(e) => setRegistrationNumber(e.target.value)}
-              />
+              <label className="text-sm font-medium">Participant Type *</label>
+              <div className="flex items-center gap-4 mt-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="pt-student"
+                    checked={participantType === "student"}
+                    onChange={() => setParticipantType("student")}
+                    className="w-4 h-4 rounded border-gray-300"
+                  />
+                  <label htmlFor="pt-student" className="text-sm cursor-pointer">LPU Student</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="pt-staff"
+                    checked={participantType === "staff"}
+                    onChange={() => setParticipantType("staff")}
+                    className="w-4 h-4 rounded border-gray-300"
+                  />
+                  <label htmlFor="pt-staff" className="text-sm cursor-pointer">LPU Staff</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="pt-other"
+                    checked={participantType === "other"}
+                    onChange={() => setParticipantType("other")}
+                    className="w-4 h-4 rounded border-gray-300"
+                  />
+                  <label htmlFor="pt-other" className="text-sm cursor-pointer">Others</label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              {participantType !== "other" ? (
+                <>
+                  <label className="text-sm font-medium">
+                    {participantType === "staff" ? "UID *" : "Registration Number *"}
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder={participantType === "staff" ? "Enter your UID" : "Enter your registration number"}
+                    value={registrationNumber}
+                    onChange={(e) => setRegistrationNumber(e.target.value)}
+                  />
+                </>
+              ) : (
+                <>
+                  <label className="text-sm font-medium">Identifier</label>
+                  <Input
+                    type="text"
+                    placeholder="(Optional for Others)"
+                    value={registrationNumber}
+                    onChange={(e) => setRegistrationNumber(e.target.value)}
+                  />
+                </>
+              )}
             </div>
 
             <div>

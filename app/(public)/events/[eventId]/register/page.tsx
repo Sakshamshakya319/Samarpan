@@ -6,6 +6,7 @@ import { useAppSelector } from "@/lib/hooks"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, AlertCircle, CheckCircle2, ArrowLeft, Calendar, MapPin, Users, Clock } from "lucide-react"
@@ -69,6 +70,7 @@ export default function EventRegistrationPage() {
 
   const [registrationNumber, setRegistrationNumber] = useState("")
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("")
+  const [participantType, setParticipantType] = useState<"student" | "staff" | "other" | "">("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState("")
   const [isSuccess, setIsSuccess] = useState(false)
@@ -176,8 +178,13 @@ export default function EventRegistrationPage() {
       return
     }
 
-    if (!registrationNumber.trim()) {
-      setSubmitError("Registration number is required")
+    if (!participantType) {
+      setSubmitError("Please select participant type")
+      return
+    }
+
+    if ((participantType === "student" || participantType === "staff") && !registrationNumber.trim()) {
+      setSubmitError(participantType === "student" ? "Registration number is required for LPU Student" : "UID is required for LPU Staff")
       return
     }
 
@@ -204,6 +211,7 @@ export default function EventRegistrationPage() {
         body: JSON.stringify({
           eventId,
           registrationNumber,
+          participantType,
           name: user.name,
           timeSlot: selectedTimeSlot,
         }),
@@ -254,6 +262,7 @@ export default function EventRegistrationPage() {
 
   const availableSlots = event ? event.volunteerSlotsNeeded - event.registeredVolunteers : 0
   const isFull = availableSlots <= 0
+  const identifierLabel = participantType === "student" ? "Registration Number" : participantType === "staff" ? "UID" : "Identifier (optional)"
 
   if (isLoadingEvent) {
     return (
@@ -470,19 +479,57 @@ export default function EventRegistrationPage() {
 
                 {!isFull && !isAlreadyRegistered && (
                   <>
-                    {/* Registration Number Input - FIRST */}
+                    {/* Participant Type Selection - FIRST */}
                     <div>
-                      <label className="text-sm font-semibold mb-2 block">
-                        Registration Number <span className="text-red-500">*</span>
+                      <label className="text-sm font-semibold mb-3 block">
+                        Participant Type <span className="text-red-500">*</span>
                       </label>
-                      <Input
-                        type="text"
-                        placeholder="Enter your registration number"
-                        value={registrationNumber}
-                        onChange={(e) => setRegistrationNumber(e.target.value)}
-                        disabled={isSubmitting}
-                      />
+                      <div className="grid grid-cols-3 gap-3">
+                        <label className="flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer hover:border-primary/50">
+                          <Checkbox
+                            checked={participantType === "student"}
+                            onCheckedChange={(checked) => setParticipantType(checked ? "student" : "")}
+                            disabled={isSubmitting}
+                          />
+                          <span className="text-sm font-medium">LPU Student</span>
+                        </label>
+                        <label className="flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer hover:border-primary/50">
+                          <Checkbox
+                            checked={participantType === "staff"}
+                            onCheckedChange={(checked) => setParticipantType(checked ? "staff" : "")}
+                            disabled={isSubmitting}
+                          />
+                          <span className="text-sm font-medium">LPU Staff</span>
+                        </label>
+                        <label className="flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer hover:border-primary/50">
+                          <Checkbox
+                            checked={participantType === "other"}
+                            onCheckedChange={(checked) => setParticipantType(checked ? "other" : "")}
+                            disabled={isSubmitting}
+                          />
+                          <span className="text-sm font-medium">Others</span>
+                        </label>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Select your participant category. Identifier is required for Students and Staff.
+                      </p>
                     </div>
+
+                    {/* Registration Identifier - SECOND (shown only for Student/Staff) */}
+                    {(participantType === "student" || participantType === "staff") && (
+                      <div>
+                        <label className="text-sm font-semibold mb-2 block">
+                          {identifierLabel} <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          type="text"
+                          placeholder={participantType === "student" ? "Enter your registration number" : "Enter your UID"}
+                          value={registrationNumber}
+                          onChange={(e) => setRegistrationNumber(e.target.value)}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                    )}
 
                     {/* Your Name - SECOND */}
                     <div>
@@ -509,6 +556,58 @@ export default function EventRegistrationPage() {
                       />
                       <p className="text-xs text-muted-foreground mt-1">
                         Auto-filled from event
+                      </p>
+                    </div>
+
+                    {/* Participant Type Selection - FOURTH */}
+                    <div>
+                      <label className="text-sm font-semibold mb-3 block">
+                        Participant Type <span className="text-red-500">*</span>
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setParticipantType("student")}
+                          disabled={isSubmitting}
+                          className={`p-3 text-sm border-2 rounded-lg font-medium transition-all ${
+                            participantType === "student"
+                              ? "bg-primary text-primary-foreground border-primary shadow-lg"
+                              : "bg-background border-border hover:border-primary/50 hover:shadow-md"
+                          }`}
+                        >
+                          LPU Student
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setParticipantType("staff")}
+                          disabled={isSubmitting}
+                          className={`p-3 text-sm border-2 rounded-lg font-medium transition-all ${
+                            participantType === "staff"
+                              ? "bg-primary text-primary-foreground border-primary shadow-lg"
+                              : "bg-background border-border hover:border-primary/50 hover:shadow-md"
+                          }`}
+                        >
+                          LPU Staff
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setParticipantType("other")}
+                          disabled={isSubmitting}
+                          className={`p-3 text-sm border-2 rounded-lg font-medium transition-all ${
+                            participantType === "other"
+                              ? "bg-primary text-primary-foreground border-primary shadow-lg"
+                              : "bg-background border-border hover:border-primary/50 hover:shadow-md"
+                          }`}
+                        >
+                          Others
+                        </button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {participantType === "student"
+                          ? "For LPU Students, enter your Registration Number"
+                          : participantType === "staff"
+                          ? "For LPU Staff, enter your UID"
+                          : "For others, identifier is optional"}
                       </p>
                     </div>
 
@@ -560,8 +659,9 @@ export default function EventRegistrationPage() {
                       onClick={handleSubmit}
                       disabled={
                         isSubmitting ||
-                        !registrationNumber.trim() ||
-                        !selectedTimeSlot
+                        !participantType ||
+                        !selectedTimeSlot ||
+                        ((participantType === "student" || participantType === "staff") && !registrationNumber.trim())
                       }
                       size="lg"
                       className="w-full bg-green-600 hover:bg-green-700"
@@ -592,6 +692,12 @@ export default function EventRegistrationPage() {
                   <p className="text-muted-foreground">Registration Number</p>
                   <p className="font-semibold text-base">
                     {registrationNumber || "Not entered"}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-muted-foreground">Participant Type</p>
+                  <p className="font-semibold text-base">
+                    {participantType ? (participantType === "student" ? "LPU Student" : participantType === "staff" ? "LPU Staff" : "Others") : "Not selected"}
                   </p>
                 </div>
 

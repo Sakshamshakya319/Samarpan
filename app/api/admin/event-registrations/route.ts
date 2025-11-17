@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url)
     const eventId = url.searchParams.get("eventId")
+    const format = url.searchParams.get("format")
 
     // If eventId is provided, get all registrations for that event (for admin view)
     if (eventId) {
@@ -75,9 +76,11 @@ export async function GET(request: NextRequest) {
         eventId: reg.eventId,
         userId: reg.userId,
         email: reg.email || "", // Email from registration record
+        phone: reg.phone || "",
         registrationNumber: reg.registrationNumber || "",
         name: reg.name || "",
         timeSlot: reg.timeSlot || "",
+        participantType: reg.participantType || "other",
         status: reg.status || "Registered",
         qrToken: reg.qrToken || "", // ALWAYS present now after generation
         qrVerified: reg.qrVerified || false,
@@ -94,6 +97,47 @@ export async function GET(request: NextRequest) {
             }
           : null,
       }))
+
+      // If CSV export requested, return as text/csv
+      if (format === "excel") {
+        const headers = [
+          "Registration #",
+          "Name",
+          "Email",
+          "Phone",
+          "Participant Type",
+          "Time Slot",
+          "Donation Status",
+          "Verified",
+          "Verified Date",
+          "Registration Date",
+        ]
+
+        const rows = enrichedEventRegistrations.map((reg: any) => [
+          reg.registrationNumber || "",
+          reg.name || "",
+          reg.email || "",
+          reg.phone || "",
+          reg.participantType || "other",
+          reg.timeSlot || "",
+          reg.donationStatus || "Pending",
+          reg.qrVerified ? "Yes" : "No",
+          reg.verifiedAt ? new Date(reg.verifiedAt).toLocaleString() : "-",
+          reg.createdAt ? new Date(reg.createdAt).toLocaleString() : "-",
+        ])
+
+        const csvContent = [
+          headers.join(","),
+          ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")),
+        ].join("\n")
+
+        return new Response(csvContent, {
+          headers: {
+            "Content-Type": "text/csv; charset=utf-8",
+            "Content-Disposition": `attachment; filename=registrations-${eventId}.csv`,
+          },
+        })
+      }
 
       return NextResponse.json({
         registrations: enrichedEventRegistrations,
@@ -154,9 +198,11 @@ export async function GET(request: NextRequest) {
           eventId: reg.eventId,
           userId: reg.userId,
           email: registrationEmail,
+          phone: reg.phone || "",
           registrationNumber: reg.registrationNumber || "",
           name: reg.name || "",
           timeSlot: reg.timeSlot || "",
+          participantType: reg.participantType || "other",
           status: reg.status || "Registered",
           qrToken: reg.qrToken || "", // ALWAYS present now after generation
           qrVerified: reg.qrVerified || false,
