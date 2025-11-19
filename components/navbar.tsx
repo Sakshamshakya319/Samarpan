@@ -42,6 +42,9 @@ export function Navbar() {
             <Link href="/blogs" className="text-sm font-medium text-muted-foreground hover:text-foreground transition">
               Blog
             </Link>
+            <Link href="/funding" className="text-sm font-medium text-muted-foreground hover:text-foreground transition">
+              Donation
+            </Link>
             <Link href="/events" className="text-sm font-medium text-muted-foreground hover:text-foreground transition">
               Events
             </Link>
@@ -113,6 +116,9 @@ export function Navbar() {
             </Link>
             <Link href="/blogs" className="block text-sm font-medium text-muted-foreground hover:text-foreground py-2">
               Blog
+            </Link>
+            <Link href="/funding" className="block text-sm font-medium text-muted-foreground hover:text-foreground py-2">
+              Donation
             </Link>
             <Link href="/events" className="block text-sm font-medium text-muted-foreground hover:text-foreground py-2">
               Events

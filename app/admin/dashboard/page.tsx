@@ -9,6 +9,7 @@ import { AdminUsersTable } from "@/components/admin-users-table"
 import { AdminSendNotification } from "@/components/admin-send-notification"
 import { AdminCertificateGenerator } from "@/components/admin-certificate-generator"
 import { AdminDonationsManagerEnhanced } from "@/components/admin-donations-manager-enhanced"
+import { AdminFundingDonations } from "@/components/admin-funding-donations"
 import { AdminEventsManager } from "@/components/admin-events-manager"
 import { AdminDonationImagesViewer } from "@/components/admin-donation-images-viewer"
 import { AdminBloodRequestsManager } from "@/components/admin-blood-requests-manager"
@@ -20,7 +21,7 @@ import { AdminBlogManager } from "@/components/admin-blog-manager"
 import { AdminChangePasswordDialog } from "@/components/admin-change-password-dialog"
 import { AdminBloodHistory } from "@/components/admin-blood-history"
 import { AdminActionHistory } from "@/components/admin-action-history" // Import the new component
-import { LogOut, LayoutDashboard, Calendar, Truck, Mail, QrCode, Users, BookOpen, Lock, Droplets, History } from "lucide-react"
+import { LogOut, LayoutDashboard, Calendar, Truck, Mail, QrCode, Users, BookOpen, Lock, Droplets, History, IndianRupee } from "lucide-react"
 import { getAvailableFeatures, hasPermission } from "@/lib/admin-utils"
 import { ADMIN_PERMISSIONS } from "@/lib/constants/admin-permissions"
 
@@ -139,6 +140,13 @@ export default function AdminDashboard() {
       label: "Generate Certificates",
       permission: ADMIN_PERMISSIONS.GENERATE_CERTIFICATES,
       enabled: availableFeatures.certificates,
+    },
+    {
+      id: "funds",
+      label: "Funds Collected",
+      permission: [ADMIN_PERMISSIONS.MANAGE_DONATIONS, ADMIN_PERMISSIONS.VIEW_DONATIONS],
+      enabled: availableFeatures.donations,
+      icon: IndianRupee,
     },
     {
       id: "donations",
@@ -341,6 +349,12 @@ export default function AdminDashboard() {
         {activeTab === "certificates" && enabledTabs.some((t) => t.id === "certificates") && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>{token && <AdminCertificateGenerator users={users} token={token} />}</div>
+          </div>
+        )}
+
+        {activeTab === "funds" && enabledTabs.some((t) => t.id === "funds") && (
+          <div className="grid grid-cols-1 gap-6">
+            {token && <AdminFundingDonations token={token} />}
           </div>
         )}
 

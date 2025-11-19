@@ -9,6 +9,7 @@ import { AdminUsersTable } from "@/components/admin-users-table"
 import { AdminSendNotification } from "@/components/admin-send-notification"
 import { AdminCertificateGenerator } from "@/components/admin-certificate-generator"
 import { AdminDonationsManagerEnhanced } from "@/components/admin-donations-manager-enhanced"
+import { AdminFundingDonations } from "@/components/admin-funding-donations"
 import { AdminEventsManager } from "@/components/admin-events-manager"
 import { AdminDonationImagesViewer } from "@/components/admin-donation-images-viewer"
 import { AdminBloodRequestsManager } from "@/components/admin-blood-requests-manager"
@@ -34,6 +35,7 @@ import {
   BookOpen,
   Lock,
   History,
+  IndianRupee,
 } from "lucide-react"
 
 interface Admin {
@@ -228,6 +230,17 @@ export default function SuperAdminPage() {
             Generate Certificates
           </button>
           <button
+            onClick={() => setActiveTab("funds")}
+            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
+              activeTab === "funds"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <IndianRupee className="w-4 h-4" />
+            Funds Collected
+          </button>
+          <button
             onClick={() => setActiveTab("donations")}
             className={`px-4 py-2 font-medium transition whitespace-nowrap ${
               activeTab === "donations"
@@ -381,6 +394,12 @@ export default function SuperAdminPage() {
         {activeTab === "certificates" && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>{token && <AdminCertificateGenerator users={users} token={token} />}</div>
+          </div>
+        )}
+
+        {activeTab === "funds" && (
+          <div className="grid grid-cols-1 gap-6">
+            {token && <AdminFundingDonations token={token} />}
           </div>
         )}
 
