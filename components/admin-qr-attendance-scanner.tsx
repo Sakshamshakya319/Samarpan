@@ -70,13 +70,42 @@ export function AdminQRAttendanceScanner({
 
   // Initialize scanner when dialog opens
   useEffect(() => {
-    if (isOpen) {
-      // Create scanner instance
-      html5QrCodeRef.current = new Html5Qrcode("qr-reader")
+    if (!isOpen) return
+
+    let retryCount = 0
+    const maxRetries = 10 // Maximum 1 second wait (10 * 100ms)
+
+    const initializeScanner = () => {
+      const element = document.getElementById('qr-reader')
       
-      // Start scanner automatically
-      startCamera()
+      if (element && !html5QrCodeRef.current) {
+        try {
+          console.log("Initializing QR scanner...")
+          html5QrCodeRef.current = new Html5Qrcode("qr-reader")
+          
+          // Small delay before starting camera to ensure scanner is ready
+          setTimeout(() => {
+            if (html5QrCodeRef.current) {
+              startCamera()
+            }
+          }, 200)
+        } catch (error) {
+          console.error("Scanner initialization error:", error)
+          setError("Failed to initialize scanner")
+        }
+      } else if (!element && retryCount < maxRetries) {
+        // Retry after a short delay if element not found
+        retryCount++
+        console.log(`Waiting for QR reader element... (${retryCount}/${maxRetries})`)
+        setTimeout(initializeScanner, 100)
+      } else if (retryCount >= maxRetries) {
+        console.error("QR reader element not found after maximum retries")
+        setError("Scanner element not available")
+      }
     }
+    
+    // Start initialization with a small delay to ensure DOM is ready
+    setTimeout(initializeScanner, 50)
     
     return () => {
       cleanup()
@@ -104,16 +133,32 @@ export function AdminQRAttendanceScanner({
 
   const cleanup = () => {
     if (html5QrCodeRef.current) {
-      html5QrCodeRef.current.stop().catch(() => {})
-      html5QrCodeRef.current.clear()
-      html5QrCodeRef.current = null
+      try {
+        html5QrCodeRef.current.stop().catch(() => {})
+        html5QrCodeRef.current.clear()
+      } catch (error) {
+        console.warn("Error during scanner cleanup:", error)
+      } finally {
+        html5QrCodeRef.current = null
+      }
     }
     setIsCameraActive(false)
     isScanningRef.current = false
   }
 
   const startCamera = async (deviceId?: string) => {
-    if (!html5QrCodeRef.current) return
+    // Ensure scanner is initialized and DOM element exists
+    if (!html5QrCodeRef.current) {
+      console.warn("Scanner not initialized yet")
+      return
+    }
+    
+    const element = document.getElementById('qr-reader')
+    if (!element) {
+      console.warn("QR reader element not found")
+      setError("Scanner element not ready")
+      return
+    }
     
     setIsLoading(true)
     setError("")
