@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { AlertCircle, CheckCircle2, Loader2, QrCode } from "lucide-react"
+import { QRCodeGenerator } from "./qr-code-generator"
 
 
 interface EventRegistrationFormProps {
@@ -58,6 +59,7 @@ export function EventRegistrationForm({
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
   const [alphanumericToken, setAlphanumericToken] = useState("")
+  const [registrationId, setRegistrationId] = useState("")
 
 
   const { user } = useAppSelector((state) => state.user)
@@ -117,13 +119,14 @@ export function EventRegistrationForm({
       if (response.ok) {
         const data = await response.json()
         setAlphanumericToken(data.alphanumericToken)
+        setRegistrationId(data.registrationId)
         setSuccess(true)
         setShowDialog(false)
         setRegistrationNumber("")
         setParticipantType("")
         setSelectedTimeSlot("")
-        // Refresh page to show updated registration count
-        window.location.reload()
+        // Don't reload page - let user see QR code immediately
+        // window.location.reload()
       } else {
         const data = await response.json()
         setError(data.error || "Failed to register")
@@ -189,17 +192,27 @@ export function EventRegistrationForm({
             )}
 
             {success && (
-              <div className="p-3 bg-green-100 text-green-800 rounded-md text-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Registration successful!</span>
-                </div>
-                {alphanumericToken && (
-                  <div className="mt-2 p-2 bg-white rounded border">
-                    <p className="text-xs text-gray-600 mb-1">Your verification token:</p>
-                    <code className="font-mono text-lg font-bold text-green-700">{alphanumericToken}</code>
-                    <p className="text-xs text-gray-600 mt-1">Keep this token safe - you'll need it for donation verification.</p>
+              <div className="space-y-4">
+                <div className="p-3 bg-green-100 text-green-800 rounded-md text-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Registration successful!</span>
                   </div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Your QR code has been generated below. Show this QR code at the event for attendance verification.
+                  </p>
+                </div>
+                
+                {/* QR Code Generator - Main Focus */}
+                {alphanumericToken && registrationId && user?.name && (
+                  <QRCodeGenerator
+                    registrationId={registrationId}
+                    alphanumericToken={alphanumericToken}
+                    userName={user.name}
+                    eventTitle={eventTitle}
+                    eventDate={eventDate}
+                    timeSlot={selectedTimeSlot}
+                  />
                 )}
               </div>
             )}

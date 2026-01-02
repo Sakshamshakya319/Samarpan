@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { AdminEventRegistrationsViewer } from "@/components/admin-event-registrations-viewer"
+import { AdminQRAttendanceScanner } from "@/components/admin-qr-attendance-scanner"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -355,6 +356,11 @@ export function AdminEventsManager({ token }: AdminEventsManagerProps) {
                   <div className="flex gap-2 justify-end flex-wrap">
                     {event.volunteerSlotsNeeded > 0 && (
                       <>
+                        <AdminQRAttendanceScanner
+                          eventId={event._id}
+                          eventTitle={event.title}
+                          token={token}
+                        />
                         <Button
                           onClick={() => handleViewRegistrations(event._id)}
                           size="sm"

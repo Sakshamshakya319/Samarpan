@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Calendar, MapPin, Clock, CheckCircle2, AlertCircle, Key, Copy, Eye } from "lucide-react"
+import { Loader2, Calendar, MapPin, Clock, CheckCircle2, AlertCircle, QrCode, Eye } from "lucide-react"
 import { useAppSelector } from "@/lib/hooks"
 import Link from "next/link"
 import { EventRegistrationDetails } from "@/components/event-registration-details"
@@ -66,12 +66,8 @@ export function UserEventRegistrations() {
     }
   }
 
-  const handleCopyToken = (token: string) => {
-    navigator.clipboard.writeText(token)
-  }
-
-  const handleRefreshToken = async () => {
-    // Refetch registrations to get updated tokens
+  const handleRefreshRegistrations = async () => {
+    // Refetch registrations to get updated data
     setIsLoading(true)
     await fetchRegistrations()
   }
@@ -102,8 +98,8 @@ export function UserEventRegistrations() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            Event Registrations
+            <QrCode className="w-5 h-5" />
+            Your Event QR Codes
           </CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center py-12">
@@ -119,14 +115,14 @@ export function UserEventRegistrations() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            Event Registrations
+            <QrCode className="w-5 h-5" />
+            Your Event QR Codes
           </CardTitle>
           <CardDescription>No event registrations yet</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <Calendar className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+            <QrCode className="w-12 h-12 mx-auto text-gray-300 mb-4" />
             <p className="text-gray-600 mb-4">You haven't registered for any events yet.</p>
             <Link href="/events">
               <Button>Browse Events</Button>
@@ -141,10 +137,10 @@ export function UserEventRegistrations() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Calendar className="w-5 h-5" />
-          Event Registrations
+          <QrCode className="w-5 h-5" />
+          Your Event QR Codes
         </CardTitle>
-        <CardDescription>Your registered events and donation records</CardDescription>
+        <CardDescription>Your registered events with QR codes for attendance verification</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {error && (
@@ -226,43 +222,29 @@ export function UserEventRegistrations() {
                 </div>
               </div>
 
-              {/* Alphanumeric Token Section - Mobile Optimized */}
-              {!registration.tokenVerified && registration.alphanumericToken && (
-                <div className="flex flex-col gap-3 bg-blue-50 p-2 sm:p-3 rounded-lg border border-blue-200 mb-3">
-                  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                    <div className="flex-shrink-0 p-3 bg-white rounded border border-blue-300">
-                      <Key className="w-8 h-8 text-blue-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-700 mb-1">Verification Token:</p>
-                      <code className="text-lg font-mono font-bold bg-white p-2 rounded block text-center border border-blue-300 text-blue-700">
-                        {registration.alphanumericToken}
-                      </code>
-                    </div>
+              {/* QR Code Available Info */}
+              {registration.alphanumericToken && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3 mb-3">
+                  <div className="flex items-center gap-2">
+                    <QrCode className="w-4 h-4 text-blue-600" />
+                    <p className="text-xs sm:text-sm text-blue-800 font-medium">
+                      QR Code Ready - Click "View Details" to see your QR code
+                    </p>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleCopyToken(registration.alphanumericToken!)}
-                    className="w-full sm:w-auto text-xs sm:text-sm"
-                  >
-                    <Copy className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                    Copy Token
-                  </Button>
                 </div>
               )}
 
-              {/* Fallback when Token is not available */}
-              {!registration.tokenVerified && !registration.alphanumericToken && (
+              {/* Fallback when QR Code is not available */}
+              {!registration.alphanumericToken && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 sm:p-3 mb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-3 h-3 sm:h-4 sm:w-4 text-amber-600 flex-shrink-0" />
-                    <p className="text-xs sm:text-sm text-amber-800">Token is being generated. Click refresh to try again.</p>
+                    <p className="text-xs sm:text-sm text-amber-800">QR code is being generated. Click refresh to try again.</p>
                   </div>
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={handleRefreshToken}
+                    onClick={handleRefreshRegistrations}
                     className="flex-shrink-0 text-xs sm:text-sm"
                   >
                     Refresh
@@ -274,7 +256,7 @@ export function UserEventRegistrations() {
                 <Alert className="bg-green-50 border-green-200 mb-3">
                   <CheckCircle2 className="h-3 h-3 sm:h-4 sm:w-4 text-green-600" />
                   <AlertDescription className="text-xs sm:text-sm text-green-800">
-                    Your donation has been verified and recorded.
+                    Your attendance has been verified and recorded.
                   </AlertDescription>
                 </Alert>
               )}

@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { ReduxProvider } from "@/components/redux-provider"
 import { Toaster } from "@/components/ui/sonner"
+import { Toaster as ToastToaster } from "@/components/ui/toaster"
 
 // NOTE: Removed Google font imports (Geist, Geist Mono) to avoid
 // build-time network fetches in restricted/offline environments.
@@ -26,6 +27,7 @@ export default function RootLayout({
       <body className={`font-sans antialiased`}>
         <ReduxProvider>{children}</ReduxProvider>
         <Toaster />
+        <ToastToaster />
         <Analytics />
       </body>
     </html>

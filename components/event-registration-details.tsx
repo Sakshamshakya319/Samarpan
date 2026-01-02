@@ -13,14 +13,14 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  Key,
-  Copy,
+  QrCode,
   Mail,
   User,
   Hash,
   Eye,
   X,
 } from "lucide-react"
+import { QRCodeGenerator } from "@/components/qr-code-generator"
 
 interface EventDetails {
   _id: string
@@ -49,25 +49,6 @@ interface EventRegistrationDetailsProps {
 
 export function EventRegistrationDetails({ registration }: EventRegistrationDetailsProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [isRegenerating, setIsRegenerating] = useState(false)
-
-  const handleCopyToken = () => {
-    if (registration.alphanumericToken) {
-      navigator.clipboard.writeText(registration.alphanumericToken)
-    }
-  }
-
-  const handleRegenerateToken = async () => {
-    setIsRegenerating(true)
-    try {
-      // Refresh the page to fetch updated registration data
-      window.location.reload()
-    } catch (err) {
-      console.error("Error regenerating token:", err)
-    } finally {
-      setIsRegenerating(false)
-    }
-  }
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-US", {
@@ -100,18 +81,18 @@ export function EventRegistrationDetails({ registration }: EventRegistrationDeta
         size="sm"
         className="gap-1"
       >
-        <Eye className="w-4 h-4" />
-        View Details
+        <QrCode className="w-4 h-4" />
+        View QR Code
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Key className="w-5 h-5" />
+              <QrCode className="w-5 h-5" />
               Registration Details
             </DialogTitle>
-            <DialogDescription>Complete information and verification token for your event registration</DialogDescription>
+            <DialogDescription>Complete information and QR code for your event registration</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
@@ -206,34 +187,26 @@ export function EventRegistrationDetails({ registration }: EventRegistrationDeta
 
             <Separator />
 
-            {/* Alphanumeric Token Section */}
-            {!registration.tokenVerified && registration.alphanumericToken && (
+            {/* QR Code Section - Replace Token Display */}
+            {registration.alphanumericToken && registration.event && (
               <>
                 <div>
-                  <h3 className="font-semibold mb-3">Verification Token for Check-in</h3>
-                  <div className="flex flex-col items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="p-4 bg-white rounded-lg border border-blue-300">
-                      <Key className="w-12 h-12 text-blue-600 mx-auto mb-2" />
-                      <p className="text-2xl font-mono font-bold text-center text-blue-700">
-                        {registration.alphanumericToken}
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm text-gray-700 mb-2 font-medium">Verification Token:</p>
-                      <code className="text-sm bg-white p-3 rounded block border border-blue-300 font-mono overflow-auto max-w-full text-center">
-                        {registration.alphanumericToken}
-                      </code>
-                    </div>
-                    <Button onClick={handleCopyToken} className="w-full">
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copy Token
-                    </Button>
+                  <h3 className="font-semibold mb-3">Your Event QR Code</h3>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <QRCodeGenerator
+                      registrationId={registration._id}
+                      alphanumericToken={registration.alphanumericToken}
+                      userName={registration.name}
+                      eventTitle={registration.event.title}
+                      eventDate={registration.event.eventDate}
+                      timeSlot={registration.timeSlot}
+                    />
                   </div>
 
                   <Alert className="bg-blue-50 border-blue-200 mt-4">
-                    <AlertCircle className="h-4 w-4 text-blue-600" />
+                    <QrCode className="h-4 w-4 text-blue-600" />
                     <AlertDescription className="text-blue-800">
-                      Please present this verification token at the event check-in for verification. You can copy it for easy access.
+                      Show this QR code to the admin at the event for attendance verification.
                     </AlertDescription>
                   </Alert>
                 </div>
@@ -242,26 +215,25 @@ export function EventRegistrationDetails({ registration }: EventRegistrationDeta
               </>
             )}
 
-            {/* Token Not Available Fallback */}
-            {!registration.tokenVerified && !registration.alphanumericToken && (
+            {/* QR Code Not Available Fallback */}
+            {!registration.alphanumericToken && (
               <>
                 <div>
-                  <h3 className="font-semibold mb-3">Verification Token for Check-in</h3>
+                  <h3 className="font-semibold mb-3">Your Event QR Code</h3>
                   <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 flex items-center justify-between gap-4">
                     <div className="flex items-start gap-3 flex-1">
                       <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-amber-900">Token Not Available</p>
-                        <p className="text-sm text-amber-800 mt-1">Your verification token is being generated. Click the button below to regenerate it or refresh the page.</p>
+                        <p className="text-sm font-medium text-amber-900">QR Code Not Available</p>
+                        <p className="text-sm text-amber-800 mt-1">Your QR code is being generated. Please refresh the page to try again.</p>
                       </div>
                     </div>
                     <Button
-                      onClick={handleRegenerateToken}
-                      disabled={isRegenerating}
+                      onClick={() => window.location.reload()}
                       variant="outline"
                       className="flex-shrink-0 whitespace-nowrap"
                     >
-                      {isRegenerating ? "Regenerating..." : "Regenerate"}
+                      Refresh
                     </Button>
                   </div>
                 </div>
@@ -274,7 +246,7 @@ export function EventRegistrationDetails({ registration }: EventRegistrationDeta
               <Alert className="bg-green-50 border-green-200">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-800">
-                  Your donation has been successfully verified and recorded. Thank you for your contribution!
+                  Your attendance has been successfully verified and recorded. Thank you for your participation!
                 </AlertDescription>
               </Alert>
             )}
