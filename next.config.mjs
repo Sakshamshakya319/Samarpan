@@ -13,7 +13,9 @@ const nextConfig = {
     maxInactiveAge: 15000,
     pagesBufferLength: 2,
   },
-  turbopack: {},
+  turbopack: {
+    root: process.cwd(),
+  },
   experimental: {
     // Reduce client bundle size by rewriting package imports to per-module imports
     optimizePackageImports: ["lucide-react"],
