@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
   }
   try {
     const body = await request.json();
-    const { enabled, message, allowedIps, secretKey } = body;
+    const { enabled, message, allowedIps, secretKey, priority } = body;
 
     console.log('Received maintenance update request:', body);
 
@@ -64,11 +64,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid payload: 'secretKey' must be a string or null" }, { status: 400 });
     }
 
+    if (priority && !['low', 'medium', 'high', 'critical'].includes(priority)) {
+      return NextResponse.json({ error: "Invalid payload: 'priority' must be one of: low, medium, high, critical" }, { status: 400 });
+    }
+
     const updatedSettings = updateMaintenanceSettings({
       enabled,
-      message: message?.trim() || "The website is currently under maintenance. We will be back shortly.",
+      message: message?.trim() || "We are currently performing scheduled maintenance to improve your experience. Please check back shortly.",
       allowedIps: allowedIps || [],
-      secretKey: secretKey?.trim() || null
+      secretKey: secretKey?.trim() || null,
+      priority: priority || 'medium'
     });
 
     console.log('Updated maintenance settings:', updatedSettings);

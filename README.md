@@ -17,6 +17,41 @@
 
 ---
 
+## 🆕 Latest Updates (January 2026)
+
+### 🔧 **QR Scanner System - FIXED**
+- **✅ Runtime Error Resolution**: Fixed "HTML Element with id=admin-qr-reader not found" error
+- **✅ Robust DOM Handling**: Implemented proper element waiting pattern with retry logic
+- **✅ Enhanced Camera Initialization**: Added safety checks and improved cleanup with error handling
+- **✅ Element Validation**: Added validation before scanner creation with retry mechanism
+- **✅ Production Ready**: QR scanners now work reliably in both admin QR checker and event attendance scanner
+
+### 🚀 **Deployment System - ENHANCED**
+- **✅ Vercel Compatibility**: Resolved "Cannot install with 'frozen-lockfile'" deployment error
+- **✅ Dependency Cleanup**: Removed problematic `baseline-browser-mapping` dependency
+- **✅ Lockfile Management**: Updated `.gitignore` to prevent future lockfile conflicts
+- **✅ Build Optimization**: Created fresh npm lockfile and proper `.vercelignore` configuration
+- **✅ Deployment Ready**: Seamless deployment to Vercel with zero configuration issues
+
+### 🛠️ **Comprehensive Maintenance System - NEW**
+- **✅ Beautiful Samarpan Loader**: Animated blood drop with rotating rings, multiple size variants
+- **✅ Modern Maintenance Page**: Light theme design with real-time clock and duration tracking
+- **✅ Complete Route Protection**: Middleware blocks ALL routes during maintenance except admin and static assets
+- **✅ Smart Navbar Integration**: Auto-hiding navigation with maintenance indicator
+- **✅ Priority-Based Styling**: Different colors and messages for maintenance priority levels (low, medium, high, critical)
+- **✅ Real-Time Updates**: 30-second auto-refresh with connection status monitoring
+- **✅ Mobile Responsive**: Perfect experience across all devices
+- **✅ Professional Design**: Glass morphism effects with light theme consistency
+
+### 🎨 **Visual Enhancements**
+- **✅ Blood PNG Integration**: Custom blood drop image in maintenance loader
+- **✅ Perfect Center Alignment**: Maintenance indicator absolutely centered with loader
+- **✅ Light Theme Consistency**: Maintenance page matches site's current light theme
+- **✅ Responsive Navbar**: Smart hiding of navigation elements during maintenance
+- **✅ Professional Animations**: Smooth transitions and GPU-accelerated effects
+
+---
+
 ## 🎯 About Samarpan
 
 Samarpan is a comprehensive blood donation management platform designed to connect donors with patients in need of blood and platelets. Built with modern web technologies, it enables real-time connections, efficient donor management, and streamlined administrative operations.
@@ -39,11 +74,21 @@ Samarpan is a comprehensive blood donation management platform designed to conne
 - **Donation Management** – Track and verify all donations
 - **Request Management** – Review and approve blood requests
 - **Event Management** – Create and manage blood donation events
+- **QR Code Scanning** – Reliable QR code scanning for event check-ins
 - **Transportation Coordination** – Manage transportation logistics
 - **Notification System** – Send bulk notifications to users
 - **Image Management** – View and manage donation images
 - **Contact Submissions** – Review and respond to user inquiries
 - **Certificate Management** – Generate and track donor certificates
+- **Maintenance Mode** – Professional maintenance system with real-time monitoring
+
+#### 🔧 System Administration
+- **Maintenance System** – Complete maintenance mode with route protection
+- **Real-Time Monitoring** – Auto-refresh maintenance status every 30 seconds
+- **Priority Management** – Different maintenance levels (low, medium, high, critical)
+- **IP Whitelisting** – Allow specific IPs to bypass maintenance mode
+- **Emergency Access** – Secret key bypass for emergency access
+- **Professional UI** – Beautiful maintenance page with Samarpan branding
 
 ---
 
@@ -63,6 +108,7 @@ Samarpan is a comprehensive blood donation management platform designed to conne
    - **Event Management**: Create and manage blood donation events
    - **Donation Tracking**: Monitor donation activities and certificates
    - **Notifications**: Send bulk notifications to users
+   - **Maintenance Mode**: Enable/disable maintenance with custom messages
 
 ### Key Operations for NGO Staff
 
@@ -70,18 +116,28 @@ Samarpan is a comprehensive blood donation management platform designed to conne
 - **Create Events**: Go to Admin Dashboard → Events → Create New Event
 - **Set Event Details**: Title, date, location, volunteer slots needed
 - **Monitor Registrations**: View donor registrations and QR codes
+- **QR Code Scanning**: Use reliable QR scanner for event check-ins
 - **Track Donations**: Update donation status and blood test results
 
 #### Managing Donors
 - **View Donor List**: Admin Dashboard → Users → View all registered users
 - **Event Donors**: Events → Select Event → View Registered Donors
+- **QR Verification**: Scan donor QR codes for attendance verification
 - **Update Blood Types**: After blood testing, update donor blood types
 - **Generate Certificates**: Automatically generate donation certificates
+
+#### Maintenance Management
+- **Enable Maintenance**: Admin Dashboard → Maintenance Mode
+- **Set Priority Level**: Choose from low, medium, high, or critical
+- **Custom Messages**: Add specific maintenance messages for users
+- **IP Whitelisting**: Allow specific IPs to bypass maintenance
+- **Emergency Access**: Set secret keys for emergency bypass
+- **Real-Time Monitoring**: View maintenance duration and auto-refresh status
 
 #### Blood Donation Process
 1. **Event Creation**: Create event with date, time slots, and location
 2. **Donor Registration**: Donors register through the public portal
-3. **Check-in Process**: Use QR codes to verify donor arrival
+3. **Check-in Process**: Use QR codes to verify donor arrival (now working reliably)
 4. **Blood Testing**: Update blood types after lab results
 5. **Certificate Generation**: Generate certificates for completed donations
 
@@ -90,12 +146,15 @@ Samarpan is a comprehensive blood donation management platform designed to conne
 - **Email Configuration**: Set up email service for notifications
 - **Database Backup**: Regular backups of MongoDB data
 - **Admin Permissions**: Assign appropriate permissions to staff members
+- **Maintenance Settings**: Configure maintenance mode parameters
 
 ### Troubleshooting
 - **Can't access admin panel**: Check login credentials and permissions
 - **Events not showing**: Verify event dates and status
-- **QR codes not working**: Ensure QR tokens are generated for registrations
+- **QR codes not working**: ✅ **FIXED** - QR scanners now work reliably
 - **Email notifications failing**: Check email service configuration
+- **Maintenance mode issues**: ✅ **NEW** - Complete maintenance system available
+- **Deployment failures**: ✅ **FIXED** - Vercel deployment now works seamlessly
 
 ---
 
@@ -111,6 +170,7 @@ Samarpan is a comprehensive blood donation management platform designed to conne
 - **Charts:** Recharts
 - **Icons:** Lucide React
 - **PDF Generation:** PDFKit & PDF-Lib
+- **QR Code Scanning:** html5-qrcode (enhanced with robust error handling)
 
 ### Backend
 - **Runtime:** Node.js (Next.js Server)
@@ -119,12 +179,14 @@ Samarpan is a comprehensive blood donation management platform designed to conne
 - **Email:** Nodemailer
 - **Cloud Storage:** AWS S3 (via AWS SDK)
 - **PDF Processing:** PDFKit
+- **Maintenance System:** Custom middleware with route protection
 
 ### Development
 - **Package Manager:** npm/pnpm
 - **Build Tool:** Next.js (Turbopack)
 - **Linting:** ESLint
 - **Environment:** Node.js 18+
+- **Deployment:** Vercel (optimized configuration)
 
 ---
 
@@ -177,6 +239,9 @@ Samarpan is a comprehensive blood donation management platform designed to conne
 
    # Google OAuth (optional)
    NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id
+
+   # Maintenance System (new)
+   MAINTENANCE_INTERNAL_TOKEN=your-internal-token-for-maintenance-checks
    ```
 
 4. **Set up the database and create super admin:**
@@ -217,11 +282,14 @@ npx tsx create-admin.ts  # Direct: Create/update super admin
 ✅ Two-tier system: Super Admin (full access) and Regular Admin (limited)  
 ✅ Granular permission control (16+ different permissions)  
 ✅ Real-time admin dashboard with activity tracking  
+✅ **NEW:** Comprehensive maintenance mode management  
+✅ **FIXED:** Reliable QR code scanning system  
 
 For complete documentation, see:
 - 📖 [Admin Quick Start Guide](./ADMIN_QUICKSTART.md)
 - 📚 [Admin Creation Guide](./docs/ADMIN_CREATION_GUIDE.md)
 - 🔧 [Admin System Documentation](./docs/ADMIN_SYSTEM.md)
+- 🛠️ [Maintenance System Documentation](./MAINTENANCE_LIGHT_THEME_UPDATE.md)
 
 ---
 
@@ -238,6 +306,7 @@ samarpan/
 │   │   ├── request-blood/        # Blood request creation
 │   │   ├── events/               # Event listings
 │   │   ├── notifications/        # Notification center
+│   │   ├── maintenance/          # 🆕 Maintenance page with blood.png
 │   │   └── ...
 │   ├── admin/                    # Admin routes
 │   │   ├── login/                # Admin login
@@ -246,6 +315,8 @@ samarpan/
 │   ├── api/                      # API routes
 │   │   ├── auth/                 # Authentication endpoints
 │   │   ├── admin/                # Admin operations
+│   │   │   ├── maintenance/      # 🆕 Maintenance mode API
+│   │   │   └── ...
 │   │   ├── blood-request/        # Blood requests API
 │   │   ├── donation-requests/    # Donations API
 │   │   ├── users/                # User management API
@@ -257,7 +328,11 @@ samarpan/
 ├── components/                   # React components
 │   ├── ui/                       # Radix UI components
 │   ├── admin-*.tsx               # Admin panel components
+│   ├── admin-qr-*.tsx            # 🔧 Fixed QR scanner components
 │   ├── blood-*.tsx               # Blood-related components
+│   ├── samarpan-loader.tsx       # 🆕 Enhanced loader with blood.png
+│   ├── maintenance-mode-manager.tsx # 🆕 Maintenance management
+│   ├── navbar.tsx                # 🔧 Enhanced navbar with maintenance mode
 │   ├── login-form.tsx            # Auth forms
 │   └── ...
 ├── lib/                          # Utility functions
@@ -266,22 +341,61 @@ samarpan/
 │   ├── email.ts                  # Email service
 │   ├── store.ts                  # Redux store
 │   ├── slices/                   # Redux slices
+│   ├── maintenance-cache.ts      # 🆕 Maintenance caching system
 │   └── utils.ts                  # Helper utilities
 ├── hooks/                        # Custom React hooks
 │   ├── use-geolocation.ts        # Geolocation hook
 │   ├── use-mobile.ts             # Mobile detection
 │   └── use-toast.ts              # Toast notifications
 ├── public/                       # Static assets
+│   ├── maintenance/              # 🆕 Maintenance assets
+│   │   └── blood.png             # 🆕 Blood drop image for loader
+│   └── ...
 ├── scripts/                      # Utility scripts
 │   ├── create-admin.ts           # Admin creation script
 │   └── update-admin-password.ts  # Password update script
 ├── styles/                       # CSS files
-├── package.json                  # Dependencies
+├── package.json                  # Dependencies (cleaned up)
 ├── tsconfig.json                 # TypeScript config
 ├── next.config.mjs               # Next.js config
 ├── tailwind.config.ts            # Tailwind CSS config
-└── middleware.ts                 # Next.js middleware
+├── middleware.ts                 # 🔧 Enhanced middleware with maintenance
+├── .vercelignore                 # 🆕 Vercel deployment config
+└── MAINTENANCE_LIGHT_THEME_UPDATE.md # 🆕 Maintenance system docs
 ```
+
+---
+
+## 🔧 Recent Technical Improvements
+
+### QR Scanner System Enhancements
+- **Robust DOM Element Waiting**: Implemented retry logic with maximum attempts
+- **Enhanced Safety Checks**: Added element validation before scanner creation
+- **Improved Cleanup**: Better error handling and resource cleanup
+- **Camera Initialization**: Enhanced camera access with proper error handling
+- **Production Ready**: Reliable QR scanning in both admin QR checker and event scanner
+
+### Maintenance System Features
+- **Complete Route Protection**: Middleware blocks all routes during maintenance
+- **Real-Time Monitoring**: 30-second auto-refresh with connection status
+- **Priority-Based Styling**: Different colors for maintenance levels
+- **IP Whitelisting**: Allow specific IPs to bypass maintenance
+- **Emergency Access**: Secret key bypass functionality
+- **Professional UI**: Beautiful maintenance page with Samarpan branding
+- **Mobile Responsive**: Perfect experience across all devices
+
+### Deployment Optimizations
+- **Vercel Compatibility**: Fixed lockfile conflicts and dependency issues
+- **Build Optimization**: Cleaned up problematic dependencies
+- **Configuration Management**: Proper `.vercelignore` and build settings
+- **Zero-Config Deployment**: Seamless deployment to Vercel
+
+### UI/UX Enhancements
+- **Light Theme Consistency**: Maintenance page matches site theme
+- **Perfect Center Alignment**: Maintenance indicator aligned with loader
+- **Smart Navbar**: Auto-hiding navigation during maintenance
+- **Blood Drop Animation**: Custom blood.png in maintenance loader
+- **Glass Morphism**: Modern design with subtle effects
 
 ---
 
@@ -316,6 +430,31 @@ samarpan/
 }
 ```
 
+### Maintenance System Endpoints (NEW)
+
+**GET** `/api/admin/maintenance` – Get maintenance status
+```json
+{
+  "enabled": false,
+  "message": "Maintenance message",
+  "priority": "medium",
+  "enabledAt": "2026-01-02T18:00:00.000Z",
+  "allowedIps": ["192.168.1.100"],
+  "secretKey": "emergency-key"
+}
+```
+
+**POST** `/api/admin/maintenance` – Update maintenance settings
+```json
+{
+  "enabled": true,
+  "message": "We are performing scheduled maintenance...",
+  "priority": "high",
+  "allowedIps": ["192.168.1.100", "10.0.0.50"],
+  "secretKey": "emergency-access-2026"
+}
+```
+
 ### Blood Request Endpoints
 
 **GET** `/api/blood-request` – Get all blood requests  
@@ -342,7 +481,8 @@ samarpan/
 
 - **Password Hashing:** bcryptjs with salt rounds = 10
 - **JWT Tokens:** Secure token-based authentication
-- **Protected Routes:** Middleware-based route protection
+- **Protected Routes:** Enhanced middleware-based route protection
+- **Maintenance Security:** IP whitelisting and emergency access keys
 - **Environment Variables:** Sensitive data stored in `.env.local`
 - **HTTPS Ready:** Production-ready for HTTPS deployment
 - **CORS:** Properly configured cross-origin policies
@@ -381,6 +521,7 @@ npm run setup
 The application uses environment-specific configurations:
 - **Development:** `npm run dev` – Hot reload enabled
 - **Production:** `npm run build && npm start` – Optimized build
+- **Vercel:** Automatic deployment with optimized configuration
 
 ---
 
@@ -410,9 +551,11 @@ AWS_REGION=us-east-1
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 
 # Admin Credentials (for initialization)
-ADMIN_EMAIL=samarpan.com
+ADMIN_EMAIL=admin@samarpan.com
 ADMIN_PASSWORD=strong-password
- 
+
+# Maintenance System (NEW)
+MAINTENANCE_INTERNAL_TOKEN=your-internal-maintenance-token
 
 # WhatsApp (Optional)
 WHATSAPP_ENABLED=true
@@ -460,11 +603,25 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 ```
 
+### Maintenance Page Customization
+
+The maintenance page supports custom styling and messages:
+
+```typescript
+// Custom maintenance messages by priority
+const priorityConfigs = {
+  low: { message: 'Routine maintenance in progress' },
+  medium: { message: 'Scheduled maintenance underway' },
+  high: { message: 'Important system updates' },
+  critical: { message: 'Critical maintenance required' }
+}
+```
+
 ---
 
 ## 🚀 Deployment
 
-### Vercel (Recommended)
+### Vercel (Recommended) - ENHANCED
 
 1. Push your repository to GitHub
 2. Connect to Vercel: https://vercel.com/new
@@ -473,7 +630,8 @@ import { Input } from "@/components/ui/input"
      - Without this, password reset links will not work correctly
      - If not set, the app will try to auto-detect using `VERCEL_URL`, but explicitly setting it is recommended
    - Include all other required variables: `MONGODB_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SMTP_*` settings
-4. Deploy!
+   - **NEW:** Add `MAINTENANCE_INTERNAL_TOKEN` for maintenance system
+4. Deploy! (Now works seamlessly with fixed dependency issues)
 
 **⚠️ Password Reset Configuration:**
 Password reset emails contain a link to `/reset-password`. This URL must be accessible from the internet. The app constructs it using:
@@ -526,6 +684,8 @@ Contributions are welcome! Please follow these steps:
 - Add comments for complex logic
 - Test new features thoroughly
 - Keep components focused and reusable
+- Test QR scanner functionality on real devices
+- Verify maintenance mode works across all routes
 
 ---
 
@@ -541,6 +701,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - **Next.js** – For the amazing React framework
 - **MongoDB** – For robust database solutions
 - **Tailwind CSS** – For utility-first CSS framework
+- **html5-qrcode** – For reliable QR code scanning functionality
 - **The Open Source Community** – For invaluable libraries and tools
 
 ---
@@ -553,6 +714,9 @@ For support, email support@samarpan.com or open an issue in the repository.
 
 ## 🗺️ Roadmap
 
+- [x] **QR Scanner System** - Reliable QR code scanning ✅
+- [x] **Maintenance System** - Complete maintenance mode ✅
+- [x] **Deployment Optimization** - Vercel compatibility ✅
 - [ ] Mobile app (React Native)
 - [ ] Advanced analytics dashboard
 - [ ] AI-powered donor matching
@@ -564,9 +728,36 @@ For support, email support@samarpan.com or open an issue in the repository.
 
 ---
 
+## 🔍 Troubleshooting Guide
+
+### Common Issues & Solutions
+
+#### QR Scanner Issues ✅ FIXED
+- **Problem**: "HTML Element with id=admin-qr-reader not found"
+- **Solution**: ✅ **RESOLVED** - Implemented robust DOM element waiting with retry logic
+
+#### Deployment Issues ✅ FIXED
+- **Problem**: "Cannot install with 'frozen-lockfile'" on Vercel
+- **Solution**: ✅ **RESOLVED** - Cleaned up dependencies and lockfile conflicts
+
+#### Maintenance Mode
+- **Enable**: Admin Dashboard → Maintenance Mode → Toggle switch
+- **Priority Levels**: Choose from low, medium, high, critical for different styling
+- **Emergency Access**: Use secret key parameter: `?secret=your-key`
+- **IP Bypass**: Add allowed IPs in maintenance settings
+
+#### Camera Access
+- **HTTPS Required**: Camera access requires HTTPS on mobile devices
+- **Permissions**: Ensure camera permissions are granted in browser
+- **Testing**: Use `npm run dev -- --host` for local mobile testing
+
+---
+
 <div align="center">
 
 **Made with ❤️ to save lives**
+
+**Latest Update: January 2026 - Enhanced QR System, Maintenance Mode & Deployment**
 
 [⬆ Back to Top](#samarpan---blood-donor-connection-platform)
 

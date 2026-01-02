@@ -5,10 +5,23 @@ const INTERNAL_TOKEN = process.env.MAINTENANCE_INTERNAL_TOKEN ?? "INTERNAL_MAINT
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith('/_next') || pathname.startsWith('/api') || pathname === '/maintenance' || pathname.endsWith('.svg') || pathname.endsWith('.jpg') || pathname.endsWith('.png')) {
+  // Allow static assets, API routes, and maintenance page
+  if (
+    pathname.startsWith('/_next') || 
+    pathname.startsWith('/api') || 
+    pathname === '/maintenance' || 
+    pathname.endsWith('.svg') || 
+    pathname.endsWith('.jpg') || 
+    pathname.endsWith('.png') ||
+    pathname.endsWith('.ico') ||
+    pathname.endsWith('.mp3') ||
+    pathname.endsWith('.css') ||
+    pathname.endsWith('.js')
+  ) {
     return NextResponse.next();
   }
 
+  // Check maintenance mode
   try {
     const maintenanceResponse = await fetch(new URL('/api/admin/maintenance', request.url), {
       headers: {
@@ -29,17 +42,33 @@ export async function middleware(request: NextRequest) {
         const isAllowedIp = userIp && allowedIps.includes(userIp);
         const hasValidSecret = secretKey && secretKeyFromQuery === secretKey;
 
+        // Allow admin routes and bypass conditions
         if (pathname.startsWith('/admin') || isAllowedIp || hasValidSecret) {
           return NextResponse.next();
         }
 
-        return NextResponse.redirect(new URL('/maintenance', request.url));
+        // Redirect ALL other routes to maintenance page
+        if (pathname !== '/maintenance') {
+          const maintenanceUrl = new URL('/maintenance', request.url);
+          
+          // Preserve any secret key in the redirect
+          if (secretKeyFromQuery) {
+            maintenanceUrl.searchParams.set('secret', secretKeyFromQuery);
+          }
+          
+          return NextResponse.redirect(maintenanceUrl);
+        }
+
+        // If already on maintenance page, allow it
+        return NextResponse.next();
       }
     }
   } catch (error) {
     console.error("Error in maintenance middleware:", error);
+    // On error, allow the request to continue to avoid breaking the site
   }
 
+  // Normal authentication and routing logic when maintenance is disabled
   const token = request.cookies.get("token")?.value;
   const adminToken = request.cookies.get("adminToken")?.value;
 

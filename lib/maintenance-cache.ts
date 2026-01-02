@@ -10,9 +10,10 @@ const CACHE_DURATION = 30 * 1000; // 30 seconds
 // Default settings
 const DEFAULT_SETTINGS = {
   enabled: false,
-  message: "The website is currently under maintenance. We will be back shortly.",
+  message: "We are currently performing scheduled maintenance to improve your experience. Please check back shortly.",
   allowedIps: [],
   secretKey: "",
+  priority: "medium",
   enabledAt: null
 };
 
@@ -33,10 +34,16 @@ export function getMaintenanceSettings() {
 }
 
 export function updateMaintenanceSettings(settings: any) {
+  const previousSettings = maintenanceSettings || DEFAULT_SETTINGS;
+  
   maintenanceSettings = {
     ...DEFAULT_SETTINGS,
     ...settings,
-    enabledAt: settings.enabled ? new Date().toISOString() : null
+    // Only update enabledAt if maintenance is being enabled for the first time
+    // or if it was previously disabled
+    enabledAt: settings.enabled 
+      ? (previousSettings.enabled ? previousSettings.enabledAt : new Date().toISOString())
+      : null
   };
   lastFetchTime = Date.now();
   return maintenanceSettings;
