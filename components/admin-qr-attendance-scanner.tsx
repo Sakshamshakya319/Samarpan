@@ -65,25 +65,23 @@ export function AdminQRAttendanceScanner({
   // Initialize beep sound and camera devices
   useEffect(() => {
     initializeBeepSound()
-    
+    initializeCameras()
+  }, [])
+
+  // Initialize scanner when dialog opens
+  useEffect(() => {
     if (isOpen) {
-      initializeCameras()
-      initializeScanner()
+      // Create scanner instance
+      html5QrCodeRef.current = new Html5Qrcode("qr-reader")
+      
+      // Start scanner automatically
+      startCamera()
     }
     
     return () => {
       cleanup()
     }
   }, [isOpen])
-
-  const initializeScanner = () => {
-    const element = document.getElementById('qr-reader')
-    if (element && !html5QrCodeRef.current) {
-      html5QrCodeRef.current = new Html5Qrcode("qr-reader")
-    } else if (!element) {
-      setTimeout(initializeScanner, 100)
-    }
-  }
 
   const initializeCameras = async () => {
     try {
@@ -115,30 +113,22 @@ export function AdminQRAttendanceScanner({
   }
 
   const startCamera = async (deviceId?: string) => {
-    cleanup()
+    if (!html5QrCodeRef.current) return
+    
     setIsLoading(true)
     setError("")
 
     try {
-      const cameraId = deviceId || selectedCamera
-      if (!cameraId) {
-        throw new Error("No camera selected")
-      }
-
-      // Ensure scanner is initialized
-      if (!html5QrCodeRef.current) {
-        html5QrCodeRef.current = new Html5Qrcode("qr-reader")
-      }
+      const cameraId = deviceId || selectedCamera || "environment"
       
       const config = {
         fps: 10,
         qrbox: { width: 250, height: 250 },
       }
 
-      const constraints = {
-        deviceId: { exact: cameraId },
-        facingMode: "environment",
-      }
+      const constraints = cameraId === "environment" 
+        ? { facingMode: "environment" }
+        : { deviceId: { exact: cameraId } }
 
       // Reset scanning state
       isScanningRef.current = false
@@ -431,8 +421,7 @@ export function AdminQRAttendanceScanner({
                 aspectRatio: "1",
                 maxWidth: "400px",
                 margin: "0 auto",
-                minHeight: "300px",
-                display: isCameraActive ? "block" : "none"
+                minHeight: "300px"
               }}
             />
 
@@ -482,6 +471,12 @@ export function AdminQRAttendanceScanner({
             {/* Manual Entry View */}
             {!isCameraActive && (
               <div className="space-y-3">
+                {error && (
+                  <div className="text-center text-red-600 text-sm">
+                    {error}
+                  </div>
+                )}
+                
                 <Button
                   onClick={() => startCamera()}
                   disabled={isLoading}

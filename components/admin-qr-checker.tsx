@@ -67,25 +67,23 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
   // Initialize beep sound and camera devices
   useEffect(() => {
     initializeBeepSound()
-    
+    initializeCameras()
+  }, [])
+
+  // Initialize scanner when dialog opens
+  useEffect(() => {
     if (showScanner) {
-      initializeCameras()
-      initializeScanner()
+      // Create scanner instance
+      html5QrCodeRef.current = new Html5Qrcode("admin-qr-reader")
+      
+      // Start scanner automatically
+      startCamera()
     }
     
     return () => {
       cleanup()
     }
   }, [showScanner])
-
-  const initializeScanner = () => {
-    const element = document.getElementById('admin-qr-reader')
-    if (element && !html5QrCodeRef.current) {
-      html5QrCodeRef.current = new Html5Qrcode("admin-qr-reader")
-    } else if (!element) {
-      setTimeout(initializeScanner, 100)
-    }
-  }
 
   const initializeCameras = async () => {
     try {
@@ -117,30 +115,22 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
   }
 
   const startCamera = async (deviceId?: string) => {
-    cleanup()
+    if (!html5QrCodeRef.current) return
+    
     setIsLoading(true)
     setCameraError("")
 
     try {
-      const cameraId = deviceId || selectedCamera
-      if (!cameraId) {
-        throw new Error("No camera selected")
-      }
-
-      // Ensure scanner is initialized
-      if (!html5QrCodeRef.current) {
-        html5QrCodeRef.current = new Html5Qrcode("admin-qr-reader")
-      }
+      const cameraId = deviceId || selectedCamera || "environment"
       
       const config = {
         fps: 10,
         qrbox: { width: 250, height: 250 },
       }
 
-      const constraints = {
-        deviceId: { exact: cameraId },
-        facingMode: "environment",
-      }
+      const constraints = cameraId === "environment" 
+        ? { facingMode: "environment" }
+        : { deviceId: { exact: cameraId } }
 
       // Reset scanning state
       isScanningRef.current = false
@@ -589,8 +579,7 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
                 aspectRatio: "1",
                 maxWidth: "400px",
                 margin: "0 auto",
-                minHeight: "300px",
-                display: isCameraActive ? "block" : "none"
+                minHeight: "300px"
               }}
             />
 
@@ -639,8 +628,12 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
             )}
 
             {/* Manual Entry View */}
-            {!isCameraActive && (
+            {!isCameraActive && cameraError && (
               <div className="space-y-3">
+                <div className="text-center text-red-600 text-sm">
+                  {cameraError}
+                </div>
+                
                 <Button
                   onClick={() => startCamera()}
                   disabled={isLoading}
@@ -649,12 +642,12 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Starting Camera...
+                      Retrying...
                     </>
                   ) : (
                     <>
                       <Camera className="w-4 h-4" />
-                      Start Camera
+                      Retry Camera
                     </>
                   )}
                 </Button>
