@@ -1,12 +1,25 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
+import { Html5Qrcode } from "html5-qrcode"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, QrCode, CheckCircle2, AlertCircle, Copy, RefreshCw } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { 
+  Loader2, 
+  QrCode, 
+  CheckCircle2, 
+  AlertCircle, 
+  Copy, 
+  RefreshCw, 
+  Camera,
+  X
+} from "lucide-react"
+import { playBeep, playErrorBeep, initializeBeepSound } from "./beep-sound"
+import { useToast } from "@/hooks/use-toast"
 
 
 interface AdminQRCheckerProps {
@@ -38,6 +51,201 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
   const [registrationDetails, setRegistrationDetails] = useState<RegistrationDetails | null>(null)
   const [successMessage, setSuccessMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
+  
+  // QR Scanner states
+  const [showScanner, setShowScanner] = useState(false)
+  const [isCameraActive, setIsCameraActive] = useState(false)
+  const [cameraError, setCameraError] = useState("")
+  const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([])
+  const [selectedCamera, setSelectedCamera] = useState<string>("")
+  const [isProcessing, setIsProcessing] = useState(false)
+  
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null)
+  const isScanningRef = useRef(false)
+  const { toast } = useToast()
+
+  // Initialize beep sound and camera devices
+  useEffect(() => {
+    initializeBeepSound()
+    
+    if (showScanner) {
+      initializeCameras()
+      initializeScanner()
+    }
+    
+    return () => {
+      cleanup()
+    }
+  }, [showScanner])
+
+  const initializeScanner = () => {
+    const element = document.getElementById('admin-qr-reader')
+    if (element && !html5QrCodeRef.current) {
+      html5QrCodeRef.current = new Html5Qrcode("admin-qr-reader")
+    } else if (!element) {
+      setTimeout(initializeScanner, 100)
+    }
+  }
+
+  const initializeCameras = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      const videoDevices = devices.filter(device => device.kind === "videoinput")
+      setCameraDevices(videoDevices)
+      
+      if (videoDevices.length > 0 && !selectedCamera) {
+        // Prefer back camera on mobile
+        const backCamera = videoDevices.find(device => 
+          device.label.toLowerCase().includes("back") || 
+          device.label.toLowerCase().includes("environment")
+        )
+        setSelectedCamera(backCamera?.deviceId || videoDevices[0].deviceId)
+      }
+    } catch (err) {
+      console.error("Failed to enumerate devices:", err)
+    }
+  }
+
+  const cleanup = () => {
+    if (html5QrCodeRef.current) {
+      html5QrCodeRef.current.stop().catch(() => {})
+      html5QrCodeRef.current.clear()
+      html5QrCodeRef.current = null
+    }
+    setIsCameraActive(false)
+    isScanningRef.current = false
+  }
+
+  const startCamera = async (deviceId?: string) => {
+    cleanup()
+    setIsLoading(true)
+    setCameraError("")
+
+    try {
+      const cameraId = deviceId || selectedCamera
+      if (!cameraId) {
+        throw new Error("No camera selected")
+      }
+
+      // Ensure scanner is initialized
+      if (!html5QrCodeRef.current) {
+        html5QrCodeRef.current = new Html5Qrcode("admin-qr-reader")
+      }
+      
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+      }
+
+      const constraints = {
+        deviceId: { exact: cameraId },
+        facingMode: "environment",
+      }
+
+      // Reset scanning state
+      isScanningRef.current = false
+
+      await html5QrCodeRef.current.start(
+        constraints,
+        config,
+        onScanSuccess,
+        onScanFailure
+      )
+
+      setIsCameraActive(true)
+      setCameraError("")
+    } catch (err: any) {
+      console.error("Camera error:", err)
+      let errorMsg = "Failed to access camera"
+
+      if (err.name === "NotAllowedError") {
+        errorMsg = "Camera permission denied. Please allow camera access."
+      } else if (err.name === "NotFoundError") {
+        errorMsg = "No camera found on this device."
+      } else if (err.name === "NotReadableError") {
+        errorMsg = "Camera is in use by another app."
+      }
+
+      setCameraError(errorMsg)
+      toast({
+        title: "Camera Error",
+        description: errorMsg,
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const onScanSuccess = async (decodedText: string) => {
+    // Prevent duplicate scans
+    if (isScanningRef.current || isProcessing) return
+    
+    isScanningRef.current = true
+    setIsProcessing(true)
+
+    try {
+      // Play beep sound immediately
+      await playBeep()
+      
+      // Stop scanner immediately to prevent multiple scans
+      if (html5QrCodeRef.current) {
+        await html5QrCodeRef.current.stop()
+        setIsCameraActive(false)
+      }
+
+      // Close scanner dialog
+      setShowScanner(false)
+
+      // Process QR code
+      await processScannedQR(decodedText)
+      
+      toast({
+        title: "Success",
+        description: "QR Code scanned successfully!",
+      })
+    } catch (error) {
+      console.error("Error processing QR code:", error)
+      await playErrorBeep()
+      toast({
+        title: "Error",
+        description: "Failed to process QR code",
+        variant: "destructive",
+      })
+    } finally {
+      setIsProcessing(false)
+      isScanningRef.current = false
+    }
+  }
+
+  const onScanFailure = (error: string) => {
+    // Ignore scan failures - they're normal during scanning
+    console.debug("QR scan attempt:", error)
+  }
+
+  const processScannedQR = async (qrData: string) => {
+    try {
+      let parsedData
+      
+      // Try to parse as JSON first (new format)
+      try {
+        parsedData = JSON.parse(qrData)
+      } catch {
+        // If not JSON, treat as alphanumeric token (legacy format)
+        parsedData = { alphanumericToken: qrData.trim() }
+      }
+
+      const tokenToSearch = parsedData.alphanumericToken || parsedData.token || qrData.trim()
+      
+      // Update input field and search
+      setQrInput(tokenToSearch)
+      await handleSearchQR(tokenToSearch)
+      
+    } catch (error) {
+      console.error("Error processing scanned QR:", error)
+      setErrorMessage("Failed to process scanned QR code")
+    }
+  }
 
   const handleSearchQR = async (qrToken?: string) => {
     const tokenToSearch = qrToken || qrInput.trim()
@@ -145,10 +353,10 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <QrCode className="w-5 h-5" />
-            Alphanumeric Token Verification
+            QR Code Verification
           </CardTitle>
           <CardDescription>
-            Enter 6-digit alphanumeric tokens to verify blood donations
+            Scan QR codes or enter tokens manually to verify event attendance
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -167,15 +375,28 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
           )}
 
           <div className="space-y-3">
-            <label className="block text-sm font-medium">Alphanumeric Token</label>
+            <label className="block text-sm font-medium">QR Code / Token</label>
+
+            {/* QR Scanner Button */}
+            <div className="flex gap-2 mb-3">
+              <Button
+                onClick={() => setShowScanner(true)}
+                variant="outline"
+                className="gap-2"
+              >
+                <Camera className="w-4 h-4" />
+                Scan QR Code
+              </Button>
+              <span className="text-sm text-gray-500 flex items-center">or enter token manually below</span>
+            </div>
 
             {/* Input and Buttons */}
             <div className="flex gap-2">
               <Input
-                placeholder="Enter 6-digit token (e.g., ABC123)"
+                placeholder="Enter token (e.g., ABC123) or scan QR code"
                 value={qrInput}
                 onChange={(e) => setQrInput(e.target.value.toUpperCase())}
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === "Enter" && qrInput.trim()) {
                     handleSearchQR()
                   }
@@ -186,7 +407,7 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
               <Button
                 onClick={() => handleSearchQR()}
                 disabled={isLoading || !qrInput.trim()}
-                title="Search for this alphanumeric token"
+                title="Search for this token"
               >
                 {isLoading ? (
                   <>
@@ -197,7 +418,6 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
                   "Search"
                 )}
               </Button>
-
             </div>
           </div>
         </CardContent>
@@ -341,6 +561,132 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* QR Scanner Dialog */}
+      <Dialog open={showScanner} onOpenChange={(open) => !open && setShowScanner(false)}>
+        <DialogContent className="w-[95vw] sm:w-full sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="w-5 h-5" />
+              Scan QR Code
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Error Alert */}
+            {cameraError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{cameraError}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* QR Reader Container - Always rendered */}
+            <div 
+              id="admin-qr-reader" 
+              className="w-full bg-black rounded-lg overflow-hidden"
+              style={{ 
+                aspectRatio: "1",
+                maxWidth: "400px",
+                margin: "0 auto",
+                minHeight: "300px",
+                display: isCameraActive ? "block" : "none"
+              }}
+            />
+
+            {isCameraActive && (
+              <div className="space-y-3">
+                {/* Processing indicator */}
+                {isProcessing && (
+                  <div className="text-center">
+                    <div className="bg-white rounded-lg p-4 flex items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Processing QR code...</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Camera Controls */}
+                {cameraDevices.length > 1 && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Select Camera:</label>
+                    <select
+                      value={selectedCamera}
+                      onChange={(e) => startCamera(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-md text-sm"
+                    >
+                      {cameraDevices.map((device) => (
+                        <option key={device.deviceId} value={device.deviceId}>
+                          {device.label || `Camera ${device.deviceId.slice(0, 8)}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <Button
+                  onClick={() => {
+                    cleanup()
+                    setShowScanner(false)
+                  }}
+                  variant="outline"
+                  className="w-full gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  Close Scanner
+                </Button>
+              </div>
+            )}
+
+            {/* Manual Entry View */}
+            {!isCameraActive && (
+              <div className="space-y-3">
+                <Button
+                  onClick={() => startCamera()}
+                  disabled={isLoading}
+                  className="w-full gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Starting Camera...
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="w-4 h-4" />
+                      Start Camera
+                    </>
+                  )}
+                </Button>
+
+                {/* Camera Device Selector */}
+                {cameraDevices.length > 1 && (
+                  <div className="space-y-2 p-3 bg-gray-50 border rounded-lg">
+                    <p className="text-xs font-medium text-gray-700">Select Camera:</p>
+                    <div className="space-y-1">
+                      {cameraDevices.map((device) => (
+                        <Button
+                          key={device.deviceId}
+                          onClick={() => {
+                            setSelectedCamera(device.deviceId)
+                            setTimeout(() => startCamera(device.deviceId), 100)
+                          }}
+                          variant={selectedCamera === device.deviceId ? "default" : "outline"}
+                          size="sm"
+                          className="w-full justify-start text-left text-xs"
+                        >
+                          <Camera className="w-3 h-3 mr-2 flex-shrink-0" />
+                          <span className="truncate">{device.label}</span>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
