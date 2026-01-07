@@ -46,6 +46,7 @@ export const ADMIN_PERMISSIONS = {
 
   // Admin management (super admin only)
   MANAGE_ADMIN_ACCOUNTS: "manage_admin_accounts",
+  VIEW_ACTION_HISTORY: "view_actions_history",
 } as const
 
 export const PERMISSION_GROUPS = {

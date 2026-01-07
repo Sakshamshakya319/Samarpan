@@ -59,7 +59,7 @@ function getDocumentMime(fileName?: string) {
 }
 
 interface AdminBloodRequestsManagerProps {
-  token: string
+  token: string | null
 }
 
 export function AdminBloodRequestsManager({ token }: AdminBloodRequestsManagerProps) {

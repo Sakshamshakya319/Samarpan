@@ -1,64 +1,74 @@
-"use client"
+"use client";
 
 // Mark as dynamic to handle admin authentication and redirects
-export const dynamic = "force-dynamic"
+export const dynamic = "force-dynamic";
 
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { AdminUsersTable } from "@/components/admin-users-table"
-import { AdminSendNotification } from "@/components/admin-send-notification"
-import { AdminCertificateGenerator } from "@/components/admin-certificate-generator"
-import { AdminDonationsManagerEnhanced } from "@/components/admin-donations-manager-enhanced"
-import { AdminEventsManager } from "@/components/admin-events-manager"
-import { AdminDonationImagesViewer } from "@/components/admin-donation-images-viewer"
-import { AdminBloodRequestsManager } from "@/components/admin-blood-requests-manager"
-import { AdminBloodHistory } from "@/components/admin-blood-history"
-import { AdminTransportationManager } from "@/components/admin-transportation-manager"
-import { AdminContactSubmissionsManager } from "@/components/admin-contact-submissions-manager"
-import { AdminQRChecker } from "@/components/admin-qr-checker"
-import { AdminEventDonors } from "@/components/admin-event-donors"
-import { AdminBlogManager } from "@/components/admin-blog-manager"
-import { LogOut, LayoutDashboard, Calendar, Truck, Mail, QrCode, Users, BookOpen, Droplets } from "lucide-react"
-import { ADMIN_PERMISSIONS } from "@/lib/constants/admin-permissions"
+import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { AdminUsersTable } from "@/components/admin-users-table";
+import { AdminSendNotification } from "@/components/admin-send-notification";
+import { AdminCertificateGenerator } from "@/components/admin-certificate-generator";
+import { AdminDonationsManagerEnhanced } from "@/components/admin-donations-manager-enhanced";
+import { AdminEventsManager } from "@/components/admin-events-manager";
+import { AdminDonationImagesViewer } from "@/components/admin-donation-images-viewer";
+import { AdminBloodRequestsManager } from "@/components/admin-blood-requests-manager";
+import { AdminBloodHistory } from "@/components/admin-blood-history";
+import { AdminTransportationManager } from "@/components/admin-transportation-manager";
+import { AdminContactSubmissionsManager } from "@/components/admin-contact-submissions-manager";
+import { AdminQRChecker } from "@/components/admin-qr-checker";
+import { AdminEventDonors } from "@/components/admin-event-donors";
+import { AdminBlogManager } from "@/components/admin-blog-manager";
+import {
+  LogOut,
+  LayoutDashboard,
+  Calendar,
+  Truck,
+  Mail,
+  QrCode,
+  Users,
+  BookOpen,
+  Droplets,
+} from "lucide-react";
+import { ADMIN_PERMISSIONS } from "@/lib/constants/admin-permissions";
 
 interface Admin {
-  id: string
-  email: string
-  name: string
-  role: string
-  permissions: string[]
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  permissions: string[];
 }
 
 interface TabConfig {
-  id: string
-  label: string
-  icon?: React.ReactNode
-  permissions: string[]
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  permissions: string[];
 }
 
 interface User {
-  _id: string
-  name: string
-  email: string
-  bloodGroup?: string
-  location?: string
-  phone?: string
-  createdAt?: string
-  lastDonationDate?: string
-  totalDonations?: number
-  hasDisease?: boolean
-  diseaseDescription?: string
+  _id: string;
+  name: string;
+  email: string;
+  bloodGroup?: string;
+  location?: string;
+  phone?: string;
+  createdAt?: string;
+  lastDonationDate?: string;
+  totalDonations?: number;
+  hasDisease?: boolean;
+  diseaseDescription?: string;
 }
 
 export default function AdminPage() {
-  const router = useRouter()
-  const [admin, setAdmin] = useState<Admin | null>(null)
-  const [users, setUsers] = useState<User[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [token, setToken] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState("")
-  const [availableTabs, setAvailableTabs] = useState<TabConfig[]>([])
+  const router = useRouter();
+  const [admin, setAdmin] = useState<Admin | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("");
+  const [availableTabs, setAvailableTabs] = useState<TabConfig[]>([]);
 
   const tabConfigs: TabConfig[] = [
     {
@@ -130,7 +140,10 @@ export default function AdminPage() {
       id: "blogs",
       label: "Blog Management",
       icon: <BookOpen className="w-4 h-4" />,
-      permissions: [ADMIN_PERMISSIONS.MANAGE_BLOGS, ADMIN_PERMISSIONS.VIEW_BLOGS],
+      permissions: [
+        ADMIN_PERMISSIONS.MANAGE_BLOGS,
+        ADMIN_PERMISSIONS.VIEW_BLOGS,
+      ],
     },
     {
       id: "blood-history",
@@ -138,12 +151,51 @@ export default function AdminPage() {
       icon: <Droplets className="w-4 h-4" />,
       permissions: [ADMIN_PERMISSIONS.VIEW_DONATIONS],
     },
-  ]
+  ];
 
-  const hasPermission = (permissions: string[], adminPermissions: string[]): boolean => {
-    if (adminPermissions.length === 0) return false
-    return permissions.some((permission) => adminPermissions.includes(permission))
-  }
+  const hasPermission = (
+    permissions: string[],
+    adminPermissions: string[]
+  ): boolean => {
+    if (adminPermissions.length === 0) return false;
+    return permissions.some((permission) =>
+      adminPermissions.includes(permission)
+    );
+  };
+
+  const tabComponentMap: Record<string, () => React.ReactNode | null> = {
+    users: () => (token ? <AdminUsersTable token={token} /> : null),
+
+    notifications: () =>
+      token ? <AdminSendNotification users={users} token={token} /> : null,
+
+    certificates: () =>
+      token ? <AdminCertificateGenerator users={users} token={token} /> : null,
+
+    donations: () =>
+      token ? <AdminDonationsManagerEnhanced token={token} /> : null,
+
+    images: () => (token ? <AdminDonationImagesViewer token={token} /> : null),
+
+    "blood-requests": () =>
+      token ? <AdminBloodRequestsManager token={token} /> : null,
+
+    "blood-history": () => (token ? <AdminBloodHistory token={token} /> : null),
+
+    events: () => (token ? <AdminEventsManager token={token} /> : null),
+
+    transportation: () =>
+      token ? <AdminTransportationManager token={token} /> : null,
+
+    contacts: () =>
+      token ? <AdminContactSubmissionsManager token={token} /> : null,
+
+    "token-verifier": () => (token ? <AdminQRChecker token={token} /> : null),
+
+    "event-donors": () => (token ? <AdminEventDonors token={token} /> : null),
+
+    blogs: () => (token ? <AdminBlogManager /> : null),
+  };
 
   useEffect(() => {
     const adminToken = localStorage.getItem("adminToken")
@@ -202,32 +254,36 @@ export default function AdminPage() {
     try {
       const response = await fetch("/api/admin/users", {
         headers: { Authorization: `Bearer ${adminToken}` },
-      })
+      });
       if (response.ok) {
-        const data = await response.json()
-        setUsers(data.users)
+        const data = await response.json();
+        setUsers(data.users);
       }
     } catch (err) {
-      console.error("Failed to load users")
+      console.error("Failed to load users");
     }
-  }
+  };
 
   const handleLogout = async () => {
     try {
       // Call logout endpoint to clear cookie
-      await fetch("/api/auth/admin-logout", { method: "POST" })
+      await fetch("/api/auth/admin-logout", { method: "POST" });
     } catch (err) {
-      console.error("Logout error:", err)
+      console.error("Logout error:", err);
     } finally {
       // Clear localStorage
-      localStorage.removeItem("adminToken")
-      localStorage.removeItem("adminEmail")
-      router.push("/admin/login")
+      localStorage.removeItem("adminToken");
+      localStorage.removeItem("adminEmail");
+      router.push("/admin/login");
     }
-  }
+  };
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
   }
 
   if (!admin) {
@@ -244,16 +300,24 @@ export default function AdminPage() {
               <LayoutDashboard className="w-6 h-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-primary">Samarpan Admin</h1>
-              <p className="text-xs text-muted-foreground">Administration Panel</p>
+              <h1 className="text-2xl font-bold text-primary">
+                Samarpan Admin
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                Administration Panel
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium">{admin.email}</p>
+              <p className="text-sm font-medium">{admin?.email}</p>
               <p className="text-xs text-muted-foreground">Administrator</p>
             </div>
-            <Button variant="outline" onClick={handleLogout} className="gap-2 bg-transparent">
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              className="gap-2 bg-transparent"
+            >
               <LogOut className="w-4 h-4" />
               Logout
             </Button>
@@ -288,90 +352,11 @@ export default function AdminPage() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === "users" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminUsersTable token={token} />}
-          </div>
-        )}
 
-        {activeTab === "notifications" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>{token && <AdminSendNotification users={users} token={token} />}</div>
-          </div>
-        )}
-
-        {activeTab === "certificates" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>{token && <AdminCertificateGenerator users={users} token={token} />}</div>
-          </div>
-        )}
-
-        {activeTab === "donations" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminDonationsManagerEnhanced token={token} />}
-          </div>
-        )}
-
-        {activeTab === "images" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminDonationImagesViewer token={token} />}
-          </div>
-        )}
-
-        {activeTab === "blood-requests" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminBloodRequestsManager token={token} />}
-          </div>
-        )}
-
-        {activeTab === "blood-history" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminBloodHistory token={token} />}
-          </div>
-        )}
-
-        {activeTab === "events" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminEventsManager token={token} />}
-          </div>
-        )}
-
-        {activeTab === "transportation" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminTransportationManager token={token} />}
-          </div>
-        )}
-
-        {activeTab === "contacts" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminContactSubmissionsManager token={token} />}
-          </div>
-        )}
-
-        {activeTab === "token-verifier" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminQRChecker token={token} />}
-          </div>
-        )}
-
-        {activeTab === "event-donors" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminEventDonors token={token} />}
-          </div>
-        )}
-
-        {activeTab === "blogs" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminBlogManager token={token} />}
-          </div>
-        )}
-
-        {activeTab === "blood-history" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminBloodHistory token={token} />}
-          </div>
-        )}
+        <div className="grid grid-cols-1 gap-6">
+          {tabComponentMap[activeTab]?.()}
+        </div>
       </div>
     </main>
-  )
+  );
 }

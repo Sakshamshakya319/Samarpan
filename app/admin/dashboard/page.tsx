@@ -76,7 +76,7 @@ export default function AdminDashboard() {
       id: "",
       email: adminEmail,
       name: adminName || "Admin",
-      role: adminRole,
+      role: adminRole || "admin",
       permissions,
     })
 
@@ -224,6 +224,7 @@ export default function AdminDashboard() {
     },
   ]
 
+
   const enabledTabs = tabs.filter((tab) => tab.enabled)
 
   // If no tabs are enabled, show a message
@@ -243,7 +244,7 @@ export default function AdminDashboard() {
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium">{admin.email}</p>
+                <p className="text-sm font-medium">{admin?.email}</p>
                 <p className="text-xs text-muted-foreground">Administrator</p>
               </div>
               <Button 
@@ -290,7 +291,7 @@ export default function AdminDashboard() {
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium">{admin.email}</p>
+              <p className="text-sm font-medium">{admin?.email}</p>
               <p className="text-xs text-muted-foreground">Administrator</p>
             </div>
             <Button 
@@ -347,7 +348,7 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === "certificates" && enabledTabs.some((t) => t.id === "certificates") && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1">
             <div>{token && <AdminCertificateGenerator users={users} token={token} />}</div>
           </div>
         )}

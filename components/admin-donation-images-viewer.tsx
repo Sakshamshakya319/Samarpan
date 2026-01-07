@@ -29,7 +29,7 @@ interface DonationImage {
 }
 
 interface AdminDonationImagesViewerProps {
-  token: string
+  token: string | null
 }
 
 export function AdminDonationImagesViewer({ token }: AdminDonationImagesViewerProps) {

@@ -44,7 +44,7 @@ interface DonorRecord {
 
 interface AdminEventDonorsProps {
   eventId?: string
-  token: string
+  token: string | null
 }
 
 export function AdminEventDonors({ eventId, token }: AdminEventDonorsProps) {

@@ -29,7 +29,7 @@ interface BloodDonationHistory {
 }
 
 interface AdminBloodHistoryProps {
-  token: string
+  token: string | null
 }
 
 interface Event {

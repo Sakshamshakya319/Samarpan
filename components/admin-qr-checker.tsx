@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast"
 
 
 interface AdminQRCheckerProps {
-  token: string
+  token: string | null
 }
 
 interface RegistrationDetails {

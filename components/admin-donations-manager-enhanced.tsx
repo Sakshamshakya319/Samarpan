@@ -51,7 +51,7 @@ interface AcceptedDonation {
 }
 
 interface AdminDonationsManagerEnhancedProps {
-  token: string
+  token: string | null
 }
 
 export function AdminDonationsManagerEnhanced({ token }: AdminDonationsManagerEnhancedProps) {

@@ -51,7 +51,7 @@ interface Event {
 }
 
 interface AdminEventsManagerProps {
-  token: string
+  token: string | null
 }
 
 export function AdminEventsManager({ token }: AdminEventsManagerProps) {

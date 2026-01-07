@@ -21,7 +21,7 @@ interface User {
 }
 
 interface AdminUsersTableProps {
-  token: string
+  token: string | null
 }
 
 export function AdminUsersTable({ token }: AdminUsersTableProps) {

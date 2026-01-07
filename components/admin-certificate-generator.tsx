@@ -35,7 +35,7 @@ interface DonationRequest {
 
 interface AdminCertificateGeneratorProps {
   users: User[]
-  token: string
+  token: string | null
 }
 
 export function AdminCertificateGenerator({ users, token }: AdminCertificateGeneratorProps) {

@@ -22,7 +22,7 @@ interface ContactSubmission {
 }
 
 interface AdminContactSubmissionsManagerProps {
-  token: string
+  token: string | null
 }
 
 export function AdminContactSubmissionsManager({ token }: AdminContactSubmissionsManagerProps) {

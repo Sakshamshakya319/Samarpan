@@ -97,7 +97,7 @@ function TransportationTimeline({ currentStatus }: { currentStatus: string }) {
 }
 
 interface AdminTransportationManagerProps {
-  token: string
+  token: string | null
 }
 
 export function AdminTransportationManager({ token }: AdminTransportationManagerProps) {

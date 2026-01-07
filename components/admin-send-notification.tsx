@@ -25,7 +25,7 @@ const BLOOD_TYPES = ["A-", "A+", "B-", "B+", "O-", "O+", "AB-", "AB+"]
 
 interface AdminSendNotificationProps {
   users: User[]
-  token: string
+  token: string | null
 }
 
 export function AdminSendNotification({ users: initialUsers, token }: AdminSendNotificationProps) {
