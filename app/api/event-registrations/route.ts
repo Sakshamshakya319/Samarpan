@@ -16,8 +16,8 @@ interface RegistrationData {
   timeSlot: string // e.g., "09:00-11:00", "11:00-13:00", etc.
   userId?: string
   email?: string
-  // New: participant type and optional identifier
-  participantType?: "student" | "staff" | "other"
+  // Updated: participant type can be any string based on event's participant categories
+  participantType?: string
 }
 
 // Generate a unique 6-digit alphanumeric token
@@ -54,20 +54,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate participant type and identifier rules
-    const allowedTypes = ["student", "staff", "other"] as const
-    const participant = (participantType || "other").toLowerCase()
-    if (!allowedTypes.includes(participant as any)) {
+    // Validate participant type against event's allowed categories
+    const event = await eventsCollection.findOne({ _id: new ObjectId(eventId) })
+    if (!event) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 })
+    }
+
+    // Check if participant type is valid for this event
+    const participant = (participantType || "others").toLowerCase()
+    if (event.participantCategories && !event.participantCategories.includes(participant)) {
       return NextResponse.json(
-        { error: "Invalid participant type. Must be student, staff, or other" },
+        { error: "Invalid participant type for this event" },
         { status: 400 }
       )
     }
 
-    // For student/staff, identifier (registrationNumber) is required; for other it is optional
-    if ((participant === "student" || participant === "staff") && (!registrationNumber || !registrationNumber.trim())) {
+    // Check if identifier is required based on event location type and participant type
+    const requiresIdentifier = (
+      (event.locationType === 'school' && (participant === 'students' || participant === 'staff')) ||
+      (event.locationType === 'college' && (participant === 'students' || participant === 'faculty' || participant === 'staff')) ||
+      (event.locationType === 'corporate' && (participant === 'employees' || participant === 'management')) ||
+      (event.locationType === 'hospital' && participant === 'staff')
+    )
+
+    if (requiresIdentifier && (!registrationNumber || !registrationNumber.trim())) {
       return NextResponse.json(
-        { error: participant === "student" ? "Registration number is required for LPU Student" : "UID is required for LPU Staff" },
+        { error: "Identifier is required for this participant type" },
         { status: 400 }
       )
     }
@@ -79,13 +91,6 @@ export async function POST(request: NextRequest) {
     const userPhone = userData?.phone || ""
 
     // Check if event exists and has available slots
-    const eventsCollection = db.collection("events")
-    const event = await eventsCollection.findOne({ _id: new ObjectId(eventId) })
-
-    if (!event) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 })
-    }
-
     const registrationsCollection = db.collection("event_registrations")
 
     // Check if user already registered for this event
@@ -96,6 +101,19 @@ export async function POST(request: NextRequest) {
 
     if (existingReg) {
       return NextResponse.json({ error: "You are already registered for this event" }, { status: 400 })
+    }
+
+    // Check if user is already registered as volunteer
+    const volunteerRegistrationsCollection = db.collection("volunteer_registrations")
+    const existingVolunteerReg = await volunteerRegistrationsCollection.findOne({
+      eventId: new ObjectId(eventId),
+      userId: new ObjectId(decoded.userId),
+    })
+
+    if (existingVolunteerReg) {
+      return NextResponse.json({ 
+        error: "You are already registered as a volunteer for this event" 
+      }, { status: 400 })
     }
 
     // Count registrations for this event
@@ -286,6 +304,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         isRegistered: !!userRegistration,
         registration: enrichedRegistration || null,
+        type: 'donor'
       })
     }
 

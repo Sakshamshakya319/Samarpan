@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
-import { hashPassword } from "@/lib/auth"
-import crypto from "crypto"
+import { hashPassword, verifyResetToken } from "@/lib/auth"
 
 interface ResetPasswordRequest {
   token: string
@@ -70,22 +69,31 @@ export async function POST(request: NextRequest) {
 
     console.log("[Password Reset] All validation checks passed, verifying token...")
 
-    // Hash the token for comparison
-    const resetTokenHash = crypto.createHash("sha256").update(token).digest("hex")
-    console.log(`[Password Reset] Token hash: ${resetTokenHash.substring(0, 20)}...`)
+    // Verify the reset token using the new system
+    const tokenData = verifyResetToken(token)
+    if (!tokenData) {
+      console.warn("[Password Reset] ❌ Invalid or expired token provided")
+      return NextResponse.json(
+        { error: "Invalid or expired password reset token. Please request a new one." },
+        { status: 400 },
+      )
+    }
+
+    console.log(`[Password Reset] Token hash: ${tokenData.tokenHash.substring(0, 20)}...`)
 
     // Connect to database
     const db = await getDatabase()
     const usersCollection = db.collection("users")
 
-    // Find user with matching reset token and check expiry
+    // Find user with matching reset token
     const user = await usersCollection.findOne({
-      passwordResetToken: resetTokenHash,
-      passwordResetExpiry: { $gt: new Date() }, // Token must not be expired
+      email: tokenData.email,
+      passwordResetToken: tokenData.tokenHash,
+      passwordResetExpiry: { $gt: new Date() }, // Double-check expiry
     })
 
     if (!user) {
-      console.warn("[Password Reset] ❌ Invalid or expired token provided")
+      console.warn("[Password Reset] ❌ User not found or token mismatch")
       return NextResponse.json(
         { error: "Invalid or expired password reset token. Please request a new one." },
         { status: 400 },
@@ -168,40 +176,29 @@ export async function GET(request: NextRequest) {
 
     console.log("[Password Reset] Token length:", token.length)
 
-    // Hash the token for comparison
-    const resetTokenHash = crypto.createHash("sha256").update(token).digest("hex")
-    console.log(`[Password Reset] Token hash: ${resetTokenHash.substring(0, 20)}...`)
+    // Verify the reset token using the new system
+    const tokenData = verifyResetToken(token)
+    if (!tokenData) {
+      console.warn("[Password Reset] ❌ Token verification failed")
+      return NextResponse.json(
+        { valid: false, error: "Invalid or expired password reset token" },
+        { status: 400 },
+      )
+    }
 
     // Connect to database
     const db = await getDatabase()
     const usersCollection = db.collection("users")
 
-    // Check if token is valid and not expired
-    const now = new Date()
-    console.log(`[Password Reset] Current time: ${now.toISOString()}`)
-
+    // Check if token exists in database and is not expired
     const user = await usersCollection.findOne({
-      passwordResetToken: resetTokenHash,
-      passwordResetExpiry: { $gt: now },
+      email: tokenData.email,
+      passwordResetToken: tokenData.tokenHash,
+      passwordResetExpiry: { $gt: new Date() },
     })
 
     if (!user) {
-      console.warn("[Password Reset] ❌ Token verification failed")
-      console.warn("[Password Reset] Possible reasons:")
-      console.warn("  - Token not found in database")
-      console.warn("  - Token has expired")
-      console.warn("  - Token is invalid")
-
-      // Check if token exists but is expired (for better error messaging)
-      const expiredTokenUser = await usersCollection.findOne({
-        passwordResetToken: resetTokenHash,
-      })
-
-      if (expiredTokenUser) {
-        console.warn(`[Password Reset] Token exists but is expired`)
-        console.warn(`[Password Reset] Token expiry: ${expiredTokenUser.passwordResetExpiry?.toISOString()}`)
-      }
-
+      console.warn("[Password Reset] ❌ Token not found in database or expired")
       return NextResponse.json(
         { valid: false, error: "Invalid or expired password reset token" },
         { status: 400 },
@@ -211,7 +208,6 @@ export async function GET(request: NextRequest) {
     console.log(`[Password Reset] ✅ Token verified successfully`)
     console.log(`[Password Reset]    - Email: ${user.email}`)
     console.log(`[Password Reset]    - Token expires: ${user.passwordResetExpiry?.toISOString()}`)
-    console.log(`[Password Reset]    - Time remaining: ${((user.passwordResetExpiry?.getTime() || 0) - now.getTime()) / 1000 / 60} minutes`)
 
     return NextResponse.json({ valid: true, email: user.email }, { status: 200 })
   } catch (error) {

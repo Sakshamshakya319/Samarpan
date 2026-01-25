@@ -268,20 +268,20 @@ export function AdminEventDonors({ eventId, token }: AdminEventDonorsProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="w-5 h-5" />
+      <CardHeader className="p-3 sm:p-6">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <Users className="w-4 h-4 sm:w-5 sm:h-5" />
           Event Donors
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs sm:text-sm">
           {selectedEvent ? (
-            <div className="space-y-1">
+            <div className="space-y-2">
               <p>View and manage donors who participated in blood donation events</p>
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mt-3">
-                <h3 className="font-semibold text-blue-900">{selectedEvent.title}</h3>
-                <div className="text-sm text-blue-700 space-y-1">
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-2 sm:p-3 mt-2 sm:mt-3">
+                <h3 className="font-heading font-semibold text-blue-900 text-sm sm:text-base truncate">{selectedEvent.title}</h3>
+                <div className="text-xs sm:text-sm text-blue-700 space-y-1">
                   <p><strong>Date:</strong> {new Date(selectedEvent.eventDate).toLocaleDateString()}</p>
-                  <p><strong>Location:</strong> {selectedEvent.location}</p>
+                  <p><strong>Location:</strong> <span className="truncate">{selectedEvent.location}</span></p>
                   {selectedEvent.startTime && selectedEvent.endTime && (
                     <p><strong>Time:</strong> {selectedEvent.startTime} - {selectedEvent.endTime}</p>
                   )}
@@ -296,21 +296,20 @@ export function AdminEventDonors({ eventId, token }: AdminEventDonorsProps) {
           )}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Event Selection */}
+      <CardContent className="space-y-4 sm:space-y-6 p-3 sm:p-6">{/* Event Selection */}
         {!eventId && (
           <div className="space-y-2">
-            <label className="text-sm font-medium">Select Event</label>
+            <label className="text-xs sm:text-sm font-medium">Select Event</label>
             <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-              <SelectTrigger>
+              <SelectTrigger className="h-9 sm:h-10">
                 <SelectValue placeholder="Choose an event..." />
               </SelectTrigger>
               <SelectContent>
                 {events.map((event) => (
                   <SelectItem key={event._id} value={event._id}>
                     <div className="flex flex-col">
-                      <span className="font-medium">{event.title}</span>
-                      <span className="text-sm text-muted-foreground">
+                      <span className="font-medium text-xs sm:text-sm truncate">{event.title}</span>
+                      <span className="text-xs text-muted-foreground">
                         {new Date(event.eventDate).toLocaleDateString()} • {event.location}
                       </span>
                     </div>
@@ -324,18 +323,18 @@ export function AdminEventDonors({ eventId, token }: AdminEventDonorsProps) {
         {selectedEventId && (
           <>
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <div className="grid grid-cols-1 xs:grid-cols-3 gap-2 sm:gap-4">
+              <div className="bg-blue-50 p-2 sm:p-4 rounded-lg border border-blue-200">
                 <p className="text-xs text-blue-600 mb-1 font-medium">Total Donors</p>
-                <p className="text-2xl font-bold text-blue-900">{donors.length}</p>
+                <p className="text-lg sm:text-2xl font-bold text-blue-900">{donors.length}</p>
               </div>
-              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <div className="bg-green-50 p-2 sm:p-4 rounded-lg border border-green-200">
                 <p className="text-xs text-green-600 mb-1 font-medium">Completed</p>
-                <p className="text-2xl font-bold text-green-900">{completedCount}</p>
+                <p className="text-lg sm:text-2xl font-bold text-green-900">{completedCount}</p>
               </div>
-              <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+              <div className="bg-amber-50 p-2 sm:p-4 rounded-lg border border-amber-200">
                 <p className="text-xs text-amber-600 mb-1 font-medium">Pending</p>
-                <p className="text-2xl font-bold text-amber-900">{pendingCount}</p>
+                <p className="text-lg sm:text-2xl font-bold text-amber-900">{pendingCount}</p>
               </div>
             </div>
 
@@ -345,176 +344,304 @@ export function AdminEventDonors({ eventId, token }: AdminEventDonorsProps) {
                 placeholder="Search by name, email, or registration #..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-9 sm:h-10 text-xs sm:text-sm"
               />
 
-              <div className="flex gap-2">
-                <Button
-                  variant={filterStatus === "all" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setFilterStatus("all")}
-                >
-                  All ({donors.length})
-                </Button>
-                <Button
-                  variant={filterStatus === "completed" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setFilterStatus("completed")}
-                >
-                  Completed ({completedCount})
-                </Button>
-                <Button
-                  variant={filterStatus === "pending" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setFilterStatus("pending")}
-                >
-                  Pending ({pendingCount})
-                </Button>
+              <div className="flex flex-col gap-2 sm:gap-3">
+                <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-2 sm:flex-wrap">
+                  <Button
+                    variant={filterStatus === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterStatus("all")}
+                    className="h-8 px-1 text-xs sm:h-9 sm:px-3 sm:text-sm"
+                  >
+                    <span className="hidden xs:inline">All ({donors.length})</span>
+                    <span className="xs:hidden">All</span>
+                  </Button>
+                  <Button
+                    variant={filterStatus === "completed" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterStatus("completed")}
+                    className="h-8 px-1 text-xs sm:h-9 sm:px-3 sm:text-sm"
+                  >
+                    <span className="hidden xs:inline">Completed ({completedCount})</span>
+                    <span className="xs:hidden">Done</span>
+                  </Button>
+                  <Button
+                    variant={filterStatus === "pending" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterStatus("pending")}
+                    className="h-8 px-1 text-xs sm:h-9 sm:px-3 sm:text-sm"
+                  >
+                    <span className="hidden xs:inline">Pending ({pendingCount})</span>
+                    <span className="xs:hidden">Pending</span>
+                  </Button>
+                </div>
 
-                <div className="ml-auto">
+                <div className="flex justify-center sm:justify-end">
                   <Button
                     onClick={exportToExcel}
                     disabled={donors.length === 0}
                     variant="outline"
                     size="sm"
+                    className="h-8 px-2 text-xs sm:h-9 sm:px-3 sm:text-sm w-full xs:w-auto"
                   >
-                    <FileDown className="w-4 h-4 mr-2" />
-                    Export to CSV
+                    <FileDown className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="hidden xs:inline">Export to CSV</span>
+                    <span className="xs:hidden">Export</span>
                   </Button>
                 </div>
               </div>
             </div>
 
-            {/* Donors Table */}
+            {/* Donors Display */}
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                <span>Loading donors...</span>
+                <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin mr-2" />
+                <span className="text-xs sm:text-sm">Loading donors...</span>
               </div>
             ) : error ? (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription className="text-xs sm:text-sm">{error}</AlertDescription>
               </Alert>
             ) : filteredDonors.length === 0 ? (
               <div className="text-center py-8">
-                <Users className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                <p className="text-gray-600">
+                <Users className="w-8 h-8 sm:w-12 sm:h-12 mx-auto text-gray-300 mb-4" />
+                <p className="text-gray-600 text-xs sm:text-sm">
                   {searchTerm || filterStatus !== "all"
                     ? "No donors found matching your filters"
                     : "No donors registered for this event yet"}
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="font-semibold">Reg. #</TableHead>
-                      <TableHead className="font-semibold">Name</TableHead>
-                      <TableHead className="font-semibold">Email</TableHead>
-                      <TableHead className="font-semibold">Phone</TableHead>
-                      <TableHead className="font-semibold">Time Slot</TableHead>
-                      <TableHead className="font-semibold">Blood Type</TableHead>
-                      <TableHead className="font-semibold">Status</TableHead>
-                      <TableHead className="font-semibold text-center">Verified</TableHead>
-                      <TableHead className="font-semibold">Verified Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredDonors.map((donor) => (
-                      <TableRow key={donor._id} className="group">
-                        <TableCell className="font-mono font-semibold text-sm">
-                          {donor.registrationNumber}
-                        </TableCell>
-                        <TableCell className="font-medium">{donor.name}</TableCell>
-                        <TableCell className="text-sm">{donor.email}</TableCell>
-                        <TableCell className="text-sm">{donor.phone || "-"}</TableCell>
-                        <TableCell className="text-sm">{donor.timeSlot}</TableCell>
-                        <TableCell>
-                          {editingBloodType === donor._id ? (
+              <>
+                {/* Mobile Card View */}
+                <div className="block lg:hidden space-y-3">
+                  {filteredDonors.map((donor) => (
+                    <Card key={donor._id} className="p-3 border">
+                      <div className="space-y-3">
+                        {/* Header */}
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-sm truncate">{donor.name}</h3>
+                            <p className="text-xs text-muted-foreground truncate">{donor.email}</p>
+                            <p className="text-xs font-mono text-blue-600 mt-1">#{donor.registrationNumber}</p>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge className={`${getStatusColor(donor.donationStatus)} text-xs`}>
+                              {donor.donationStatus}
+                            </Badge>
+                            {donor.tokenVerified ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-600" />
+                            ) : (
+                              <div className="w-4 h-4 border-2 border-amber-400 rounded-full" />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Details Grid */}
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-muted-foreground">Phone:</span>
+                            <p className="font-medium truncate">{donor.phone || "-"}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Time Slot:</span>
+                            <p className="font-medium truncate">{donor.timeSlot}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Blood Type:</span>
                             <div className="flex items-center gap-1">
-                              <Select
-                                value={bloodTypeInput}
-                                onValueChange={setBloodTypeInput}
-                              >
-                                <SelectTrigger className="w-20 h-8">
-                                  <SelectValue placeholder="Select" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {bloodTypeOptions.map((type) => (
-                                    <SelectItem key={type} value={type}>
-                                      {type}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => saveBloodType(donor._id)}
-                                disabled={updatingBloodType || !bloodTypeInput.trim()}
-                                className="h-8 w-8 p-0"
-                              >
-                                {updatingBloodType ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                ) : (
-                                  <Save className="w-3 h-3" />
-                                )}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={cancelEditingBloodType}
-                                disabled={updatingBloodType}
-                                className="h-8 w-8 p-0"
-                              >
-                                <X className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <span className={`font-medium ${donor.bloodType ? 'text-green-700' : donor.userBloodGroup ? 'text-blue-700' : 'text-gray-400'}`}>
-                                {donor.bloodType || donor.userBloodGroup || "Not set"}
-                              </span>
-                              {donor.bloodTestCompleted && (
-                                <CheckCircle2 className="w-3 h-3 text-green-600" />
+                              {editingBloodType === donor._id ? (
+                                <div className="flex items-center gap-1 w-full">
+                                  <Select
+                                    value={bloodTypeInput}
+                                    onValueChange={setBloodTypeInput}
+                                  >
+                                    <SelectTrigger className="w-16 h-6 text-xs">
+                                      <SelectValue placeholder="Select" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {bloodTypeOptions.map((type) => (
+                                        <SelectItem key={type} value={type}>
+                                          {type}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => saveBloodType(donor._id)}
+                                    disabled={updatingBloodType || !bloodTypeInput.trim()}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    {updatingBloodType ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <Save className="w-3 h-3" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={cancelEditingBloodType}
+                                    disabled={updatingBloodType}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 w-full">
+                                  <span className={`font-medium text-xs ${donor.bloodType ? 'text-green-700' : donor.userBloodGroup ? 'text-blue-700' : 'text-gray-400'}`}>
+                                    {donor.bloodType || donor.userBloodGroup || "Not set"}
+                                  </span>
+                                  {donor.bloodTestCompleted && (
+                                    <CheckCircle2 className="w-3 h-3 text-green-600" />
+                                  )}
+                                  {donor.userBloodGroup && !donor.bloodType && (
+                                    <span className="text-xs text-blue-600 bg-blue-50 px-1 py-0.5 rounded">Profile</span>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => startEditingBloodType(donor)}
+                                    className="h-5 w-5 p-0 ml-auto"
+                                  >
+                                    <Edit3 className="w-3 h-3" />
+                                  </Button>
+                                </div>
                               )}
-                              {donor.userBloodGroup && !donor.bloodType && (
-                                <span className="text-xs text-blue-600 bg-blue-50 px-1 py-0.5 rounded">From profile</span>
-                              )}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => startEditingBloodType(donor)}
-                                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <Edit3 className="w-3 h-3" />
-                              </Button>
                             </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(donor.donationStatus)}>
-                            {donor.donationStatus}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {donor.tokenVerified ? (
-                            <CheckCircle2 className="w-4 h-4 text-green-600 mx-auto" />
-                          ) : (
-                            <div className="w-4 h-4 border-2 border-amber-400 rounded-full mx-auto" />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {donor.verifiedAt
-                            ? new Date(donor.verifiedAt).toLocaleDateString()
-                            : "-"}
-                        </TableCell>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Verified:</span>
+                            <p className="font-medium">
+                              {donor.verifiedAt
+                                ? new Date(donor.verifiedAt).toLocaleDateString()
+                                : "-"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden lg:block overflow-x-auto border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50">
+                        <TableHead className="font-semibold text-xs">Reg. #</TableHead>
+                        <TableHead className="font-semibold text-xs">Name</TableHead>
+                        <TableHead className="font-semibold text-xs">Email</TableHead>
+                        <TableHead className="font-semibold text-xs">Phone</TableHead>
+                        <TableHead className="font-semibold text-xs">Time Slot</TableHead>
+                        <TableHead className="font-semibold text-xs">Blood Type</TableHead>
+                        <TableHead className="font-semibold text-xs">Status</TableHead>
+                        <TableHead className="font-semibold text-center text-xs">Verified</TableHead>
+                        <TableHead className="font-semibold text-xs">Verified Date</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredDonors.map((donor) => (
+                        <TableRow key={donor._id} className="group">
+                          <TableCell className="font-mono font-semibold text-xs">
+                            {donor.registrationNumber}
+                          </TableCell>
+                          <TableCell className="font-medium text-xs">{donor.name}</TableCell>
+                          <TableCell className="text-xs">{donor.email}</TableCell>
+                          <TableCell className="text-xs">{donor.phone || "-"}</TableCell>
+                          <TableCell className="text-xs">{donor.timeSlot}</TableCell>
+                          <TableCell>
+                            {editingBloodType === donor._id ? (
+                              <div className="flex items-center gap-1">
+                                <Select
+                                  value={bloodTypeInput}
+                                  onValueChange={setBloodTypeInput}
+                                >
+                                  <SelectTrigger className="w-20 h-8">
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {bloodTypeOptions.map((type) => (
+                                      <SelectItem key={type} value={type}>
+                                        {type}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => saveBloodType(donor._id)}
+                                  disabled={updatingBloodType || !bloodTypeInput.trim()}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  {updatingBloodType ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Save className="w-3 h-3" />
+                                  )}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={cancelEditingBloodType}
+                                  disabled={updatingBloodType}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className={`font-medium text-xs ${donor.bloodType ? 'text-green-700' : donor.userBloodGroup ? 'text-blue-700' : 'text-gray-400'}`}>
+                                  {donor.bloodType || donor.userBloodGroup || "Not set"}
+                                </span>
+                                {donor.bloodTestCompleted && (
+                                  <CheckCircle2 className="w-3 h-3 text-green-600" />
+                                )}
+                                {donor.userBloodGroup && !donor.bloodType && (
+                                  <span className="text-xs text-blue-600 bg-blue-50 px-1 py-0.5 rounded">From profile</span>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => startEditingBloodType(donor)}
+                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <Edit3 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={`${getStatusColor(donor.donationStatus)} text-xs`}>
+                              {donor.donationStatus}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {donor.tokenVerified ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-600 mx-auto" />
+                            ) : (
+                              <div className="w-4 h-4 border-2 border-amber-400 rounded-full mx-auto" />
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {donor.verifiedAt
+                              ? new Date(donor.verifiedAt).toLocaleDateString()
+                              : "-"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </>
         )}

@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { AdaptiveImage } from "@/components/adaptive-image"
+import { ImageLightbox } from "@/components/image-lightbox"
 import { Loader2, Eye, MessageSquare, Calendar, User, Trash2, AlertCircle, ArrowLeft, Heart, MessageCircle, X, Share2, Mail, Facebook, Instagram } from "lucide-react"
 import { useAppSelector } from "@/lib/hooks"
 
@@ -69,6 +71,8 @@ export default function BlogDetailPage() {
   const [isSubmittingReply, setIsSubmittingReply] = useState(false)
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set())
   const [likedReplies, setLikedReplies] = useState<Set<string>>(new Set())
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
 
   const { isAuthenticated, token } = useAppSelector((state) => state.auth)
 
@@ -424,7 +428,7 @@ export default function BlogDetailPage() {
         <article className="space-y-6">
           {/* Title */}
           <div>
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">{blog.title}</h1>
+            <h1 className="font-heading text-4xl md:text-5xl font-bold mb-4">{blog.title}</h1>
 
             {/* Meta Info */}
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -518,11 +522,21 @@ export default function BlogDetailPage() {
 
           {/* Featured Image */}
           {thumbnailImage && (
-            <div className="relative h-96 rounded-lg overflow-hidden">
-              <img
+            <div 
+              className="cursor-pointer"
+              onClick={() => {
+                setLightboxIndex(blog.images.findIndex(img => img.isThumbnail) || 0)
+                setLightboxOpen(true)
+              }}
+            >
+              <AdaptiveImage
                 src={thumbnailImage.url}
                 alt={blog.title}
-                className="w-full h-full object-cover"
+                maxHeight={600}
+                showCaption={!!thumbnailImage.caption}
+                caption={thumbnailImage.caption}
+                priority={true}
+                className="rounded-lg hover:shadow-lg transition-shadow duration-300"
               />
             </div>
           )}
@@ -537,22 +551,30 @@ export default function BlogDetailPage() {
           {/* Image Gallery */}
           {blog.images.length > 1 && (
             <div className="mt-12">
-              <h2 className="text-2xl font-bold mb-6">Photo Gallery</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <h2 className="font-heading text-2xl font-bold mb-6">Photo Gallery</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {blog.images.map((image, idx) => (
-                  <div key={idx} className="relative rounded-lg overflow-hidden">
-                    <img
-                      src={image.url}
-                      alt={`Gallery ${idx + 1}`}
-                      className="w-full h-48 object-cover hover:scale-105 transition-transform duration-300"
-                    />
+                  <div key={idx} className="relative group">
+                    <div 
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setLightboxIndex(idx)
+                        setLightboxOpen(true)
+                      }}
+                    >
+                      <AdaptiveImage
+                        src={image.url}
+                        alt={`Gallery ${idx + 1}`}
+                        maxHeight={400}
+                        showCaption={!!image.caption}
+                        caption={image.caption}
+                        className="rounded-lg group-hover:scale-105 transition-transform duration-300 hover:shadow-lg"
+                      />
+                    </div>
                     {image.isThumbnail && (
-                      <Badge className="absolute top-2 right-2">Featured</Badge>
-                    )}
-                    {image.caption && (
-                      <p className="absolute bottom-2 left-2 right-2 text-xs bg-black/50 text-white p-1 rounded">
-                        {image.caption}
-                      </p>
+                      <Badge className="absolute top-2 right-2 bg-primary text-primary-foreground">
+                        Featured
+                      </Badge>
                     )}
                   </div>
                 ))}
@@ -562,7 +584,7 @@ export default function BlogDetailPage() {
 
           {/* Comments Section */}
           <div className="mt-12 pt-12 border-t">
-            <h2 className="text-2xl font-bold mb-8">Comments</h2>
+            <h2 className="font-heading text-2xl font-bold mb-8">Comments</h2>
 
             {/* Add Comment Form */}
             {isAuthenticated ? (
@@ -787,6 +809,14 @@ export default function BlogDetailPage() {
           </div>
         </article>
       </div>
+
+      {/* Image Lightbox */}
+      <ImageLightbox
+        images={blog.images}
+        initialIndex={lightboxIndex}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
     </main>
   )
 }

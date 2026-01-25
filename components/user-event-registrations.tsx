@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Calendar, MapPin, Clock, CheckCircle2, AlertCircle, QrCode, Eye } from "lucide-react"
+import { Loader2, Calendar, MapPin, Clock, CheckCircle2, AlertCircle, QrCode, Eye, Users, Heart } from "lucide-react"
 import { useAppSelector } from "@/lib/hooks"
 import Link from "next/link"
 import { EventRegistrationDetails } from "@/components/event-registration-details"
@@ -15,13 +15,19 @@ interface EventRegistration {
   eventId: string
   name: string
   email: string
-  registrationNumber: string
-  timeSlot: string
+  registrationNumber?: string
+  timeSlot?: string
   status: string
   alphanumericToken?: string
   tokenVerified: boolean
-  donationStatus: string
+  donationStatus?: string
   createdAt: string
+  type: 'donor' | 'volunteer'
+  // Volunteer specific fields
+  motivation?: string
+  experience?: string
+  availability?: string
+  skills?: string
   event?: {
     title: string
     location: string
@@ -46,18 +52,44 @@ export function UserEventRegistrations() {
     }
 
     try {
-      const response = await fetch("/api/users/event-registrations", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      // Fetch both donor and volunteer registrations
+      const [donorResponse, volunteerResponse] = await Promise.all([
+        fetch("/api/users/event-registrations", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("/api/volunteer-registrations?userRegistrations=true", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      ])
 
-      if (response.ok) {
-        const data = await response.json()
-        setRegistrations(data.registrations || [])
-      } else {
-        setError("Failed to load event registrations")
+      const allRegistrations: EventRegistration[] = []
+
+      // Process donor registrations
+      if (donorResponse.ok) {
+        const donorData = await donorResponse.json()
+        const donorRegistrations = (donorData.registrations || []).map((reg: any) => ({
+          ...reg,
+          type: 'donor' as const
+        }))
+        allRegistrations.push(...donorRegistrations)
       }
+
+      // Process volunteer registrations
+      if (volunteerResponse.ok) {
+        const volunteerData = await volunteerResponse.json()
+        const volunteerRegistrations = (volunteerData.registrations || []).map((reg: any) => ({
+          ...reg,
+          type: 'volunteer' as const,
+          status: reg.status || 'Registered',
+          donationStatus: reg.status || 'Registered'
+        }))
+        allRegistrations.push(...volunteerRegistrations)
+      }
+
+      // Sort by creation date (newest first)
+      allRegistrations.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      
+      setRegistrations(allRegistrations)
     } catch (err) {
       console.error("Error fetching registrations:", err)
       setError("Error loading registrations")
@@ -99,7 +131,7 @@ export function UserEventRegistrations() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <QrCode className="w-5 h-5" />
-            Your Event QR Codes
+            Your Event Registrations
           </CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center py-12">
@@ -116,7 +148,7 @@ export function UserEventRegistrations() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <QrCode className="w-5 h-5" />
-            Your Event QR Codes
+            Your Event Registrations
           </CardTitle>
           <CardDescription>No event registrations yet</CardDescription>
         </CardHeader>
@@ -138,9 +170,9 @@ export function UserEventRegistrations() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <QrCode className="w-5 h-5" />
-          Your Event QR Codes
+          Your Event Registrations
         </CardTitle>
-        <CardDescription>Your registered events with QR codes for attendance verification</CardDescription>
+        <CardDescription>Your registered events as donor and volunteer with QR codes for attendance verification</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {error && (
@@ -159,13 +191,31 @@ export function UserEventRegistrations() {
               {/* Header Section - Responsive */}
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-3">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-base sm:text-lg truncate">
-                    {registration.event?.title || "Event"}
-                  </h3>
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="font-heading font-semibold text-base sm:text-lg truncate">
+                      {registration.event?.title || "Event"}
+                    </h3>
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs ${
+                        registration.type === 'volunteer' 
+                          ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                          : 'bg-green-50 text-green-700 border-green-200'
+                      }`}
+                    >
+                      {registration.type === 'volunteer' ? (
+                        <><Heart className="w-3 h-3 mr-1" />Volunteer</>
+                      ) : (
+                        <><Users className="w-3 h-3 mr-1" />Donor</>
+                      )}
+                    </Badge>
+                  </div>
                   <div className="space-y-1 mt-1">
-                    <p className="text-xs sm:text-sm text-gray-600 truncate">
-                      Reg #: {registration.registrationNumber}
-                    </p>
+                    {registration.registrationNumber && (
+                      <p className="text-xs sm:text-sm text-gray-600 truncate">
+                        Reg #: {registration.registrationNumber}
+                      </p>
+                    )}
                     {registration.email && (
                       <p className="text-xs sm:text-sm text-gray-600 truncate">
                         Email: {registration.email}
@@ -180,10 +230,10 @@ export function UserEventRegistrations() {
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Badge
-                    className={`${getStatusColor(registration.donationStatus)} text-xs sm:text-sm`}
+                    className={`${getStatusColor(registration.donationStatus || registration.status)} text-xs sm:text-sm`}
                     variant="outline"
                   >
-                    {registration.donationStatus}
+                    {registration.donationStatus || registration.status}
                   </Badge>
                   <EventRegistrationDetails registration={registration} />
                 </div>
@@ -203,10 +253,12 @@ export function UserEventRegistrations() {
                     </div>
                   </>
                 )}
-                <div className="flex items-center gap-2 text-xs sm:text-sm">
-                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
-                  <span className="truncate">{registration.timeSlot}</span>
-                </div>
+                {registration.timeSlot && (
+                  <div className="flex items-center gap-2 text-xs sm:text-sm">
+                    <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
+                    <span className="truncate">{registration.timeSlot}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 text-xs sm:text-sm">
                   {registration.tokenVerified ? (
                     <>

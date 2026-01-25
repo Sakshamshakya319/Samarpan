@@ -3,8 +3,8 @@
 // Mark as dynamic to prevent prerendering - requires authentication
 export const dynamic = "force-dynamic"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useState, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,7 +12,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Bell, LogOut, User, Calendar, Trash2, Lock } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/lib/hooks"
 import { fetchUserProfile, updateUserProfile } from "@/lib/slices/userSlice"
-import { logout } from "@/lib/slices/authSlice"
+import { logout, loginSuccess } from "@/lib/slices/authSlice"
+import { SamarpanFullscreenLoader } from "@/components/samarpan-loader"
 import { BloodDonationRequests } from "@/components/blood-donation-requests"
 import { DonationImageUpload } from "@/components/donation-image-upload"
 import { DriverDetailsDisplay } from "@/components/driver-details-display"
@@ -28,8 +29,9 @@ interface Notification {
   createdAt: string
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const dispatch = useAppDispatch()
   const { token, isAuthenticated } = useAppSelector((state) => state.auth)
   const { data: user, isLoading } = useAppSelector((state) => state.user)
@@ -40,6 +42,8 @@ export default function DashboardPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  const [authProcessed, setAuthProcessed] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     bloodGroup: "",
@@ -50,13 +54,75 @@ export default function DashboardPage() {
     diseaseDescription: "",
   })
 
+  // Handle Google auth callback parameters
   useEffect(() => {
-    if (!isAuthenticated) {
+    const authParam = searchParams.get("auth")
+    const tokenParam = searchParams.get("token")
+    const userParam = searchParams.get("user")
+
+    if (authParam === "success" && tokenParam && userParam && !authProcessed) {
+      try {
+        console.log("[Dashboard] Processing Google auth callback...")
+        
+        const decodedToken = decodeURIComponent(tokenParam)
+        const decodedUser = JSON.parse(decodeURIComponent(userParam))
+        
+        // Store in localStorage
+        localStorage.setItem("token", decodedToken)
+        localStorage.setItem("user", JSON.stringify(decodedUser))
+        
+        // Update Redux state
+        dispatch(loginSuccess({ token: decodedToken, user: decodedUser }))
+        
+        console.log("[Dashboard] Auth state updated for user:", decodedUser.email)
+        setAuthProcessed(true)
+        
+        // Clean up URL
+        const newUrl = new URL(window.location.href)
+        newUrl.searchParams.delete("auth")
+        newUrl.searchParams.delete("token")
+        newUrl.searchParams.delete("user")
+        window.history.replaceState({}, "", newUrl.toString())
+        
+      } catch (error) {
+        console.error("[Dashboard] Failed to process auth callback:", error)
+        router.push("/login?error=Authentication failed")
+        return
+      }
+    }
+  }, [searchParams, dispatch, router, authProcessed])
+
+  // Wait for client-side hydration
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!isMounted) return
+
+    // Check authentication state
+    const localToken = localStorage.getItem("token")
+    const hasAuth = isAuthenticated || !!localToken || authProcessed
+
+    console.log("[Dashboard] Auth check:", { 
+      isAuthenticated, 
+      hasToken: !!token, 
+      hasLocalToken: !!localToken,
+      authProcessed
+    })
+
+    if (!hasAuth) {
+      console.log("[Dashboard] Not authenticated, redirecting to login")
       router.push("/login")
       return
     }
-    dispatch(fetchUserProfile())
-  }, [isAuthenticated, router, dispatch])
+
+    // Fetch user profile if authenticated
+    if (hasAuth) {
+      console.log("[Dashboard] Fetching user profile")
+      dispatch(fetchUserProfile())
+    }
+  }, [isAuthenticated, token, router, dispatch, isMounted, authProcessed])
 
   useEffect(() => {
     if (user) {
@@ -143,12 +209,24 @@ export default function DashboardPage() {
     }
   }
 
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  // Show loader while checking auth or processing callback
+  const authParam = searchParams.get("auth")
+  const isProcessingAuth = authParam === "success" && !authProcessed
+  const localToken = typeof window !== 'undefined' ? localStorage.getItem("token") : null
+  const hasAuth = isAuthenticated || !!localToken || authProcessed
+
+  if (!isMounted || isProcessingAuth) {
+    return <SamarpanFullscreenLoader message={isProcessingAuth ? "Finalizing login..." : "Loading dashboard..."} showIcon={false} />
   }
 
-  if (!user) {
-    return null
+  // If we're not authenticated (and not processing), we're redirecting, so show loader
+  if (!hasAuth) {
+    return <SamarpanFullscreenLoader message="Redirecting to login..." showIcon={false} />
+  }
+
+  // If authenticated but user data is still loading, show loader
+  if (isLoading || !user) {
+    return <SamarpanFullscreenLoader message="Loading user profile..." showIcon={false} />
   }
 
   return (
@@ -157,7 +235,7 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 md:mb-8 gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Welcome, {user.name}</h1>
+            <h1 className="font-heading text-2xl md:text-3xl font-bold text-gray-900">Welcome, {user.name}</h1>
             <p className="text-sm md:text-base text-gray-600">Manage your profile and donations</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
@@ -422,5 +500,13 @@ export default function DashboardPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<SamarpanFullscreenLoader message="Loading dashboard..." showIcon={false} />}>
+      <DashboardContent />
+    </Suspense>
   )
 }

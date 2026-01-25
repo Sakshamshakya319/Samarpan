@@ -8,6 +8,16 @@ import { ObjectId } from "mongodb"
  * Get current user's event registrations
  */
 
+// Generate a unique 6-digit alphanumeric token
+function generateAlphanumericToken(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let result = ''
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return result
+}
+
 // GET: Get current user's event registrations
 export async function GET(request: NextRequest) {
   try {
@@ -30,11 +40,44 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .toArray()
 
+    // Backfill alphanumericToken if missing
+    const registrationsNeedingToken = registrations.filter(
+      (reg) => !reg.alphanumericToken || reg.alphanumericToken.trim() === ""
+    )
+
+    if (registrationsNeedingToken.length > 0) {
+      for (const reg of registrationsNeedingToken) {
+        const newToken = generateAlphanumericToken()
+        await registrationsCollection.updateOne(
+          { _id: reg._id },
+          {
+            $set: {
+              alphanumericToken: newToken,
+              tokenVerified: false,
+              updatedAt: new Date(),
+            }
+          }
+        )
+        reg.alphanumericToken = newToken
+        reg.tokenVerified = false
+      }
+    }
+
     // Get event data for each registration
     const eventsCollection = db.collection("events")
     const enrichedRegistrations = await Promise.all(
       registrations.map(async (registration) => {
-        const event = await eventsCollection.findOne({ _id: registration.eventId })
+        // Ensure eventId is treated as ObjectId
+        let eventId = registration.eventId
+        if (typeof eventId === 'string') {
+            try {
+                eventId = new ObjectId(eventId)
+            } catch (e) {
+                console.error("Invalid eventId format:", eventId)
+            }
+        }
+
+        const event = await eventsCollection.findOne({ _id: eventId })
 
         return {
           ...registration,

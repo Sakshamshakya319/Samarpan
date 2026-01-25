@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { sendEmail, generatePasswordResetEmailHTML } from "@/lib/email"
-import crypto from "crypto"
+import { generateResetToken } from "@/lib/auth"
 
 interface ForgotPasswordRequest {
   email: string
@@ -116,9 +116,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate password reset token (expires in 1 hour)
-    const resetToken = crypto.randomBytes(32).toString("hex")
-    const resetTokenHash = crypto.createHash("sha256").update(resetToken).digest("hex")
+    // Generate password reset token using new auth utility
+    console.log(`[Password Reset] Generating reset token for user: ${user._id}`)
+    const { token: resetToken, hashedToken: resetTokenHash } = generateResetToken(email.toLowerCase())
     const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000) // 1 hour from now
 
     // Store reset token in database

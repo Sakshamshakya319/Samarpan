@@ -22,13 +22,13 @@ export async function POST(request: NextRequest) {
     }
 
     const db = await getDatabase()
-    const { title, description, eventDate, startTime, endTime, location, expectedAttendees, eventType, volunteerSlotsNeeded, allowRegistrations, ngoName, ngoLogo, ngoWebsite, organizedBy } =
+    const { title, description, eventDate, startTime, endTime, location, expectedAttendees, eventTypes, volunteerSlotsNeeded, allowRegistrations, ngoName, ngoLogo, ngoWebsite, organizedBy } =
       await request.json()
 
     // Validation
-    if (!title || !description || !eventDate || !location) {
+    if (!title || !description || !eventDate || !location || !eventTypes?.length) {
       return NextResponse.json(
-        { error: "Title, description, date, and location are required" },
+        { error: "Title, description, date, location, and event types are required" },
         { status: 400 }
       )
     }
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       location,
       expectedAttendees: expectedAttendees || 0,
       volunteerSlotsNeeded: volunteerSlotsNeeded || 0,
-      eventType: eventType || "donation_camp", // donation_camp, awareness_seminar, donor_appreciation, etc.
+      eventTypes: eventTypes || ["donation_camp"], // Changed to array
       status: "active", // active, completed, cancelled
       allowRegistrations: allowRegistrations === true, // Default to false if not specified
       ngoName: ngoName || "", // NGO name (optional)
@@ -86,12 +86,19 @@ export async function GET(request: NextRequest) {
 
     const db = await getDatabase()
     const eventsCollection = db.collection("events")
+    const registrationsCollection = db.collection("event_registrations")
     const url = new URL(request.url)
     const status = url.searchParams.get("status")
+    const includeNgoEvents = url.searchParams.get("includeNgoEvents") !== "false" // Default to true
 
-    let query = {}
+    let query: any = {}
     if (status) {
-      query = { status }
+      query.status = status
+    }
+
+    // If includeNgoEvents is false, only get admin-created events
+    if (!includeNgoEvents) {
+      query.ngoId = { $exists: false }
     }
 
     const events = await eventsCollection
@@ -99,7 +106,36 @@ export async function GET(request: NextRequest) {
       .sort({ eventDate: -1 })
       .toArray()
 
-    return NextResponse.json({ events, total: events.length })
+    // Add registration counts and event source information
+    const eventsWithDetails = await Promise.all(
+      events.map(async (event) => {
+        const donorCount = await registrationsCollection.countDocuments({
+          eventId: event._id
+        })
+        
+        const volunteerCount = await db.collection("volunteer_registrations").countDocuments({
+          eventId: event._id
+        })
+
+        return {
+          ...event,
+          registeredVolunteers: volunteerCount,
+          registeredDonors: donorCount,
+          isNgoEvent: !!event.ngoId, // Flag to identify NGO events
+          eventSource: event.ngoId ? "ngo" : "admin", // Source of the event
+          canModify: decoded.role === "superadmin" || !event.ngoId, // Admins can modify their own events, superadmin can modify all
+          // Ensure eventTypes is always an array for consistency
+          eventTypes: Array.isArray(event.eventTypes) ? event.eventTypes : [event.eventType || "donation_camp"]
+        }
+      })
+    )
+
+    return NextResponse.json({
+      events: eventsWithDetails,
+      total: eventsWithDetails.length,
+      userRole: decoded.role
+    })
+
   } catch (error) {
     console.error("Get events error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

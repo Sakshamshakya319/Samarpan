@@ -26,6 +26,59 @@ interface EventRegistrationFormProps {
   volunteerSlotsNeeded: number
   registeredVolunteers: number
   token: string | null
+  isAlreadyRegistered?: boolean
+  registrationStatus?: {
+    isDonorRegistered: boolean
+    isVolunteerRegistered: boolean
+  }
+}
+
+interface EventDetails {
+  _id: string
+  title: string
+  eventDate: string
+  locationType: string
+  participantCategories: string[]
+  volunteerSlotsNeeded: number
+  registeredVolunteers: number
+}
+
+const LOCATION_TYPE_LABELS: Record<string, Record<string, string>> = {
+  school: {
+    students: "Students",
+    staff: "Staff",
+    others: "Others"
+  },
+  college: {
+    students: "Students",
+    faculty: "Faculty",
+    staff: "Staff",
+    others: "Others"
+  },
+  society: {
+    children: "Children",
+    men: "Men",
+    women: "Women",
+    elderly_men: "Elderly Men",
+    elderly_women: "Elderly Women",
+    others: "Others"
+  },
+  hospital: {
+    patients: "Patients",
+    staff: "Medical Staff",
+    visitors: "Visitors",
+    others: "Others"
+  },
+  corporate: {
+    employees: "Employees",
+    management: "Management",
+    visitors: "Visitors",
+    others: "Others"
+  },
+  public: {
+    general_public: "General Public",
+    others: "Others"
+  }
 }
 
 // Generate 2-hour time slots from 9am to 5pm
@@ -41,6 +94,57 @@ const generateTimeSlots = () => {
 
 const TIME_SLOTS = generateTimeSlots()
 
+// Helper functions for identifier labels and placeholders
+const getIdentifierLabel = (locationType?: string, participantType?: string): string => {
+  if (!locationType || !participantType) return "Identifier"
+  
+  const labelMap: Record<string, Record<string, string>> = {
+    school: {
+      students: "Student ID",
+      staff: "Staff ID"
+    },
+    college: {
+      students: "Registration Number",
+      faculty: "Faculty ID",
+      staff: "Staff ID"
+    },
+    corporate: {
+      employees: "Employee ID",
+      management: "Management ID"
+    },
+    hospital: {
+      staff: "Staff ID"
+    }
+  }
+  
+  return labelMap[locationType]?.[participantType] || "Identifier"
+}
+
+const getIdentifierPlaceholder = (locationType?: string, participantType?: string): string => {
+  if (!locationType || !participantType) return "Enter your identifier"
+  
+  const placeholderMap: Record<string, Record<string, string>> = {
+    school: {
+      students: "Enter your student ID",
+      staff: "Enter your staff ID"
+    },
+    college: {
+      students: "Enter your registration number",
+      faculty: "Enter your faculty ID",
+      staff: "Enter your staff ID"
+    },
+    corporate: {
+      employees: "Enter your employee ID",
+      management: "Enter your management ID"
+    },
+    hospital: {
+      staff: "Enter your staff ID"
+    }
+  }
+  
+  return placeholderMap[locationType]?.[participantType] || "Enter your identifier"
+}
+
 
 
 export function EventRegistrationForm({
@@ -50,24 +154,51 @@ export function EventRegistrationForm({
   volunteerSlotsNeeded,
   registeredVolunteers,
   token,
+  isAlreadyRegistered = false,
+  registrationStatus = { isDonorRegistered: false, isVolunteerRegistered: false }
 }: EventRegistrationFormProps) {
   const [showDialog, setShowDialog] = useState(false)
   const [registrationNumber, setRegistrationNumber] = useState("")
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("")
-  const [participantType, setParticipantType] = useState<"student" | "staff" | "other" | "">("")
+  const [participantType, setParticipantType] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
   const [alphanumericToken, setAlphanumericToken] = useState("")
   const [registrationId, setRegistrationId] = useState("")
-
+  const [eventDetails, setEventDetails] = useState<EventDetails | null>(null)
+  const [isLoadingEvent, setIsLoadingEvent] = useState(false)
 
   const { user } = useAppSelector((state) => state.user)
   const { isAuthenticated } = useAppSelector((state) => state.auth)
 
   const availableSlots = volunteerSlotsNeeded - registeredVolunteers
   const isFull = availableSlots <= 0
-  const canRegister = isAuthenticated && token && !isFull
+  const canRegister = isAuthenticated && token && !isFull && !registrationStatus.isDonorRegistered
+
+  // Fetch event details to get participant categories
+  useEffect(() => {
+    const fetchEventDetails = async () => {
+      if (!eventId) return
+      
+      setIsLoadingEvent(true)
+      try {
+        const response = await fetch(`/api/events?id=${eventId}`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.length > 0) {
+            setEventDetails(data[0])
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching event details:", error)
+      } finally {
+        setIsLoadingEvent(false)
+      }
+    }
+
+    fetchEventDetails()
+  }, [eventId])
 
 
 
@@ -82,8 +213,29 @@ export function EventRegistrationForm({
       return
     }
 
-    if ((participantType === "student" || participantType === "staff") && !registrationNumber.trim()) {
-      setError(participantType === "student" ? "Registration number is required for LPU Student" : "UID is required for LPU Staff")
+    // Check if identifier is required for this participant type
+    const requiresIdentifier = eventDetails?.locationType === 'school' && (participantType === 'students' || participantType === 'staff') ||
+                              eventDetails?.locationType === 'college' && (participantType === 'students' || participantType === 'faculty' || participantType === 'staff') ||
+                              eventDetails?.locationType === 'corporate' && (participantType === 'employees' || participantType === 'management')
+
+    if (requiresIdentifier && !registrationNumber.trim()) {
+      let errorMessage = "Identifier is required for this participant type"
+      if (eventDetails?.locationType === 'school' && participantType === 'students') {
+        errorMessage = "Student ID is required"
+      } else if (eventDetails?.locationType === 'school' && participantType === 'staff') {
+        errorMessage = "Staff ID is required"
+      } else if (eventDetails?.locationType === 'college' && participantType === 'students') {
+        errorMessage = "Registration number is required"
+      } else if (eventDetails?.locationType === 'college' && participantType === 'faculty') {
+        errorMessage = "Faculty ID is required"
+      } else if (eventDetails?.locationType === 'college' && participantType === 'staff') {
+        errorMessage = "Staff ID is required"
+      } else if (eventDetails?.locationType === 'corporate' && participantType === 'employees') {
+        errorMessage = "Employee ID is required"
+      } else if (eventDetails?.locationType === 'corporate' && participantType === 'management') {
+        errorMessage = "Management ID is required"
+      }
+      setError(errorMessage)
       return
     }
 
@@ -184,6 +336,16 @@ export function EventRegistrationForm({
               </div>
             </div>
 
+            {registrationStatus.isDonorRegistered && (
+              <div className="p-3 bg-blue-100 text-blue-800 rounded-md text-sm flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4" />
+                <div>
+                  <p className="font-medium">You're already registered as a donor for this event!</p>
+                  <p className="text-xs mt-1">You cannot register as both donor and volunteer for the same event.</p>
+                </div>
+              </div>
+            )}
+
             {isFull && (
               <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm flex items-center gap-2">
                 <AlertCircle className="w-4 h-4" />
@@ -223,7 +385,12 @@ export function EventRegistrationForm({
               className="w-full"
               size="lg"
             >
-              {isFull ? "Event is Full" : "Register as Volunteer"}
+              {registrationStatus.isDonorRegistered 
+                ? "Already Registered as Donor" 
+                : isFull 
+                ? "Event is Full" 
+                : "Register as Volunteer"
+              }
             </Button>
           </div>
         </CardContent>
@@ -272,64 +439,63 @@ export function EventRegistrationForm({
             {/* Participant Type Selection */}
             <div>
               <label className="text-sm font-medium">Participant Type *</label>
-              <div className="flex items-center gap-4 mt-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="pt-student"
-                    checked={participantType === "student"}
-                    onChange={() => setParticipantType("student")}
-                    className="w-4 h-4 rounded border-gray-300"
-                  />
-                  <label htmlFor="pt-student" className="text-sm cursor-pointer">LPU Student</label>
+              {isLoadingEvent ? (
+                <div className="flex items-center gap-2 mt-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">Loading participant types...</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="pt-staff"
-                    checked={participantType === "staff"}
-                    onChange={() => setParticipantType("staff")}
-                    className="w-4 h-4 rounded border-gray-300"
-                  />
-                  <label htmlFor="pt-staff" className="text-sm cursor-pointer">LPU Staff</label>
+              ) : eventDetails?.participantCategories ? (
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {eventDetails.participantCategories.map((category) => {
+                    const label = LOCATION_TYPE_LABELS[eventDetails.locationType]?.[category] || category
+                    return (
+                      <div key={category} className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          id={`pt-${category}`}
+                          name="participantType"
+                          checked={participantType === category}
+                          onChange={() => setParticipantType(category)}
+                          className="w-4 h-4"
+                        />
+                        <label htmlFor={`pt-${category}`} className="text-sm cursor-pointer">
+                          {label}
+                        </label>
+                      </div>
+                    )
+                  })}
                 </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="pt-other"
-                    checked={participantType === "other"}
-                    onChange={() => setParticipantType("other")}
-                    className="w-4 h-4 rounded border-gray-300"
-                  />
-                  <label htmlFor="pt-other" className="text-sm cursor-pointer">Others</label>
+              ) : (
+                <div className="text-sm text-muted-foreground mt-2">
+                  No participant categories available
                 </div>
-              </div>
+              )}
             </div>
 
             <div>
-              {participantType !== "other" ? (
+              {participantType && participantType !== "others" && participantType !== "general_public" ? (
                 <>
                   <label className="text-sm font-medium">
-                    {participantType === "staff" ? "UID *" : "Registration Number *"}
+                    {getIdentifierLabel(eventDetails?.locationType, participantType)} *
                   </label>
                   <Input
                     type="text"
-                    placeholder={participantType === "staff" ? "Enter your UID" : "Enter your registration number"}
+                    placeholder={getIdentifierPlaceholder(eventDetails?.locationType, participantType)}
                     value={registrationNumber}
                     onChange={(e) => setRegistrationNumber(e.target.value)}
                   />
                 </>
-              ) : (
+              ) : participantType === "others" || participantType === "general_public" ? (
                 <>
                   <label className="text-sm font-medium">Identifier</label>
                   <Input
                     type="text"
-                    placeholder="(Optional for Others)"
+                    placeholder="(Optional)"
                     value={registrationNumber}
                     onChange={(e) => setRegistrationNumber(e.target.value)}
                   />
                 </>
-              )}
+              ) : null}
             </div>
 
             <div>

@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
+import { loginSuccess } from "./authSlice"
 
 interface UserData {
   _id: string
@@ -122,6 +123,30 @@ const userSlice = createSlice({
         state.isLoading = false
         state.error = action.payload as string
       })
+      // Sync with auth state
+      .addCase(loginSuccess, (state, action) => {
+        state.data = action.payload.user
+        state.error = null
+        state.isLoading = false
+      })
+      // Sync with auth initialization
+      .addMatcher(
+        (action) => action.type === 'auth/initializeAuth',
+        (state) => {
+          if (typeof window !== 'undefined') {
+            try {
+              const userStr = localStorage.getItem("user")
+              if (userStr) {
+                state.data = JSON.parse(userStr)
+                state.error = null
+                state.isLoading = false
+              }
+            } catch (e) {
+              console.error("Failed to parse user data in userSlice", e)
+            }
+          }
+        }
+      )
   },
 })
 

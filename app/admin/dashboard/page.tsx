@@ -21,7 +21,9 @@ import { AdminBlogManager } from "@/components/admin-blog-manager"
 import { AdminChangePasswordDialog } from "@/components/admin-change-password-dialog"
 import { AdminBloodHistory } from "@/components/admin-blood-history"
 import { AdminActionHistory } from "@/components/admin-action-history" // Import the new component
-import { LogOut, LayoutDashboard, Calendar, Truck, Mail, QrCode, Users, BookOpen, Lock, Droplets, History, IndianRupee } from "lucide-react"
+import { AdminNGOEventsManager } from "@/components/admin-ngo-events-manager"
+import { QRDebugScanner } from "@/components/qr-debug-scanner" // Debug scanner
+import { LogOut, LayoutDashboard, Calendar, Truck, Mail, QrCode, Users, BookOpen, Lock, Droplets, History, IndianRupee, Building } from "lucide-react"
 import { getAvailableFeatures, hasPermission } from "@/lib/admin-utils"
 import { ADMIN_PERMISSIONS } from "@/lib/constants/admin-permissions"
 
@@ -174,6 +176,13 @@ export default function AdminDashboard() {
       icon: Calendar,
     },
     {
+      id: "ngo-events",
+      label: "NGO Events",
+      permission: [ADMIN_PERMISSIONS.MANAGE_EVENTS, ADMIN_PERMISSIONS.VIEW_EVENTS],
+      enabled: admin?.role === "superadmin", // Only super admins can approve NGO events
+      icon: Building,
+    },
+    {
       id: "transportation",
       label: "Transportation",
       permission: [ADMIN_PERMISSIONS.MANAGE_TRANSPORTATION, ADMIN_PERMISSIONS.VIEW_TRANSPORTATION],
@@ -192,6 +201,13 @@ export default function AdminDashboard() {
       label: "Token Verifier",
       permission: ADMIN_PERMISSIONS.CHECK_QR_CODES,
       enabled: availableFeatures.qrChecker,
+      icon: QrCode,
+    },
+    {
+      id: "qr-debug",
+      label: "🐛 QR Debug",
+      permission: null, // Always available for debugging
+      enabled: true,
       icon: QrCode,
     },
     {
@@ -237,7 +253,7 @@ export default function AdminDashboard() {
                 <LayoutDashboard className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-primary">Samarpan Admin</h1>
+                <h1 className="font-heading text-2xl font-bold text-primary">Samarpan Admin</h1>
                 <p className="text-xs text-muted-foreground">Administration Panel</p>
               </div>
             </div>
@@ -264,7 +280,7 @@ export default function AdminDashboard() {
         </nav>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-          <h2 className="text-2xl font-bold mb-4">No Permissions Assigned</h2>
+          <h2 className="font-heading text-2xl font-bold mb-4">No Permissions Assigned</h2>
           <p className="text-muted-foreground mb-8">
             Your account has not been assigned any permissions yet. Please contact your super admin.
           </p>
@@ -278,59 +294,86 @@ export default function AdminDashboard() {
     <main className="min-h-screen bg-background">
       {/* Admin Navigation */}
       <nav className="bg-card border-b border-border sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <LayoutDashboard className="w-6 h-6 text-primary-foreground" />
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-4">
+          <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3 xs:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary rounded-lg flex items-center justify-center">
+                <LayoutDashboard className="w-4 h-4 sm:w-6 sm:h-6 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="font-heading text-lg sm:text-xl lg:text-2xl font-bold text-primary">Samarpan Admin</h1>
+                <p className="text-xs text-muted-foreground hidden xs:block">Administration Panel</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-primary">Samarpan Admin</h1>
-              <p className="text-xs text-muted-foreground">Administration Panel</p>
+            <div className="flex flex-col xs:flex-row items-start xs:items-center gap-2 xs:gap-3 sm:gap-4">
+              <div className="text-left xs:text-right hidden sm:block">
+                <p className="text-xs sm:text-sm font-medium truncate max-w-[200px]">{admin.email}</p>
+                <p className="text-xs text-muted-foreground">Administrator</p>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowPasswordDialog(true)} 
+                  className="gap-1 xs:gap-2 bg-transparent hidden sm:flex h-8 px-2 xs:h-9 xs:px-3"
+                  title="Change Password"
+                >
+                  <Lock className="w-3 h-3 xs:w-4 xs:h-4" />
+                  <span className="text-xs xs:text-sm">Change Password</span>
+                </Button>
+                <Button variant="outline" onClick={handleLogout} className="gap-1 xs:gap-2 bg-transparent h-8 px-2 xs:h-9 xs:px-3">
+                  <LogOut className="w-3 h-3 xs:w-4 xs:h-4" />
+                  <span className="text-xs xs:text-sm">Logout</span>
+                </Button>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium">{admin.email}</p>
-              <p className="text-xs text-muted-foreground">Administrator</p>
-            </div>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowPasswordDialog(true)} 
-              className="gap-2 bg-transparent hidden sm:flex"
-              title="Change Password"
-            >
-              <Lock className="w-4 h-4" />
-              Change Password
-            </Button>
-            <Button variant="outline" onClick={handleLogout} className="gap-2 bg-transparent">
-              <LogOut className="w-4 h-4" />
-              Logout
-            </Button>
           </div>
         </div>
       </nav>
 
       {/* Admin Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Tab Navigation */}
-        <div className="flex gap-4 mb-8 border-b border-border overflow-x-auto pb-2">
-          {enabledTabs.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
-                  activeTab === tab.id
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {Icon && <Icon className="w-4 h-4" />}
-                {tab.label}
-              </button>
-            )
-          })}
+        <div className="mb-4 sm:mb-6 lg:mb-8">
+          <div className="overflow-x-auto scrollbar-hide">
+            <div className="flex gap-2 sm:gap-3 lg:gap-4 pb-2 border-b border-border min-w-max">
+              {enabledTabs.map((tab) => {
+                const Icon = tab.icon
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
+                      activeTab === tab.id
+                        ? "text-primary border-b-2 border-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {Icon && <Icon className="w-3 h-3 xs:w-4 xs:h-4" />}
+                    <span className="hidden xs:inline">{tab.label}</span>
+                    <span className="xs:hidden">
+                      {tab.id === "users" && "Users"}
+                      {tab.id === "notifications" && "Notify"}
+                      {tab.id === "certificates" && "Certs"}
+                      {tab.id === "funds" && "Funds"}
+                      {tab.id === "donations" && "Donations"}
+                      {tab.id === "images" && "Images"}
+                      {tab.id === "blood-requests" && "Requests"}
+                      {tab.id === "events" && "Events"}
+                      {tab.id === "ngo-events" && "NGO Events"}
+                      {tab.id === "transportation" && "Transport"}
+                      {tab.id === "contacts" && "Contacts"}
+                      {tab.id === "token-verifier" && "QR"}
+                      {tab.id === "qr-debug" && "Debug"}
+                      {tab.id === "event-donors" && "Donors"}
+                      {tab.id === "blogs" && "Blogs"}
+                      {tab.id === "action-history" && "Actions"}
+                      {tab.id === "blood-history" && "History"}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Tab Content */}
@@ -341,14 +384,14 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === "notifications" && enabledTabs.some((t) => t.id === "notifications") && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>{token && <AdminSendNotification users={users} token={token} />}</div>
+          <div className="w-full">
+            {token && <AdminSendNotification users={users} token={token} />}
           </div>
         )}
 
         {activeTab === "certificates" && enabledTabs.some((t) => t.id === "certificates") && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>{token && <AdminCertificateGenerator users={users} token={token} />}</div>
+          <div className="w-full">
+            {token && <AdminCertificateGenerator users={users} token={token} />}
           </div>
         )}
 
@@ -382,6 +425,12 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {activeTab === "ngo-events" && enabledTabs.some((t) => t.id === "ngo-events") && (
+          <div className="grid grid-cols-1 gap-6">
+            {token && <AdminNGOEventsManager token={token} />}
+          </div>
+        )}
+
         {activeTab === "transportation" && enabledTabs.some((t) => t.id === "transportation") && (
           <div className="grid grid-cols-1 gap-6">
             {token && <AdminTransportationManager token={token} />}
@@ -397,6 +446,12 @@ export default function AdminDashboard() {
         {activeTab === "token-verifier" && enabledTabs.some((t) => t.id === "token-verifier") && (
           <div className="grid grid-cols-1 gap-6">
             {token && <AdminQRChecker token={token} />}
+          </div>
+        )}
+
+        {activeTab === "qr-debug" && (
+          <div className="grid grid-cols-1 gap-6">
+            <QRDebugScanner />
           </div>
         )}
 

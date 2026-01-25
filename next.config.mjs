@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Re-enable React Strict Mode - QR scanner is now fixed
+  reactStrictMode: true,
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -31,7 +33,7 @@ const nextConfig = {
         headers: [
           {
             key: 'X-Frame-Options',
-            value: 'DENY',
+            value: 'SAMEORIGIN',
           },
           {
             key: 'X-Content-Type-Options',

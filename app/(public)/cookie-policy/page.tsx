@@ -7,7 +7,7 @@ export default function CookiePolicy() {
       {/* Hero */}
       <section className="py-20 md:py-32 bg-gradient-to-br from-background via-secondary/20 to-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6">Cookie Policy</h1>
+          <h1 className="font-heading text-5xl md:text-6xl font-bold mb-6">Cookie Policy</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Learn about how we use cookies and similar technologies to improve your experience on our platform.
           </p>
@@ -19,7 +19,7 @@ export default function CookiePolicy() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="prose prose-lg max-w-none">
             <Card className="p-8 mb-8">
-              <h2 className="text-3xl font-bold mb-6">What Are Cookies?</h2>
+              <h2 className="font-heading text-3xl font-bold mb-6">What Are Cookies?</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
                   Cookies are small text files that are stored on your device when you visit our website. They help us
@@ -34,10 +34,10 @@ export default function CookiePolicy() {
             </Card>
 
             <Card className="p-8 mb-8">
-              <h2 className="text-3xl font-bold mb-6">Types of Cookies We Use</h2>
+              <h2 className="font-heading text-3xl font-bold mb-6">Types of Cookies We Use</h2>
               <div className="space-y-6 text-muted-foreground">
                 <div>
-                  <h3 className="text-xl font-semibold text-foreground mb-3">Essential Cookies</h3>
+                  <h3 className="font-heading text-xl font-semibold text-foreground mb-3">Essential Cookies</h3>
                   <p className="mb-2">
                     These cookies are necessary for the website to function properly. They enable core functionality
                     such as security, network management, and accessibility.
@@ -50,7 +50,7 @@ export default function CookiePolicy() {
                 </div>
 
                 <div>
-                  <h3 className="text-xl font-semibold text-foreground mb-3">Functional Cookies</h3>
+                  <h3 className="font-heading text-xl font-semibold text-foreground mb-3">Functional Cookies</h3>
                   <p className="mb-2">
                     These cookies enhance your experience by remembering your preferences and settings.
                   </p>
@@ -62,7 +62,7 @@ export default function CookiePolicy() {
                 </div>
 
                 <div>
-                  <h3 className="text-xl font-semibold text-foreground mb-3">Analytics Cookies</h3>
+                  <h3 className="font-heading text-xl font-semibold text-foreground mb-3">Analytics Cookies</h3>
                   <p className="mb-2">
                     These cookies help us understand how visitors interact with our website by collecting and reporting
                     information anonymously.
@@ -75,7 +75,7 @@ export default function CookiePolicy() {
                 </div>
 
                 <div>
-                  <h3 className="text-xl font-semibold text-foreground mb-3">Marketing Cookies</h3>
+                  <h3 className="font-heading text-xl font-semibold text-foreground mb-3">Marketing Cookies</h3>
                   <p className="mb-2">
                     These cookies are used to deliver relevant advertisements and track the effectiveness of our
                     marketing campaigns.
@@ -90,7 +90,7 @@ export default function CookiePolicy() {
             </Card>
 
             <Card className="p-8 mb-8">
-              <h2 className="text-3xl font-bold mb-6">Third-Party Cookies</h2>
+              <h2 className="font-heading text-3xl font-bold mb-6">Third-Party Cookies</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
                   We may use third-party services that place cookies on your device. These services help us provide
@@ -106,12 +106,12 @@ export default function CookiePolicy() {
             </Card>
 
             <Card className="p-8 mb-8">
-              <h2 className="text-3xl font-bold mb-6">Managing Your Cookie Preferences</h2>
+              <h2 className="font-heading text-3xl font-bold mb-6">Managing Your Cookie Preferences</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>You have several options for managing cookies:</p>
 
                 <div className="bg-secondary/50 p-4 rounded-lg mb-4">
-                  <h3 className="text-lg font-semibold text-foreground mb-2">Browser Settings</h3>
+                  <h3 className="font-heading text-lg font-semibold text-foreground mb-2">Browser Settings</h3>
                   <p>
                     Most web browsers allow you to control cookies through their settings. You can usually find these
                     options in the 'Options' or 'Preferences' menu of your browser.
@@ -119,7 +119,7 @@ export default function CookiePolicy() {
                 </div>
 
                 <div className="bg-secondary/50 p-4 rounded-lg mb-4">
-                  <h3 className="text-lg font-semibold text-foreground mb-2">Cookie Consent Banner</h3>
+                  <h3 className="font-heading text-lg font-semibold text-foreground mb-2">Cookie Consent Banner</h3>
                   <p>
                     When you first visit our website, you'll see a cookie consent banner where you can choose which
                     types of cookies to accept or reject.
@@ -127,7 +127,7 @@ export default function CookiePolicy() {
                 </div>
 
                 <div className="bg-secondary/50 p-4 rounded-lg mb-4">
-                  <h3 className="text-lg font-semibold text-foreground mb-2">Opt-Out Links</h3>
+                  <h3 className="font-heading text-lg font-semibold text-foreground mb-2">Opt-Out Links</h3>
                   <p>
                     For specific third-party services, you can opt-out directly through their websites:
                   </p>
@@ -140,7 +140,7 @@ export default function CookiePolicy() {
             </Card>
 
             <Card className="p-8 mb-8">
-              <h2 className="text-3xl font-bold mb-6">Impact of Disabling Cookies</h2>
+              <h2 className="font-heading text-3xl font-bold mb-6">Impact of Disabling Cookies</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
                   Please note that disabling certain cookies may affect your experience on our platform:
@@ -155,7 +155,7 @@ export default function CookiePolicy() {
             </Card>
 
             <Card className="p-8 mb-8">
-              <h2 className="text-3xl font-bold mb-6">Updates to This Policy</h2>
+              <h2 className="font-heading text-3xl font-bold mb-6">Updates to This Policy</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
                   We may update this Cookie Policy from time to time to reflect changes in our practices or applicable
@@ -166,7 +166,7 @@ export default function CookiePolicy() {
             </Card>
 
             <Card className="p-8">
-              <h2 className="text-3xl font-bold mb-6">Contact Us</h2>
+              <h2 className="font-heading text-3xl font-bold mb-6">Contact Us</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
                   If you have any questions about our use of cookies or this Cookie Policy, please contact us:

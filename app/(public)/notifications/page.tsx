@@ -7,6 +7,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Bell, ArrowLeft, Phone, Truck, Clock } from "lucide-react"
 import { useAppSelector } from "@/lib/hooks"
 
@@ -63,33 +64,45 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/5">
+      <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <Button variant="outline" size="sm" onClick={() => router.back()}>
+          <Button variant="outline" size="sm" onClick={() => router.back()} className="flex-shrink-0">
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Notifications</h1>
-            <p className="text-gray-600">All your notifications in one place</p>
+          <div className="flex-1">
+            <h1 className="font-heading text-3xl md:text-4xl font-bold text-foreground">Notifications</h1>
+            <p className="text-muted-foreground mt-1">Stay updated with the latest messages from Samarpan</p>
           </div>
         </div>
 
-        {/* Notifications List */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="w-5 h-5" />
-              All Notifications ({notifications.length})
+        {/* Notifications Card */}
+        <Card className="shadow-lg border-0 bg-card/50 backdrop-blur-sm">
+          <CardHeader className="bg-gradient-to-r from-primary/5 to-accent/5">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bell className="w-5 h-5 text-primary" />
+                All Notifications
+              </div>
+              <Badge variant="secondary" className="bg-primary/10 text-primary">
+                {notifications.length} total
+              </Badge>
             </CardTitle>
-            <CardDescription>Stay updated with the latest messages from Samarpan</CardDescription>
+            <CardDescription>
+              Your notifications from Samarpan will appear here
+            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             {notifications.length === 0 ? (
-              <div className="text-center py-12">
-                <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-600">No notifications yet</p>
+              <div className="text-center py-16">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Bell className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="font-heading text-lg font-semibold mb-2">No notifications yet</h3>
+                <p className="text-muted-foreground">
+                  When you receive notifications, they'll appear here
+                </p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -99,74 +112,103 @@ export default function NotificationsPage() {
                     (notif.driverDetails.name || notif.driverDetails.phone)
                   
                   return (
-                  <div
-                    key={notif._id}
-                    className={`p-4 rounded-lg border-2 transition ${
-                      notif.read 
-                        ? "bg-gray-50 border-gray-200" 
-                        : isDriverNotification 
-                          ? "bg-green-50 border-green-300" 
-                          : "bg-red-50 border-red-300"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-lg">{notif.title}</p>
-                          {isDriverNotification && (
-                            <Truck className="w-5 h-5 text-green-600 flex-shrink-0" />
+                    <div
+                      key={notif._id}
+                      className={`relative p-6 rounded-xl border-2 transition-all duration-200 hover:shadow-md ${
+                        notif.read 
+                          ? "bg-muted/30 border-border" 
+                          : isDriverNotification 
+                            ? "bg-green-50 border-green-200 shadow-sm" 
+                            : "bg-primary/5 border-primary/20 shadow-sm"
+                      }`}
+                    >
+                      <div className="flex items-start gap-4">
+                        {/* Icon */}
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          isDriverNotification 
+                            ? "bg-green-100 text-green-600" 
+                            : "bg-primary/10 text-primary"
+                        }`}>
+                          {isDriverNotification ? (
+                            <Truck className="w-5 h-5" />
+                          ) : (
+                            <Bell className="w-5 h-5" />
                           )}
                         </div>
-                        
-                        {hasDriverDetails ? (
-                          // Driver Details Display
-                          <div className="mt-3 space-y-3 bg-white rounded-lg p-3 border border-green-200">
-                            <p className="text-gray-700 text-sm">{notif.message}</p>
-                            
-                            <div className="space-y-2 pt-2 border-t border-green-100">
-                              {notif.driverDetails?.name && (
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-gray-700 text-sm">Driver:</span>
-                                  <span className="text-gray-900 text-sm">{notif.driverDetails.name}</span>
-                                </div>
-                              )}
-                              
-                              {notif.driverDetails?.phone && (
-                                <div className="flex items-center gap-2">
-                                  <Phone className="w-4 h-4 text-green-600 flex-shrink-0" />
-                                  <a 
-                                    href={`tel:${notif.driverDetails.phone}`}
-                                    className="text-green-600 hover:text-green-700 font-medium text-sm underline"
-                                  >
-                                    {notif.driverDetails.phone}
-                                  </a>
-                                </div>
-                              )}
-                              
-                              {notif.driverDetails?.vehicleInfo && (
-                                <div className="flex items-center gap-2">
-                                  <Truck className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                                  <span className="text-gray-900 text-sm">{notif.driverDetails.vehicleInfo}</span>
-                                </div>
-                              )}
-                              
-                              {notif.driverDetails?.pickupTime && (
-                                <div className="flex items-center gap-2">
-                                  <Clock className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                                  <span className="text-gray-900 text-sm">{notif.driverDetails.pickupTime}</span>
-                                </div>
-                              )}
-                            </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <h3 className="font-heading text-lg font-semibold text-foreground pr-2">
+                              {notif.title}
+                            </h3>
+                            {!notif.read && (
+                              <div className="w-3 h-3 bg-primary rounded-full flex-shrink-0 mt-2" />
+                            )}
                           </div>
-                        ) : (
-                          <p className="text-gray-700 mt-2 text-sm">{notif.message}</p>
-                        )}
-                        
-                        <p className="text-sm text-gray-500 mt-3">{new Date(notif.createdAt).toLocaleString()}</p>
+                          
+                          {hasDriverDetails ? (
+                            // Driver Details Display
+                            <div className="space-y-4">
+                              <p className="text-muted-foreground leading-relaxed">{notif.message}</p>
+                              
+                              <div className="bg-white rounded-lg p-4 border border-green-200 space-y-3">
+                                <h4 className="font-medium text-green-800 flex items-center gap-2">
+                                  <Truck className="w-4 h-4" />
+                                  Driver Information
+                                </h4>
+                                
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  {notif.driverDetails?.name && (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium text-muted-foreground">Driver:</span>
+                                      <span className="text-sm text-foreground">{notif.driverDetails.name}</span>
+                                    </div>
+                                  )}
+                                  
+                                  {notif.driverDetails?.phone && (
+                                    <div className="flex items-center gap-2">
+                                      <Phone className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                      <a 
+                                        href={`tel:${notif.driverDetails.phone}`}
+                                        className="text-sm text-green-600 hover:text-green-700 font-medium underline"
+                                      >
+                                        {notif.driverDetails.phone}
+                                      </a>
+                                    </div>
+                                  )}
+                                  
+                                  {notif.driverDetails?.vehicleInfo && (
+                                    <div className="flex items-center gap-2">
+                                      <Truck className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                      <span className="text-sm text-foreground">{notif.driverDetails.vehicleInfo}</span>
+                                    </div>
+                                  )}
+                                  
+                                  {notif.driverDetails?.pickupTime && (
+                                    <div className="flex items-center gap-2">
+                                      <Clock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                      <span className="text-sm text-foreground">{notif.driverDetails.pickupTime}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                              {notif.message}
+                            </p>
+                          )}
+                          
+                          <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border/50">
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">
+                              {new Date(notif.createdAt).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      {!notif.read && <div className="w-3 h-3 bg-red-600 rounded-full mt-2 ml-4 flex-shrink-0" />}
                     </div>
-                  </div>
                   )
                 })}
               </div>

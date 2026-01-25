@@ -22,6 +22,8 @@ import { AdminAdminManager } from "@/components/admin-admin-manager"
 import { AdminBlogManager } from "@/components/admin-blog-manager"
 import { AdminActionHistory } from "@/components/admin-action-history"
 import { AdminChangePasswordDialog } from "@/components/admin-change-password-dialog"
+import { AdminNGOApplicationsManager } from "@/components/admin-ngo-applications-manager"
+import { AdminNGOEventsManager } from "@/components/admin-ngo-events-manager"
 import { MaintenanceModeManager } from "@/components/maintenance-mode-manager"
 import {
   LogOut,
@@ -36,6 +38,7 @@ import {
   Lock,
   History,
   IndianRupee,
+  Building,
 } from "lucide-react"
 
 interface Admin {
@@ -147,235 +150,292 @@ export default function SuperAdminPage() {
     <main className="min-h-screen bg-background">
       {/* Admin Navigation */}
       <nav className="bg-card border-b border-border sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <LayoutDashboard className="w-6 h-6 text-primary-foreground" />
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-4">
+          <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3 xs:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary rounded-lg flex items-center justify-center">
+                <LayoutDashboard className="w-4 h-4 sm:w-6 sm:h-6 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="font-heading text-lg sm:text-xl lg:text-2xl font-bold text-primary">Samarpan Super Admin</h1>
+                <p className="text-xs text-muted-foreground hidden xs:block">Full System Control</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-primary">Samarpan Super Admin</h1>
-              <p className="text-xs text-muted-foreground">Full System Control</p>
-            </div>
-          </div>
-          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-medium">{admin.email}</p>
-              <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
-                Super Admin
-              </span>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowPasswordDialog(true)} 
-                className="gap-2 bg-transparent"
-                title="Change Password"
-              >
-                <Lock className="w-4 h-4" />
-                <span className="hidden sm:inline">Change Password</span>
-              </Button>
-              <Button variant="outline" onClick={handleLogout} className="gap-2 bg-transparent">
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Logout</span>
-              </Button>
+            <div className="flex flex-col xs:flex-row items-start xs:items-center gap-2 xs:gap-3 sm:gap-4">
+              <div className="text-left xs:text-right">
+                <p className="text-xs sm:text-sm font-medium truncate max-w-[200px]">{admin.email}</p>
+                <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
+                  Super Admin
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowPasswordDialog(true)} 
+                  className="gap-1 xs:gap-2 bg-transparent h-8 px-2 xs:h-9 xs:px-3"
+                  title="Change Password"
+                >
+                  <Lock className="w-3 h-3 xs:w-4 xs:h-4" />
+                  <span className="hidden sm:inline text-xs xs:text-sm">Change Password</span>
+                  <span className="sm:hidden text-xs">Password</span>
+                </Button>
+                <Button variant="outline" onClick={handleLogout} className="gap-1 xs:gap-2 bg-transparent h-8 px-2 xs:h-9 xs:px-3">
+                  <LogOut className="w-3 h-3 xs:w-4 xs:h-4" />
+                  <span className="hidden xs:inline text-xs xs:text-sm">Logout</span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </nav>
 
       {/* Admin Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Tab Navigation */}
-        <div className="overflow-x-auto pb-2">
-          <div className="flex gap-4 mb-8 border-b border-border">
-          <button
-            onClick={() => setActiveTab("admin-accounts")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "admin-accounts"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Shield className="w-4 h-4" />
-            Admin Management
-          </button>
-          <button
-            onClick={() => setActiveTab("users")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap ${
-              activeTab === "users"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Users Management
-          </button>
-          <button
-            onClick={() => setActiveTab("notifications")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap ${
-              activeTab === "notifications"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Send Notifications
-          </button>
-          <button
-            onClick={() => setActiveTab("certificates")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap ${
-              activeTab === "certificates"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Generate Certificates
-          </button>
-          <button
-            onClick={() => setActiveTab("funds")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "funds"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <IndianRupee className="w-4 h-4" />
-            Funds Collected
-          </button>
-          <button
-            onClick={() => setActiveTab("donations")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap ${
-              activeTab === "donations"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Manage Donations
-          </button>
-          <button
-            onClick={() => setActiveTab("images")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap ${
-              activeTab === "images"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Donation Images
-          </button>
-          <button
-            onClick={() => setActiveTab("blood-requests")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap ${
-              activeTab === "blood-requests"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Blood Requests
-          </button>
-          <button
-            onClick={() => setActiveTab("blood-history")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "blood-history"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <History className="w-4 h-4" />
-            Blood History
-          </button>
-          <button
-            onClick={() => setActiveTab("events")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "events"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            Events
-          </button>
-          <button
-            onClick={() => setActiveTab("transportation")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "transportation"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Truck className="w-4 h-4" />
-            Transportation
-          </button>
-          <button
-            onClick={() => setActiveTab("contacts")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "contacts"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Mail className="w-4 h-4" />
-            Contact Submissions
-          </button>
-          <button
-            onClick={() => setActiveTab("qr-checker")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "qr-checker"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <QrCode className="w-4 h-4" />
-            QR Checker
-          </button>
-          <button
-            onClick={() => setActiveTab("event-donors")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "event-donors"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            Event Donors
-          </button>
-          <button
-            onClick={() => setActiveTab("blogs")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "blogs"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            Blog Management
-          </button>
-          <button
-            onClick={() => setActiveTab("action-history")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "action-history"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <History className="w-4 h-4" />
-            Action History
-          </button>
-          <button
-            onClick={() => setActiveTab("maintenance")}
-            className={`px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-2 ${
-              activeTab === "maintenance"
-                ? "text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Lock className="w-4 h-4" />
-            Maintenance
-          </button>
+        <div className="mb-4 sm:mb-6 lg:mb-8">
+          <div className="overflow-x-auto scrollbar-hide">
+            <div className="flex gap-2 sm:gap-3 lg:gap-4 pb-2 border-b border-border min-w-max">
+              <button
+                onClick={() => setActiveTab("admin-accounts")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
+                  activeTab === "admin-accounts"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Shield className="w-3 h-3 xs:w-4 xs:h-4" />
+                <span className="hidden xs:inline">Admin Management</span>
+                <span className="xs:hidden">Admins</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("ngo-applications")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
+                  activeTab === "ngo-applications"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Building className="w-3 h-3 xs:w-4 xs:h-4" />
+                <span className="hidden xs:inline">NGO Applications</span>
+                <span className="xs:hidden">NGOs</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("ngo-events")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
+                  activeTab === "ngo-events"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Calendar className="w-3 h-3 xs:w-4 xs:h-4" />
+                <span className="hidden xs:inline">NGO Events</span>
+                <span className="xs:hidden">Events</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("users")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap text-xs xs:text-sm ${
+                  activeTab === "users"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span className="hidden xs:inline">Users Management</span>
+                <span className="xs:hidden">Users</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("notifications")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap text-xs xs:text-sm ${
+                  activeTab === "notifications"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span className="hidden xs:inline">Send Notifications</span>
+                <span className="xs:hidden">Notify</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("certificates")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap text-xs xs:text-sm ${
+                  activeTab === "certificates"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span className="hidden xs:inline">Generate Certificates</span>
+                <span className="xs:hidden">Certs</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("funds")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
+                  activeTab === "funds"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <IndianRupee className="w-3 h-3 xs:w-4 xs:h-4" />
+                <span className="hidden xs:inline">Funds Collected</span>
+                <span className="xs:hidden">Funds</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("donations")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap text-xs xs:text-sm ${
+                  activeTab === "donations"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span className="hidden xs:inline">Manage Donations</span>
+                <span className="xs:hidden">Donations</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("images")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap text-xs xs:text-sm ${
+                  activeTab === "images"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span className="hidden xs:inline">Donation Images</span>
+                <span className="xs:hidden">Images</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("blood-requests")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap text-xs xs:text-sm ${
+                  activeTab === "blood-requests"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span className="hidden xs:inline">Blood Requests</span>
+                <span className="xs:hidden">Requests</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("blood-history")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
+                  activeTab === "blood-history"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <History className="w-3 h-3 xs:w-4 xs:h-4" />
+                <span className="hidden xs:inline">Blood History</span>
+                <span className="xs:hidden">History</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("events")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
+                  activeTab === "events"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Calendar className="w-3 h-3 xs:w-4 xs:h-4" />
+                <span>Events</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("transportation")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
+                  activeTab === "transportation"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Truck className="w-3 h-3 xs:w-4 xs:h-4" />
+                <span className="hidden xs:inline">Transportation</span>
+                <span className="xs:hidden">Transport</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("contacts")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
+                  activeTab === "contacts"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Mail className="w-3 h-3 xs:w-4 xs:h-4" />
+                <span className="hidden xs:inline">Contact Submissions</span>
+                <span className="xs:hidden">Contacts</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("qr-checker")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
+                  activeTab === "qr-checker"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <QrCode className="w-3 h-3 xs:w-4 xs:h-4" />
+                <span className="hidden xs:inline">QR Checker</span>
+                <span className="xs:hidden">QR</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("event-donors")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
+                  activeTab === "event-donors"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Users className="w-3 h-3 xs:w-4 xs:h-4" />
+                <span className="hidden xs:inline">Event Donors</span>
+                <span className="xs:hidden">Donors</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("blogs")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
+                  activeTab === "blogs"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <BookOpen className="w-3 h-3 xs:w-4 xs:h-4" />
+                <span className="hidden xs:inline">Blog Management</span>
+                <span className="xs:hidden">Blogs</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("action-history")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
+                  activeTab === "action-history"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <History className="w-3 h-3 xs:w-4 xs:h-4" />
+                <span className="hidden xs:inline">Action History</span>
+                <span className="xs:hidden">Actions</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("maintenance")}
+                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
+                  activeTab === "maintenance"
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Lock className="w-3 h-3 xs:w-4 xs:h-4" />
+                <span className="hidden xs:inline">Maintenance</span>
+                <span className="xs:hidden">Maint</span>
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
 
         {/* Tab Content */}
         {activeTab === "admin-accounts" && (
           <div className="grid grid-cols-1 gap-6">
             {token && <AdminAdminManager token={token} />}
+          </div>
+        )}
+
+        {activeTab === "ngo-applications" && (
+          <div className="grid grid-cols-1 gap-6">
+            {token && <AdminNGOApplicationsManager token={token} />}
+          </div>
+        )}
+
+        {activeTab === "ngo-events" && (
+          <div className="grid grid-cols-1 gap-6">
+            {token && <AdminNGOEventsManager token={token} />}
           </div>
         )}
 
@@ -386,14 +446,14 @@ export default function SuperAdminPage() {
         )}
 
         {activeTab === "notifications" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>{token && <AdminSendNotification users={users} token={token} />}</div>
+          <div className="w-full">
+            {token && <AdminSendNotification users={users} token={token} />}
           </div>
         )}
 
         {activeTab === "certificates" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>{token && <AdminCertificateGenerator users={users} token={token} />}</div>
+          <div className="w-full">
+            {token && <AdminCertificateGenerator users={users} token={token} />}
           </div>
         )}
 

@@ -1,25 +1,22 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { Html5Qrcode } from "html5-qrcode"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { 
-  Camera, 
-  CameraOff, 
   QrCode, 
   CheckCircle2, 
   AlertCircle, 
   Users, 
   Download,
   Loader2,
-  RotateCcw,
   X
 } from "lucide-react"
+import { QRScannerBase } from "./qr-scanner-base"
 import { playBeep, playSuccessBeep, playErrorBeep, initializeBeepSound } from "./beep-sound"
 import { useToast } from "@/hooks/use-toast"
 
@@ -48,212 +45,28 @@ export function AdminQRAttendanceScanner({
   onAttendanceUpdate,
 }: AdminQRAttendanceScannerProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [isCameraActive, setIsCameraActive] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
   const [manualInput, setManualInput] = useState("")
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
-  const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([])
-  const [selectedCamera, setSelectedCamera] = useState<string>("")
   
-  const html5QrCodeRef = useRef<Html5Qrcode | null>(null)
   const isScanningRef = useRef(false)
-  const videoRef = useRef<HTMLVideoElement>(null)
   const { toast } = useToast()
 
-  // Initialize beep sound and camera devices
-  useEffect(() => {
+  // Initialize beep sound
+  React.useEffect(() => {
     initializeBeepSound()
-    initializeCameras()
   }, [])
 
-  // Initialize scanner when dialog opens
-  useEffect(() => {
-    if (!isOpen) return
-
-    let retryCount = 0
-    const maxRetries = 10 // Maximum 1 second wait (10 * 100ms)
-
-    const initializeScanner = () => {
-      const element = document.getElementById('qr-reader')
-      
-      if (element && !html5QrCodeRef.current) {
-        try {
-          console.log("Initializing QR scanner...")
-          html5QrCodeRef.current = new Html5Qrcode("qr-reader")
-          
-          // Small delay before starting camera to ensure scanner is ready
-          setTimeout(() => {
-            if (html5QrCodeRef.current) {
-              startCamera()
-            }
-          }, 200)
-        } catch (error) {
-          console.error("Scanner initialization error:", error)
-          setError("Failed to initialize scanner")
-        }
-      } else if (!element && retryCount < maxRetries) {
-        // Retry after a short delay if element not found
-        retryCount++
-        console.log(`Waiting for QR reader element... (${retryCount}/${maxRetries})`)
-        setTimeout(initializeScanner, 100)
-      } else if (retryCount >= maxRetries) {
-        console.error("QR reader element not found after maximum retries")
-        setError("Scanner element not available")
-      }
-    }
-    
-    // Start initialization with a small delay to ensure DOM is ready
-    setTimeout(initializeScanner, 50)
-    
-    return () => {
-      cleanup()
-    }
-  }, [isOpen])
-
-  const initializeCameras = async () => {
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices()
-      const videoDevices = devices.filter(device => device.kind === "videoinput")
-      setCameraDevices(videoDevices)
-      
-      if (videoDevices.length > 0 && !selectedCamera) {
-        // Prefer back camera on mobile
-        const backCamera = videoDevices.find(device => 
-          device.label.toLowerCase().includes("back") || 
-          device.label.toLowerCase().includes("environment")
-        )
-        setSelectedCamera(backCamera?.deviceId || videoDevices[0].deviceId)
-      }
-    } catch (err) {
-      console.error("Failed to enumerate devices:", err)
-    }
-  }
-
-  const cleanup = () => {
-    if (html5QrCodeRef.current) {
-      try {
-        html5QrCodeRef.current.stop().catch(() => {})
-        html5QrCodeRef.current.clear()
-      } catch (error) {
-        console.warn("Error during scanner cleanup:", error)
-      } finally {
-        html5QrCodeRef.current = null
-      }
-    }
-    setIsCameraActive(false)
-    isScanningRef.current = false
-  }
-
-  const startCamera = async (deviceId?: string) => {
-    // Ensure scanner is initialized and DOM element exists
-    if (!html5QrCodeRef.current) {
-      console.warn("Scanner not initialized yet")
+  const processQRCode = async (qrData: string) => {
+    // Prevent duplicate processing
+    if (isScanningRef.current || isProcessing) {
+      console.log("Already processing, ignoring...")
       return
     }
-    
-    const element = document.getElementById('qr-reader')
-    if (!element) {
-      console.warn("QR reader element not found")
-      setError("Scanner element not ready")
-      return
-    }
-    
-    setIsLoading(true)
-    setError("")
 
-    try {
-      const cameraId = deviceId || selectedCamera || "environment"
-      
-      const config = {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-      }
-
-      const constraints = cameraId === "environment" 
-        ? { facingMode: "environment" }
-        : { deviceId: { exact: cameraId } }
-
-      // Reset scanning state
-      isScanningRef.current = false
-
-      await html5QrCodeRef.current.start(
-        constraints,
-        config,
-        onScanSuccess,
-        onScanFailure
-      )
-
-      setIsCameraActive(true)
-      setError("")
-    } catch (err: any) {
-      console.error("Camera error:", err)
-      let errorMsg = "Failed to access camera"
-
-      if (err.name === "NotAllowedError") {
-        errorMsg = "Camera permission denied. Please allow camera access."
-      } else if (err.name === "NotFoundError") {
-        errorMsg = "No camera found on this device."
-      } else if (err.name === "NotReadableError") {
-        errorMsg = "Camera is in use by another app."
-      }
-
-      setError(errorMsg)
-      toast({
-        title: "Camera Error",
-        description: errorMsg,
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const onScanSuccess = async (decodedText: string) => {
-    // Prevent duplicate scans - following QR module README pattern
-    if (isScanningRef.current || isProcessing) return
-    
     isScanningRef.current = true
     setIsProcessing(true)
 
-    try {
-      // Play beep sound immediately
-      await playBeep()
-      
-      // Stop scanner immediately to prevent multiple scans
-      if (html5QrCodeRef.current) {
-        await html5QrCodeRef.current.stop()
-        setIsCameraActive(false)
-      }
-
-      // Process QR code
-      await processQRCode(decodedText)
-      
-      toast({
-        title: "Success",
-        description: "QR Code scanned successfully!",
-      })
-    } catch (error) {
-      console.error("Error processing QR code:", error)
-      await playErrorBeep()
-      toast({
-        title: "Error",
-        description: "Failed to process QR code",
-        variant: "destructive",
-      })
-      isScanningRef.current = false
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  const onScanFailure = (error: string) => {
-    // Ignore scan failures - they're normal during scanning (following QR module README)
-    console.debug("QR scan attempt:", error)
-  }
-
-  const processQRCode = async (qrData: string) => {
     try {
       let parsedData
       
@@ -264,6 +77,9 @@ export function AdminQRAttendanceScanner({
         // If not JSON, treat as alphanumeric token (legacy format)
         parsedData = { alphanumericToken: qrData.trim() }
       }
+
+      // Play beep sound immediately
+      await playBeep()
 
       // Verify attendance via API
       const response = await fetch("/api/event-registrations/qr-verify", {
@@ -278,14 +94,10 @@ export function AdminQRAttendanceScanner({
         }),
       })
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-
       const result = await response.json()
 
-      if (result.success) {
-        // Success
+      // Handle Success
+      if (response.ok && result.success) {
         await playSuccessBeep()
         
         const attendanceRecord: AttendanceRecord = {
@@ -305,7 +117,33 @@ export function AdminQRAttendanceScanner({
           title: "Success",
           description: `✅ ${result.registration.name} - Attendance marked!`,
         })
-      } else {
+      } 
+      // Handle Already Verified (409 Conflict)
+      else if (response.status === 409 && result.registration) {
+        await playErrorBeep() // Or a different beep for warning?
+
+        const attendanceRecord: AttendanceRecord = {
+          registrationId: result.registration._id,
+          alphanumericToken: parsedData.alphanumericToken || parsedData.token || "N/A",
+          userName: result.registration.name,
+          eventTitle: eventTitle,
+          timeSlot: result.registration.timeSlot || "N/A",
+          scannedAt: new Date().toISOString(),
+          status: "duplicate",
+          errorMessage: "Already verified"
+        }
+
+        setAttendanceRecords(prev => [attendanceRecord, ...prev])
+        
+        toast({
+          title: "Already Verified",
+          description: `⚠️ ${result.registration.name} has already been verified.`,
+          variant: "default", // or warning style if available
+          className: "bg-yellow-100 border-yellow-200 text-yellow-900"
+        })
+      }
+      // Handle Errors
+      else {
         throw new Error(result.error || "Verification failed")
       }
     } catch (error) {
@@ -332,8 +170,11 @@ export function AdminQRAttendanceScanner({
         variant: "destructive",
       })
     } finally {
-      // Reset processing state
-      isScanningRef.current = false
+      setIsProcessing(false)
+      // Reset after a delay to allow for next scan
+      setTimeout(() => {
+        isScanningRef.current = false
+      }, 2000)
     }
   }
 
@@ -341,17 +182,8 @@ export function AdminQRAttendanceScanner({
     const token = manualInput.trim()
     if (!token) return
 
-    setIsProcessing(true)
     await processQRCode(token)
     setManualInput("")
-    setIsProcessing(false)
-  }
-
-  const switchCamera = async (deviceId: string) => {
-    setSelectedCamera(deviceId)
-    if (isCameraActive) {
-      await startCamera(deviceId)
-    }
   }
 
   const exportToExcel = () => {
@@ -395,13 +227,6 @@ export function AdminQRAttendanceScanner({
     })
   }
 
-  const handleClose = () => {
-    cleanup()
-    setIsOpen(false)
-    setManualInput("")
-    setError("")
-  }
-
   const successCount = attendanceRecords.filter(r => r.status === "success").length
   const errorCount = attendanceRecords.filter(r => r.status === "error").length
 
@@ -417,7 +242,7 @@ export function AdminQRAttendanceScanner({
         )}
       </Button>
 
-      <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="w-[95vw] sm:w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -450,132 +275,55 @@ export function AdminQRAttendanceScanner({
               </Card>
             </div>
 
-            {/* Error Alert */}
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+            {/* Processing indicator */}
+            {isProcessing && (
+              <Alert>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <AlertDescription>Processing QR code...</AlertDescription>
               </Alert>
             )}
 
-            {/* Camera View - QR Reader Container ALWAYS rendered */}
-            <div 
-              id="qr-reader" 
-              className="w-full bg-black rounded-lg overflow-hidden"
-              style={{ 
-                aspectRatio: "1",
-                maxWidth: "400px",
-                margin: "0 auto",
-                minHeight: "300px"
-              }}
+            {/* QR Scanner */}
+            <QRScannerBase
+              onScanSuccess={processQRCode}
+              elementId="admin-attendance-qr-reader"
+              className="border rounded-lg p-4"
             />
 
-            {isCameraActive && (
-              <div className="space-y-3">
-                {/* Scanning overlay */}
-                <div className="absolute inset-4 border-2 border-green-500 rounded-lg opacity-75 pointer-events-none">
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1/3 h-1/3 border-2 border-green-400" />
-                </div>
-
-                {/* Processing indicator */}
-                {isProcessing && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                    <div className="bg-white rounded-lg p-4 flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-sm">Processing...</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Camera Controls */}
-                <div className="flex gap-2">
-                  {cameraDevices.length > 1 && (
-                    <select
-                      value={selectedCamera}
-                      onChange={(e) => switchCamera(e.target.value)}
-                      className="flex-1 px-3 py-2 border rounded-md text-sm"
-                    >
-                      {cameraDevices.map((device) => (
-                        <option key={device.deviceId} value={device.deviceId}>
-                          {device.label || `Camera ${device.deviceId.slice(0, 8)}`}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  <Button
-                    onClick={() => setIsCameraActive(false)}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <CameraOff className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Manual Entry View */}
-            {!isCameraActive && (
-              <div className="space-y-3">
-                {error && (
-                  <div className="text-center text-red-600 text-sm">
-                    {error}
-                  </div>
-                )}
-                
+            {/* Manual Entry */}
+            <div className="space-y-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm font-medium text-blue-900">Manual Entry</p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter token or paste QR data..."
+                  value={manualInput}
+                  onChange={(e) => setManualInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleManualEntry()
+                    }
+                  }}
+                  className="flex-1"
+                />
                 <Button
-                  onClick={() => startCamera()}
-                  disabled={isLoading}
-                  className="w-full gap-2"
+                  onClick={handleManualEntry}
+                  disabled={!manualInput.trim() || isProcessing}
+                  size="sm"
                 >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Starting Camera...
-                    </>
+                  {isProcessing ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    <>
-                      <Camera className="w-4 h-4" />
-                      Start Camera Scanner
-                    </>
+                    "Verify"
                   )}
                 </Button>
-
-                {/* Manual Entry */}
-                <div className="space-y-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm font-medium text-blue-900">Manual Entry</p>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Enter token or paste QR data..."
-                      value={manualInput}
-                      onChange={(e) => setManualInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleManualEntry()
-                        }
-                      }}
-                      className="flex-1"
-                    />
-                    <Button
-                      onClick={handleManualEntry}
-                      disabled={!manualInput.trim() || isProcessing}
-                      size="sm"
-                    >
-                      {isProcessing ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        "Verify"
-                      )}
-                    </Button>
-                  </div>
-                </div>
               </div>
-            )}
+            </div>
 
             {/* Attendance Records */}
             {attendanceRecords.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-medium flex items-center gap-2">
+                  <h3 className="font-heading font-medium flex items-center gap-2">
                     <Users className="w-4 h-4" />
                     Recent Scans ({attendanceRecords.length})
                   </h3>
@@ -597,6 +345,8 @@ export function AdminQRAttendanceScanner({
                       className={`p-3 rounded-lg border ${
                         record.status === "success"
                           ? "bg-green-50 border-green-200"
+                          : record.status === "duplicate"
+                          ? "bg-yellow-50 border-yellow-200"
                           : "bg-red-50 border-red-200"
                       }`}
                     >
@@ -610,6 +360,8 @@ export function AdminQRAttendanceScanner({
                         <div className="text-right">
                           {record.status === "success" ? (
                             <CheckCircle2 className="w-5 h-5 text-green-600" />
+                          ) : record.status === "duplicate" ? (
+                            <AlertCircle className="w-5 h-5 text-yellow-600" />
                           ) : (
                             <AlertCircle className="w-5 h-5 text-red-600" />
                           )}
@@ -619,7 +371,9 @@ export function AdminQRAttendanceScanner({
                         </div>
                       </div>
                       {record.errorMessage && (
-                        <p className="text-xs text-red-600 mt-1">{record.errorMessage}</p>
+                        <p className={`text-xs mt-1 ${
+                          record.status === "duplicate" ? "text-yellow-700" : "text-red-600"
+                        }`}>{record.errorMessage}</p>
                       )}
                     </div>
                   ))}
@@ -632,3 +386,6 @@ export function AdminQRAttendanceScanner({
     </>
   )
 }
+
+// React import for useEffect
+import React from "react"

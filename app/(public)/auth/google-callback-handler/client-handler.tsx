@@ -6,65 +6,41 @@ import { useAppDispatch } from "@/lib/hooks"
 import { loginSuccess } from "@/lib/slices/authSlice"
 import { setUser } from "@/lib/slices/userSlice"
 
-export default function GoogleCallbackHandler() {
+export default function GoogleCallbackClientHandler() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const dispatch = useAppDispatch()
 
   useEffect(() => {
-    const handleCallback = async () => {
+    const processAuth = async () => {
       try {
         const token = searchParams.get("token")
-        const userJson = searchParams.get("user")
+        const userParam = searchParams.get("user")
 
-        if (!token || !userJson) {
-          console.error("[Google Callback Handler] Missing token or user data")
-          router.push("/login?error=Missing authentication data")
-          return
+        if (token && userParam) {
+          const user = JSON.parse(decodeURIComponent(userParam))
+          
+          // Store in localStorage
+          localStorage.setItem("token", token)
+          localStorage.setItem("user", JSON.stringify(user))
+          
+          // Update Redux
+          dispatch(setUser(user))
+          dispatch(loginSuccess({ token, user }))
+          
+          // Redirect to dashboard
+          router.replace("/dashboard")
+        } else {
+          router.push("/login?error=Authentication failed")
         }
-
-        // Parse user data
-        const user = JSON.parse(decodeURIComponent(userJson))
-
-        console.log("[Google Callback Handler] Processing callback with user:", user.email)
-
-        // Dispatch loginSuccess action which will:
-        // 1. Update Redux state (token, isAuthenticated)
-        // 2. Store token and user in localStorage
-        dispatch(
-          loginSuccess({
-            token,
-            user,
-          }),
-        )
-
-        // Also set user state in Redux user slice
-        dispatch(setUser(user))
-
-        console.log("[Google Callback Handler] Auth and user state updated, redirecting to dashboard")
-
-        // Redirect to dashboard
-        // Using a small delay to ensure Redux state is updated first
-        setTimeout(() => {
-          router.push("/dashboard")
-        }, 100)
       } catch (error) {
-        console.error("[Google Callback Handler] Error:", error)
-        const errorMessage =
-          error instanceof Error ? error.message : "Failed to process authentication"
-        router.push(`/login?error=${encodeURIComponent(errorMessage)}`)
+        console.error("Auth processing error:", error)
+        router.push("/login?error=Authentication failed")
       }
     }
 
-    handleCallback()
-  }, [router, searchParams, dispatch])
+    processAuth()
+  }, [searchParams, dispatch, router])
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-red-100">
-      <div className="text-center">
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mb-4"></div>
-        <p className="text-gray-700 font-medium">Completing your login...</p>
-      </div>
-    </div>
-  )
+  return null
 }

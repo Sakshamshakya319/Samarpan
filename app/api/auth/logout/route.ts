@@ -14,6 +14,18 @@ export async function POST(request: NextRequest) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 0, // Expire immediately
+    path: "/",
+  })
+
+  // Clear auth_user cookie
+  response.cookies.set({
+    name: "auth_user",
+    value: "",
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 0, // Expire immediately
+    path: "/",
   })
 
   return response

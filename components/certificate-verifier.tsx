@@ -8,9 +8,15 @@ import { AlertCircle, CheckCircle, Loader2, Search, Info, Eye, EyeOff } from "lu
 
 interface VerificationResult {
   verified: boolean
+  certificateType?: "donation" | "volunteer"
   certificate?: {
     certificateId: string
-    donationCount: number
+    donationCount?: number
+    eventTitle?: string
+    eventDate?: string
+    eventLocation?: string
+    ngoName?: string
+    certificateToken?: string
     issuedDate: string
     status: string
     recipientName: string
@@ -21,6 +27,8 @@ interface VerificationResult {
 export function CertificateVerifier() {
   const [certificateId, setCertificateId] = useState("")
   const [verificationToken, setVerificationToken] = useState("")
+  const [certificateToken, setCertificateToken] = useState("")
+  const [certificateType, setCertificateType] = useState<"donation" | "volunteer">("donation")
   const [showToken, setShowToken] = useState(false)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<VerificationResult | null>(null)
@@ -33,15 +41,22 @@ export function CertificateVerifier() {
     setLoading(true)
 
     try {
+      const requestBody: any = {
+        certificateId: certificateId.trim(),
+      }
+
+      if (certificateType === "donation") {
+        requestBody.verificationToken = verificationToken.trim()
+      } else {
+        requestBody.certificateToken = certificateToken.trim()
+      }
+
       const response = await fetch("/api/certificates/verify", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          certificateId: certificateId.trim(),
-          verificationToken: verificationToken.trim(),
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       const data = await response.json()
@@ -76,30 +91,68 @@ export function CertificateVerifier() {
           <CardContent className="pt-8">
             <form onSubmit={handleVerify} className="space-y-6">
               <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-800">
+                  Certificate Type
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="certificateType"
+                      value="donation"
+                      checked={certificateType === "donation"}
+                      onChange={(e) => setCertificateType(e.target.value as "donation" | "volunteer")}
+                      className="text-blue-600"
+                    />
+                    <span className="text-sm">Blood Donation Certificate</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="certificateType"
+                      value="volunteer"
+                      checked={certificateType === "volunteer"}
+                      onChange={(e) => setCertificateType(e.target.value as "donation" | "volunteer")}
+                      className="text-blue-600"
+                    />
+                    <span className="text-sm">Volunteer Certificate</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="space-y-2">
                 <label htmlFor="certificateId" className="text-sm font-semibold text-gray-800">
                   Certificate ID
                 </label>
                 <Input
                   id="certificateId"
-                  placeholder="e.g., CERT-1762435257159-YM0R1DNQD"
+                  placeholder={certificateType === "donation" ? "e.g., CERT-1762435257159-YM0R1DNQD" : "e.g., VC-38878852"}
                   value={certificateId}
                   onChange={(e) => setCertificateId(e.target.value)}
                   disabled={loading}
                   className="text-sm border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                 />
-                <p className="text-xs text-gray-500">Format: CERT-TIMESTAMP-CODE</p>
+                <p className="text-xs text-gray-500">
+                  {certificateType === "donation" ? "Format: CERT-TIMESTAMP-CODE" : "Format: VC-TIMESTAMP"}
+                </p>
               </div>
 
               <div className="space-y-2">
                 <label htmlFor="token" className="text-sm font-semibold text-gray-800">
-                  Verification Token
+                  {certificateType === "donation" ? "Verification Token" : "Certificate Token"}
                 </label>
                 <div className="relative">
                   <Input
                     id="token"
-                    placeholder="Enter your 32-character verification token"
-                    value={verificationToken}
-                    onChange={(e) => setVerificationToken(e.target.value)}
+                    placeholder={certificateType === "donation" ? "Enter your 32-character verification token" : "Enter your certificate token"}
+                    value={certificateType === "donation" ? verificationToken : certificateToken}
+                    onChange={(e) => {
+                      if (certificateType === "donation") {
+                        setVerificationToken(e.target.value)
+                      } else {
+                        setCertificateToken(e.target.value)
+                      }
+                    }}
                     disabled={loading}
                     type={showToken ? "text" : "password"}
                     className="text-sm border-gray-300 focus:border-blue-500 focus:ring-blue-500 pr-10"
@@ -108,7 +161,7 @@ export function CertificateVerifier() {
                     type="button"
                     onClick={() => setShowToken(!showToken)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    disabled={!verificationToken}
+                    disabled={!(certificateType === "donation" ? verificationToken : certificateToken)}
                   >
                     {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -142,7 +195,7 @@ export function CertificateVerifier() {
 
               <Button
                 type="submit"
-                disabled={loading || !certificateId.trim() || !verificationToken.trim()}
+                disabled={loading || !certificateId.trim() || !(certificateType === "donation" ? verificationToken.trim() : certificateToken.trim())}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition-colors"
                 size="lg"
               >
@@ -162,7 +215,7 @@ export function CertificateVerifier() {
                 <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg flex items-start gap-3">
                   <CheckCircle className="w-6 h-6 text-green-600 mt-0.5 flex-shrink-0" />
                   <div>
-                    <h3 className="font-bold text-green-900 text-lg">Certificate Verified ✓</h3>
+                    <h3 className="font-heading font-bold text-green-900 text-lg">Certificate Verified ✓</h3>
                     <p className="text-sm text-green-800 mt-1">This is a valid and authentic certificate issued by Samarpan Blood Donor Network</p>
                   </div>
                 </div>
@@ -177,10 +230,41 @@ export function CertificateVerifier() {
                       <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Email</p>
                       <p className="text-sm font-mono text-gray-700 mt-1 break-all">{result.certificate.recipientEmail}</p>
                     </div>
-                    <div className="bg-white p-3 rounded-lg shadow-sm">
-                      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Total Donations</p>
-                      <p className="text-3xl font-bold text-blue-600 mt-1">{result.certificate.donationCount}</p>
-                    </div>
+                    
+                    {result.certificateType === "donation" && result.certificate.donationCount && (
+                      <div className="bg-white p-3 rounded-lg shadow-sm">
+                        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Total Donations</p>
+                        <p className="font-heading text-3xl font-bold text-blue-600 mt-1">{result.certificate.donationCount}</p>
+                      </div>
+                    )}
+                    
+                    {result.certificateType === "volunteer" && (
+                      <>
+                        <div className="bg-white p-3 rounded-lg shadow-sm">
+                          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Event Title</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-1">{result.certificate.eventTitle}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg shadow-sm">
+                          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Event Date</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-1">
+                            {result.certificate.eventDate ? new Date(result.certificate.eventDate).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            }) : "N/A"}
+                          </p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg shadow-sm">
+                          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Event Location</p>
+                          <p className="text-sm text-gray-700 mt-1">{result.certificate.eventLocation || "N/A"}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg shadow-sm">
+                          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Issued By</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-1">{result.certificate.ngoName || "N/A"}</p>
+                        </div>
+                      </>
+                    )}
+                    
                     <div className="bg-white p-3 rounded-lg shadow-sm">
                       <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Issue Date</p>
                       <p className="text-sm font-semibold text-gray-900 mt-1">
@@ -213,7 +297,7 @@ export function CertificateVerifier() {
         </Card>
 
         <div className="mt-8 p-4 bg-white rounded-lg shadow-md border border-gray-200">
-          <h3 className="font-semibold text-gray-800 mb-3">Need Help?</h3>
+          <h3 className="font-heading font-semibold text-gray-800 mb-3">Need Help?</h3>
           <ul className="space-y-2 text-sm text-gray-700">
             <li>• <strong>Certificate ID not found?</strong> Check your email for the certificate notification sent when it was issued</li>
             <li>• <strong>Lost your token?</strong> Contact the Samarpan team for assistance in verifying your identity</li>

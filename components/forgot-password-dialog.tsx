@@ -132,7 +132,7 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
               <CheckCircle2 className="h-16 w-16 text-green-600" />
             </div>
             <div className="space-y-3">
-              <h3 className="font-semibold text-lg text-foreground">Check Your Email!</h3>
+              <h3 className="font-heading font-semibold text-lg text-foreground">Check Your Email!</h3>
               <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-4 text-left space-y-2 border border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-muted-foreground">
                   If an account exists with <span className="font-semibold text-foreground break-all">{email}</span>, you'll receive a password reset link shortly.

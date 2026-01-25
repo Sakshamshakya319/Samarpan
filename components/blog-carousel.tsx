@@ -12,6 +12,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { AdaptiveImage } from "@/components/adaptive-image"
 import { Loader2, Eye, MessageSquare, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
 
 interface Blog {
@@ -76,7 +77,7 @@ export function BlogCarousel() {
     <section className="py-20 md:py-32 bg-secondary/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold mb-4">Latest Blog Posts</h2>
+          <h2 className="font-heading text-4xl font-bold mb-4">Latest Blog Posts</h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Discover inspiring stories, health tips, and insights from our community about blood donation.
           </p>
@@ -98,18 +99,17 @@ export function BlogCarousel() {
                       <Card className="overflow-hidden h-full hover:border-primary/50 transition hover:shadow-xl transform hover:scale-105 transition-all duration-300 cursor-pointer">
                         {/* Image Container */}
                         {thumbnail && (
-                          <div className="relative h-48 bg-muted overflow-hidden">
-                            <img
-                              src={thumbnail}
-                              alt={blog.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
+                          <AdaptiveImage
+                            src={thumbnail}
+                            alt={blog.title}
+                            maxHeight={250}
+                            className="rounded-t-lg"
+                          />
                         )}
 
                         <CardContent className="p-4 space-y-3">
                           {/* Title */}
-                          <h3 className="font-semibold text-lg line-clamp-2 hover:text-primary transition">
+                          <h3 className="font-heading font-semibold text-lg line-clamp-2 hover:text-primary transition">
                             {blog.title}
                           </h3>
 

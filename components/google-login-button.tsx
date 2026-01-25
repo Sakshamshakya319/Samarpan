@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Loader2, AlertCircle } from "lucide-react"
 
@@ -11,47 +12,26 @@ interface GoogleLoginButtonProps {
 export function GoogleLoginButton({ mode = "signin" }: GoogleLoginButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
-  const handleGoogleLogin = useCallback(async () => {
+  const handleGoogleLogin = useCallback(() => {
     try {
       setIsLoading(true)
       setError(null)
 
-      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
-      const redirectUri = `${window.location.origin}/api/auth/google/callback`
+      // Redirect to server-side auth route
+      // This ensures consistent redirect_uri generation and secure state handling
+      window.location.href = '/api/auth/google'
 
-      if (!clientId) {
-        throw new Error("Google Client ID is not configured")
-      }
-
-      // Generate random state for CSRF protection
-      const state = Math.random().toString(36).substring(7)
-      sessionStorage.setItem("google_oauth_state", state)
-
-      // Build Google OAuth authorization URL
-      const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth")
-      authUrl.searchParams.append("client_id", clientId)
-      authUrl.searchParams.append("redirect_uri", redirectUri)
-      authUrl.searchParams.append("response_type", "code")
-      authUrl.searchParams.append("scope", "openid email profile")
-      authUrl.searchParams.append("state", state)
-      authUrl.searchParams.append("access_type", "offline")
-      authUrl.searchParams.append("prompt", "consent")
-
-      // Redirect to Google OAuth
-      window.location.href = authUrl.toString()
     } catch (err) {
       console.error("[Google Login] Error:", err)
-      const errorMessage = err instanceof Error ? err.message : "Failed to initiate Google login"
-      setError(errorMessage)
+      setError("Failed to start Google authentication")
       setIsLoading(false)
     }
   }, [])
 
-  const buttonText =
-    mode === "signup" ? "Sign up with Google" : "Sign in with Google"
-  const loadingText =
-    mode === "signup" ? "Creating account..." : "Connecting..."
+  const buttonText = mode === "signup" ? "Sign up with Google" : "Sign in with Google"
+  const loadingText = mode === "signup" ? "Redirecting..." : "Redirecting..."
 
   return (
     <div className="space-y-3">

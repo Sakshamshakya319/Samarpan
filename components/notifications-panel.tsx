@@ -89,7 +89,7 @@ export function NotificationsPanel() {
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <h4 className="font-medium text-sm flex-1">{notification.title}</h4>
+                  <h4 className="font-heading font-medium text-sm flex-1">{notification.title}</h4>
                   {isDriverNotification && (
                     <Truck className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
                   )}

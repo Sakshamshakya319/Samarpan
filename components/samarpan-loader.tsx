@@ -6,6 +6,7 @@ import Image from "next/image"
 interface SamarpanLoaderProps {
   size?: "sm" | "md" | "lg" | "xl"
   showText?: boolean
+  showIcon?: boolean
   className?: string
   useBloodImage?: boolean
 }
@@ -13,6 +14,7 @@ interface SamarpanLoaderProps {
 export function SamarpanLoader({ 
   size = "md", 
   showText = true, 
+  showIcon = true,
   className = "",
   useBloodImage = false
 }: SamarpanLoaderProps) {
@@ -49,47 +51,27 @@ export function SamarpanLoader({
 
   return (
     <div className={`flex flex-col items-center justify-center space-y-4 ${className}`}>
-      {/* Samarpan Logo with Animation */}
-      <div className="relative">
-        {/* Outer rotating ring */}
-        <div className={`${sizeClasses[size]} relative`}>
-          <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-red-500 border-r-orange-500 animate-spin"></div>
-          <div className="absolute inset-2 rounded-full border-4 border-transparent border-b-red-400 border-l-orange-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
-          
-          {/* Center logo */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="relative">
-              {useBloodImage ? (
-                /* Blood drop image for maintenance page */
-                <div className="animate-pulse">
-                  <Image
-                    src="/maintenance/blood.png"
-                    alt="Blood Drop"
-                    width={imageSizes[size].width}
-                    height={imageSizes[size].height}
-                    className="object-contain"
-                    priority
-                  />
-                </div>
-              ) : (
-                /* Heart symbol representing donation/care */
-                <div className="text-red-500 animate-pulse">
-                  <svg 
-                    className={`${size === 'sm' ? 'w-6 h-6' : size === 'md' ? 'w-8 h-8' : size === 'lg' ? 'w-12 h-12' : 'w-16 h-16'}`}
-                    fill="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                  </svg>
-                </div>
-              )}
-              
-              {/* Pulsing effect */}
-              <div className="absolute inset-0 rounded-full bg-red-500 opacity-20 animate-ping"></div>
+      {/* Samarpan Logo with Animation - Only show if using blood image (Maintenance) */}
+      {showIcon && useBloodImage && (
+        <div className="relative">
+          <div className={`${sizeClasses[size]} relative flex items-center justify-center`}>
+            {/* Blood drop image for maintenance page */}
+            <div className="animate-pulse">
+              <Image
+                src="/maintenance/blood.png"
+                alt="Blood Drop"
+                width={imageSizes[size].width}
+                height={imageSizes[size].height}
+                className="object-contain"
+                priority
+              />
             </div>
+            
+            {/* Pulsing effect */}
+            <div className="absolute inset-0 rounded-full bg-red-500 opacity-20 animate-ping"></div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Loading text with animated dots */}
       {showText && (
@@ -119,15 +101,17 @@ export function SamarpanLoader({
 // Fullscreen loader variant
 export function SamarpanFullscreenLoader({ 
   message = "Loading...", 
-  useBloodImage = false 
+  useBloodImage = false,
+  showIcon = true
 }: { 
   message?: string
-  useBloodImage?: boolean 
+  useBloodImage?: boolean
+  showIcon?: boolean
 }) {
   return (
     <div className="fixed inset-0 bg-white dark:bg-gray-900 flex items-center justify-center z-50">
       <div className="text-center space-y-6">
-        <SamarpanLoader size="xl" showText={true} useBloodImage={useBloodImage} />
+        <SamarpanLoader size="xl" showText={true} useBloodImage={useBloodImage} showIcon={showIcon} />
         <p className="text-gray-600 dark:text-gray-400 text-lg max-w-md mx-auto">
           {message}
         </p>

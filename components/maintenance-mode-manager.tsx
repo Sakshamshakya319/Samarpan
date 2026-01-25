@@ -285,7 +285,7 @@ export function MaintenanceModeManager() {
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5" />
               <div>
-                <h4 className="font-medium text-red-800">Maintenance Mode is Active</h4>
+                <h4 className="font-heading font-medium text-red-800">Maintenance Mode is Active</h4>
                 <p className="text-sm text-red-700 mt-1">
                   All users (except admins and allowed IPs) are currently being redirected to the maintenance page. 
                   The website is effectively offline for regular users.

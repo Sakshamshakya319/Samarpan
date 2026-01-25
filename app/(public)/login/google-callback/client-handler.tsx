@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAppDispatch } from "@/lib/hooks"
 import { loginSuccess, loginFailure } from "@/lib/slices/authSlice"
+import { setUser } from "@/lib/slices/userSlice"
 import { Card, CardContent } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
 
@@ -17,70 +18,48 @@ export default function GoogleCallbackClient() {
   useEffect(() => {
     const processCallback = async () => {
       try {
-        const code = searchParams.get("code")
-        const state = searchParams.get("state")
+        const token = searchParams.get("token")
+        const userParam = searchParams.get("user")
         const errorParam = searchParams.get("error")
 
         console.log("[Google Callback] Processing callback...")
 
         if (errorParam) {
-          const errorDescription = searchParams.get("error_description") || errorParam
+          const errorDescription = decodeURIComponent(errorParam)
           console.error("[Google Callback] OAuth error:", errorDescription)
           setError(errorDescription)
           setIsProcessing(false)
           return
         }
 
-        if (!code) {
-          console.error("[Google Callback] No authorization code received")
-          setError("No authorization code received")
+        if (!token || !userParam) {
+          console.error("[Google Callback] Missing authentication data")
+          setError("Missing authentication data")
           setIsProcessing(false)
           return
         }
 
-        // Verify state for CSRF protection
-        const savedState = sessionStorage.getItem("google_oauth_state")
-        if (state !== savedState) {
-          console.error("[Google Callback] State mismatch - possible CSRF attack")
-          setError("Invalid state parameter")
-          setIsProcessing(false)
-          return
-        }
+        console.log("[Google Callback] Authentication data received, processing...")
 
-        console.log("[Google Callback] Authorization code received, exchanging for tokens...")
+        // Parse user data
+        const user = JSON.parse(decodeURIComponent(userParam))
 
-        // Exchange authorization code for tokens on backend
-        const response = await fetch("/api/auth/google/callback", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ code }),
-        })
-
-        console.log("[Google Callback] Backend response status:", response.status)
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || "Authentication failed")
-        }
-
-        const data = await response.json()
-        console.log("[Google Callback] Authentication successful")
+        // Store in localStorage
+        localStorage.setItem("token", token)
+        localStorage.setItem("user", JSON.stringify(user))
 
         // Update Redux state
+        dispatch(setUser(user))
         dispatch(
           loginSuccess({
-            user: data.user,
-            token: data.token,
+            user: user,
+            token: token,
           }),
         )
 
-        // Clear session storage
-        sessionStorage.removeItem("google_oauth_state")
-
+        console.log("[Google Callback] Authentication successful, redirecting to dashboard...")
+        
         // Redirect to dashboard
-        console.log("[Google Callback] Redirecting to dashboard...")
         router.replace("/dashboard")
       } catch (err) {
         console.error("[Google Callback] Error:", err)

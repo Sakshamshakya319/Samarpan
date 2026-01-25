@@ -10,6 +10,7 @@ import {
   CarouselNext,
 } from "@/components/ui/carousel"
 import { BlogCarousel } from "@/components/blog-carousel"
+import { NGOOnboardingBanner } from "@/components/ngo-onboarding-banner"
 
 export default function Home() {
   return (
@@ -28,7 +29,7 @@ export default function Home() {
                 Save Lives, Make a Difference
               </span>
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 text-balance">
+            <h1 className="font-heading text-5xl md:text-6xl font-bold mb-6 text-balance">
               Connect Donors,{" "}
               <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Save Lives</span>
             </h1>
@@ -56,7 +57,7 @@ export default function Home() {
       {/* <section className="py-20 md:py-32 bg-secondary/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">Our Impact in Blood Donation</h2>
+            <h2 className="font-heading text-4xl font-bold mb-4">Our Impact in Blood Donation</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               From donors to patients, see how Samarpan is making a difference in saving lives across the community.
             </p>
@@ -114,7 +115,7 @@ export default function Home() {
       <section className="py-20 md:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Why Choose Samarpan?</h2>
+            <h2 className="font-heading text-4xl font-bold mb-4">Why Choose Samarpan?</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               We make it easy to find donors and save lives with our innovative platform.
             </p>
@@ -143,7 +144,7 @@ export default function Home() {
                 className="p-8 rounded-lg border border-border bg-card hover:border-primary/50 transition"
               >
                 <feature.icon className="w-12 h-12 text-primary mb-4" />
-                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                <h3 className="font-heading text-xl font-semibold mb-2">{feature.title}</h3>
                 <p className="text-muted-foreground">{feature.description}</p>
               </div>
             ))}
@@ -154,10 +155,13 @@ export default function Home() {
       {/* Blog Carousel Section */}
       <BlogCarousel />
 
+      {/* NGO Onboarding Section */}
+      <NGOOnboardingBanner />
+
       {/* CTA Section */}
       <section className="py-20 md:py-32 bg-primary/5 border-y border-border">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl font-bold mb-6">Ready to Make a Difference?</h2>
+          <h2 className="font-heading text-4xl font-bold mb-6">Ready to Make a Difference?</h2>
           <p className="text-lg text-muted-foreground mb-8">Join our community of donors and help save lives today.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/signup">

@@ -7,6 +7,9 @@
 pnpm-lock.yaml
 yarn.lock
 
+# Firebase service account (keep private!)
+*firebase-adminsdk*.json
+samarpan-project-firebase-adminsdk.json
 # next.js
 /.next/
 /out/

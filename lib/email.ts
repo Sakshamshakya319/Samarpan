@@ -1,19 +1,19 @@
-import nodemailer from "nodemailer"
-import type SMTPTransport from "nodemailer/lib/smtp-transport"
+import Mailjet from "node-mailjet"
 
-// Create SMTP transporter
-let transporter: nodemailer.Transporter | null = null
-let transporterReady = false
+// Create Mailjet client
+let mailjetClient: Mailjet.Client | null = null
 
-// Validate SMTP configuration
-function validateSMTPConfig(): { valid: boolean; errors: string[] } {
+// Validate Mailjet configuration
+function validateMailjetConfig(): { valid: boolean; errors: string[] } {
   const errors: string[] = []
 
-  if (!process.env.SMTP_HOST) errors.push("SMTP_HOST not configured")
-  if (!process.env.SMTP_PORT) errors.push("SMTP_PORT not configured")
-  if (!process.env.SMTP_USER) errors.push("SMTP_USER not configured")
-  if (!process.env.SMTP_PASS) errors.push("SMTP_PASS not configured")
-  if (!process.env.SMTP_FROM) errors.push("SMTP_FROM not configured")
+  const apiKey = process.env.MAILJET_API_KEY || process.env.SMTP_USER
+  const apiSecret = process.env.MAILJET_SECRET_KEY || process.env.SMTP_PASS
+  const senderEmail = process.env.MAILJET_SENDER_EMAIL || process.env.SMTP_FROM
+
+  if (!apiKey) errors.push("Mailjet API Key (MAILJET_API_KEY or SMTP_USER) not configured")
+  if (!apiSecret) errors.push("Mailjet Secret Key (MAILJET_SECRET_KEY or SMTP_PASS) not configured")
+  if (!senderEmail) errors.push("Sender Email (MAILJET_SENDER_EMAIL or SMTP_FROM) not configured")
 
   return {
     valid: errors.length === 0,
@@ -21,65 +21,29 @@ function validateSMTPConfig(): { valid: boolean; errors: string[] } {
   }
 }
 
-async function getTransporter(): Promise<nodemailer.Transporter | null> {
-  if (transporter && transporterReady) {
-    return transporter
+function getMailjetClient(): Mailjet.Client | null {
+  if (mailjetClient) {
+    return mailjetClient
   }
 
   try {
-    const config = validateSMTPConfig()
+    const config = validateMailjetConfig()
     if (!config.valid) {
-      console.error("[Email] ❌ SMTP Configuration errors:")
+      console.error("[Email] ❌ Mailjet Configuration errors:")
       config.errors.forEach((err) => console.error(`[Email]    - ${err}`))
       return null
     }
 
-    const port = parseInt(process.env.SMTP_PORT || "587")
+    const apiKey = process.env.MAILJET_API_KEY || process.env.SMTP_USER
+    const apiSecret = process.env.MAILJET_SECRET_KEY || process.env.SMTP_PASS
 
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: port,
-      secure: port === 465, // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      // Add connection timeout
-      connectionTimeout: 10000, // 10 seconds
-      socketTimeout: 10000, // 10 seconds
-      // Add TLS configuration for better compatibility
-      tls: {
-        rejectUnauthorized: false,
-      },
-    })
+    // Initialize Mailjet client
+    mailjetClient = Mailjet.apiConnect(apiKey!, apiSecret!)
 
-    // Verify connection (only once, don't repeat on every email)
-    if (!transporterReady) {
-      console.log("[Email] 🔍 Verifying SMTP connection...")
-      await transporter.verify()
-      transporterReady = true
-      console.log("[Email] ✅ SMTP connection verified successfully")
-    }
-
-    return transporter
+    return mailjetClient
   } catch (error) {
-    console.error("[Email] ❌ Failed to initialize transporter:", error)
-    transporter = null
-    transporterReady = false
-
-    if (error instanceof Error) {
-      // Provide specific error guidance
-      if (error.message.includes("535") || error.message.includes("Authentication failed")) {
-        console.error("[Email] 🔑 SendGrid authentication failed. Check your API key in SMTP_PASS")
-        console.error("[Email] 📝 Update SMTP_PASS in .env.local with a valid SendGrid API key")
-        console.error("[Email] 🔗 Get a new key at: https://app.sendgrid.com/settings/api_keys")
-      } else if (error.message.includes("ECONNREFUSED")) {
-        console.error("[Email] 🌐 Cannot connect to SMTP server. Check SMTP_HOST and SMTP_PORT")
-      } else if (error.message.includes("ETIMEDOUT")) {
-        console.error("[Email] ⏱️  Connection timeout. SMTP server may be unreachable")
-      }
-    }
-
+    console.error("[Email] ❌ Failed to initialize Mailjet client:", error)
+    mailjetClient = null
     return null
   }
 }
@@ -90,6 +54,11 @@ interface EmailOptions {
   html: string
   text?: string
   replyTo?: string
+  attachments?: {
+    filename: string
+    content: Buffer | string
+    contentType: string
+  }[]
 }
 
 export async function sendEmail(options: EmailOptions, retryCount = 0): Promise<boolean> {
@@ -97,102 +66,108 @@ export async function sendEmail(options: EmailOptions, retryCount = 0): Promise<
   const RETRY_DELAY = 1000 // 1 second
 
   try {
-    // In development without valid SMTP, log to console
+    // In development without valid credentials, log to console
     const isDevelopment = process.env.NODE_ENV !== "production"
-    const config = validateSMTPConfig()
+    const config = validateMailjetConfig()
 
     if (!config.valid) {
       if (isDevelopment) {
-        console.warn("[Email] ⚠️  SMTP not fully configured. Email logged to console (development mode)")
+        console.warn("[Email] ⚠️  Mailjet not fully configured. Email logged to console (development mode)")
         console.log(`[Email] TO: ${Array.isArray(options.to) ? options.to.join(", ") : options.to}`)
         console.log(`[Email] SUBJECT: ${options.subject}`)
         console.log(`[Email] HTML: ${options.html.substring(0, 200)}...`)
+        if (options.attachments?.length) {
+          console.log(`[Email] ATTACHMENTS: ${options.attachments.map(a => a.filename).join(", ")}`)
+        }
         console.warn("[Email] Configuration issues:")
         config.errors.forEach((err) => console.warn(`[Email]    - ${err}`))
         return true // Return true in dev mode to prevent user-facing errors
       }
-      console.error("[Email] ❌ SMTP configuration incomplete in production")
+      console.error("[Email] ❌ Mailjet configuration incomplete in production")
       return false
     }
 
-    const transporter = await getTransporter()
-    if (!transporter) {
-      console.error("[Email] ❌ Failed to get email transporter")
+    const client = getMailjetClient()
+    if (!client) {
+      console.error("[Email] ❌ Failed to get Mailjet client")
       return false
     }
 
-    // Parse SMTP_FROM - handle both "Name <email>" and plain email formats
-    const smtpFrom = process.env.SMTP_FROM || "Samarpan <noreply@samarpan.com>"
-    const recipientEmails = Array.isArray(options.to) ? options.to.join(", ") : options.to
+    // Parse Sender Email - handle both "Name <email>" and plain email formats
+    const sender = process.env.MAILJET_SENDER_EMAIL || process.env.SMTP_FROM || "Samarpan <noreply@samarpan.com>"
+    
+    // Extract name and email from "Name <email>" format
+    const fromMatch = sender.match(/(.*)<(.*)>/)
+    const fromName = fromMatch ? fromMatch[1].trim() : "Samarpan"
+    const fromEmail = fromMatch ? fromMatch[2].trim() : sender
 
-    // Validate recipient emails
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    const emails = Array.isArray(options.to) ? options.to : [options.to]
-    for (const email of emails) {
-      if (!emailRegex.test(email)) {
-        console.error(`[Email] ❌ Invalid recipient email: ${email}`)
-        return false
+    // Prepare recipients
+    const toAddresses = Array.isArray(options.to) ? options.to : [options.to]
+    const recipients = toAddresses.map(email => ({
+      Email: email,
+      Name: email.split("@")[0] // Simple name extraction
+    }))
+
+    // Prepare attachments
+    const attachments = options.attachments?.map(att => ({
+      ContentType: att.contentType,
+      Filename: att.filename,
+      Base64Content: Buffer.isBuffer(att.content) 
+        ? att.content.toString('base64') 
+        : att.content
+    }))
+
+    // Prepare message
+    const messageData: any = {
+      From: {
+        Email: fromEmail,
+        Name: fromName
+      },
+      To: recipients,
+      Subject: options.subject,
+      TextPart: options.text || options.html.replace(/<[^>]*>/g, ""),
+      HTMLPart: options.html,
+      CustomID: "SamarpanApp",
+      Headers: {
+        "Reply-To": options.replyTo || fromEmail
       }
     }
 
-    const mailOptions: SMTPTransport.MailOptions = {
-      from: smtpFrom,
-      to: recipientEmails,
-      subject: options.subject,
-      html: options.html,
-      text: options.text || options.html.replace(/<[^>]*>/g, ""),
-      // Add headers for better deliverability
-      headers: {
-        "X-Mailer": "Samarpan/1.0",
-        "X-Priority": "3",
-        "Importance": "normal",
-        "List-Unsubscribe": "<mailto:noreply@samarpan.com>",
-        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-      },
-      // Add replyTo if specified
-      ...(options.replyTo && { replyTo: options.replyTo }),
+    if (attachments && attachments.length > 0) {
+      messageData.Attachments = attachments
     }
 
-    console.log(`[Email] 📧 Sending email to ${recipientEmails} (Subject: "${options.subject}")`)
+    const request = client.post("send", { 'version': 'v3.1' }).request({
+      Messages: [messageData]
+    })
 
-    // Send email with error handling
-    const result = await transporter.sendMail(mailOptions)
+    console.log(`[Email] 📧 Sending email to ${toAddresses.join(", ")} (Subject: "${options.subject}")`)
 
-    console.log(`[Email] ✅ Email sent successfully`)
-    console.log(`[Email]    - MessageID: ${result.messageId}`)
-    console.log(`[Email]    - To: ${recipientEmails}`)
+    // Send email
+    const result = await request
+    
+    // Log success
+    const responseData = result.body as any
+    const messageStatus = responseData.Messages[0].Status
+    
+    if (messageStatus === "success") {
+        console.log(`[Email] ✅ Email sent successfully`)
+        console.log(`[Email]    - To: ${toAddresses.join(", ")}`)
+        return true
+    } else {
+        console.error(`[Email] ❌ Mailjet reported issue:`, responseData.Messages[0])
+        return false
+    }
 
-    return true
   } catch (error) {
     console.error(`[Email] ❌ Error sending email (Attempt ${retryCount + 1}/${MAX_RETRIES + 1}):`, error)
 
     // Retry logic for transient errors
     if (retryCount < MAX_RETRIES) {
-      const isTransientError =
-        error instanceof Error &&
-        (error.message.includes("ETIMEDOUT") ||
-          error.message.includes("ECONNREFUSED") ||
-          error.message.includes("EHOSTUNREACH") ||
-          error.message.includes("ENOTFOUND"))
-
-      if (isTransientError) {
-        console.log(`[Email] 🔄 Retrying in ${RETRY_DELAY}ms...`)
-        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY))
-        return sendEmail(options, retryCount + 1)
-      }
-    }
-
-    // Log specific error types for debugging
-    if (error instanceof Error) {
-      if (error.message.includes("535") || error.message.includes("Authentication failed")) {
-        console.error("[Email] 🔑 Authentication error: Invalid SendGrid API key")
-      } else if (error.message.includes("Invalid email")) {
-        console.error("[Email] ✉️  Invalid email format detected")
-      } else if (error.message.includes("ECONNREFUSED")) {
-        console.error("[Email] 🌐 Connection refused: SMTP server unreachable")
-      } else if (error.message.includes("ETIMEDOUT")) {
-        console.error("[Email] ⏱️  Connection timeout")
-      }
+      // Basic retry for network errors
+      console.log(`[Email] 🔄 Retrying in ${RETRY_DELAY}ms...`)
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY))
+      return sendEmail(options, retryCount + 1)
     }
 
     return false
@@ -491,29 +466,367 @@ export function generatePasswordResetEmailHTML(data: {
 
           <!-- CTA -->
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${data.resetLink}" style="background: #dc2626; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px; border: 1px solid #dc2626;">
+            <a href="${escapedResetLink}" style="background: #dc2626; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px; border: 1px solid #dc2626;">
               Reset Password
             </a>
           </div>
 
-          <!-- Alternative Link Section -->
-          <div style="background: #f3f4f6; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
-            <p style="color: #6b7280; font-size: 12px; margin: 0 0 8px 0; font-weight: 600;">If the button doesn't work, copy and paste this link:</p>
-            <p style="color: #374151; font-size: 12px; word-break: break-all; margin: 0; font-family: monospace; background: white; padding: 10px; border-radius: 4px; overflow-wrap: break-word;">${escapedResetLink}</p>
-          </div>
-
           <!-- Security Notice -->
-          <div style="background: #fef3c7; padding: 12px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
-            <p style="color: #78350f; font-size: 12px; margin: 0; font-weight: 600;">🔒 Security Tip: Never share this link with anyone. Samarpan staff will never ask for your reset link.</p>
+          <div style="background: #eff6ff; padding: 12px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+            <p style="color: #1e40af; font-size: 12px; margin: 0; font-weight: 600;">🔒 Security: Never share this link with anyone.</p>
           </div>
 
           <!-- Footer -->
           <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; text-align: center; color: #6b7280; font-size: 12px;">
             <p style="margin: 5px 0; font-weight: 600;">Samarpan Blood Donation Network</p>
             <p style="margin: 5px 0;">This is an automated email. Please do not reply directly.</p>
-            <p style="margin: 8px 0 0 0; font-size: 11px;">
-              © 2024 Samarpan. All rights reserved.
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+// Generate NGO registration confirmation email
+export function generateNGORegistrationEmailHTML({
+  ngoName,
+  contactPersonName,
+}: {
+  ngoName: string
+  contactPersonName: string
+}): string {
+  const escapedNgoName = escapeHtml(ngoName)
+  const escapedContactName = escapeHtml(contactPersonName)
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>NGO Registration Received - Samarpan</title>
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; background: #f9fafb;">
+        <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #dc2626; margin: 0; font-size: 28px; font-weight: 700;">🏢 NGO Registration Received</h1>
+          </div>
+
+          <!-- Greeting -->
+          <p style="color: #6b7280; margin-bottom: 20px; font-size: 16px;">Dear ${escapedContactName},</p>
+
+          <!-- Main Content -->
+          <div style="background: #f3f4f6; padding: 20px; border-radius: 6px; margin-bottom: 20px;">
+            <p style="color: #374151; margin: 0 0 15px 0; font-size: 14px;">
+              Thank you for registering <strong>${escapedNgoName}</strong> with Samarpan! We have received your application and all required documents.
             </p>
+          </div>
+
+          <!-- Process Steps -->
+          <div style="background: #fef3c7; padding: 20px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
+            <h3 style="color: #92400e; margin-top: 0; font-size: 16px;">📋 What happens next?</h3>
+            <ol style="color: #92400e; font-size: 14px; margin: 0; padding-left: 20px;">
+              <li style="margin-bottom: 8px;">Our admin team will review your application and documents</li>
+              <li style="margin-bottom: 8px;">We will verify all submitted information</li>
+              <li style="margin-bottom: 8px;">You will receive an email notification about the approval status</li>
+              <li style="margin-bottom: 0;">Once approved, you can login and start managing blood donation activities</li>
+            </ol>
+          </div>
+
+          <!-- Timeline -->
+          <div style="background: #dbeafe; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+            <p style="color: #1e40af; font-size: 14px; margin: 0; font-weight: 600;">
+              ⏱️ Review Timeline: Applications are typically reviewed within 3-5 business days.
+            </p>
+          </div>
+
+          <!-- Support -->
+          <div style="text-align: center; margin: 30px 0;">
+            <p style="color: #6b7280; font-size: 14px; margin-bottom: 15px;">
+              If you have any questions, please contact our support team.
+            </p>
+            <p style="color: #374151; font-size: 14px; font-weight: 600;">
+              Thank you for joining our mission to save lives through blood donation!
+            </p>
+          </div>
+
+          <!-- Footer -->
+          <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; text-align: center; color: #6b7280; font-size: 12px;">
+            <p style="margin: 5px 0; font-weight: 600;">Samarpan Blood Donation Network</p>
+            <p style="margin: 5px 0;">Contact: support@samarpan.com</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+// Generate NGO approval email
+export function generateNGOApprovalEmailHTML({
+  ngoName,
+  contactPersonName,
+  loginEmail,
+}: {
+  ngoName: string
+  contactPersonName: string
+  loginEmail: string
+}): string {
+  const escapedNgoName = escapeHtml(ngoName)
+  const escapedContactName = escapeHtml(contactPersonName)
+  const escapedLoginEmail = escapeHtml(loginEmail)
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>NGO Application Approved - Samarpan</title>
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; background: #f9fafb;">
+        <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #16a34a; margin: 0; font-size: 28px; font-weight: 700;">🎉 Congratulations!</h1>
+            <p style="color: #16a34a; font-size: 16px; margin: 10px 0 0 0; font-weight: 600;">Your NGO has been approved</p>
+          </div>
+
+          <!-- Greeting -->
+          <p style="color: #6b7280; margin-bottom: 20px; font-size: 16px;">Dear ${escapedContactName},</p>
+
+          <!-- Approval Notice -->
+          <div style="background: #dcfce7; padding: 20px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #16a34a;">
+            <h3 style="color: #15803d; margin-top: 0; font-size: 18px;">✅ ${escapedNgoName} has been successfully verified!</h3>
+            <p style="color: #15803d; margin: 0; font-size: 14px;">
+              Your NGO application has been reviewed and approved by our team. Welcome to the Samarpan family!
+            </p>
+          </div>
+
+          <!-- Login Information -->
+          <div style="background: #dbeafe; padding: 20px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+            <h3 style="color: #1e40af; margin-top: 0; font-size: 16px;">🔐 Login Information</h3>
+            <p style="color: #1e40af; margin: 8px 0; font-size: 14px;">
+              <strong>Login Email:</strong> ${escapedLoginEmail}
+            </p>
+            <p style="color: #1e40af; margin: 8px 0; font-size: 14px;">
+              <strong>Password:</strong> Use the password you created during registration
+            </p>
+            <p style="color: #1e40af; margin: 8px 0; font-size: 14px;">
+              <strong>Login URL:</strong> <a href="${process.env.NEXT_PUBLIC_APP_URL}/ngo/login" style="color: #1e40af; text-decoration: underline;">NGO Login Portal</a>
+            </p>
+          </div>
+
+          <!-- Features -->
+          <div style="margin-bottom: 20px;">
+            <h3 style="color: #1f2937; font-size: 16px; margin-top: 0; margin-bottom: 12px;">🚀 What you can do now:</h3>
+            <ul style="color: #374151; font-size: 14px; padding-left: 20px; margin: 0; line-height: 1.8;">
+              <li>Login to your NGO dashboard</li>
+              <li>Organize blood donation camps</li>
+              <li>Manage donor registrations</li>
+              <li>Track donation activities</li>
+              <li>Connect with blood banks and hospitals</li>
+            </ul>
+          </div>
+
+          <!-- CTA -->
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/ngo/login" style="background: #dc2626; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px; border: 1px solid #dc2626;">
+              Login to Dashboard
+            </a>
+          </div>
+
+          <!-- Thank You -->
+          <div style="text-align: center; margin: 30px 0;">
+            <p style="color: #374151; font-size: 14px; font-weight: 600;">
+              Thank you for partnering with us in our mission to save lives through blood donation!
+            </p>
+          </div>
+
+          <!-- Footer -->
+          <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; text-align: center; color: #6b7280; font-size: 12px;">
+            <p style="margin: 5px 0; font-weight: 600;">Samarpan Blood Donation Network</p>
+            <p style="margin: 5px 0;">Contact: support@samarpan.com</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+// Generate NGO rejection email
+export function generateNGORejectionEmailHTML({
+  ngoName,
+  contactPersonName,
+  rejectionReason,
+}: {
+  ngoName: string
+  contactPersonName: string
+  rejectionReason: string
+}): string {
+  const escapedNgoName = escapeHtml(ngoName)
+  const escapedContactName = escapeHtml(contactPersonName)
+  const escapedReason = escapeHtml(rejectionReason)
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>NGO Application Status Update - Samarpan</title>
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f8fafc;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
+          
+          <!-- Header with Samarpan Branding -->
+          <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; padding: 30px 30px 40px 30px; text-align: center; position: relative;">
+            <div style="background: rgba(255, 255, 255, 0.1); width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 20px auto; display: flex; align-items: center; justify-content: center;">
+              <div style="font-size: 36px; font-weight: bold;">🩸</div>
+            </div>
+            <h1 style="margin: 0; font-size: 28px; font-weight: 700;">Samarpan</h1>
+            <p style="margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Blood Donation Network</p>
+            <div style="position: absolute; top: 20px; right: 20px; background: rgba(255, 255, 255, 0.2); padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600;">
+              Application Update
+            </div>
+          </div>
+
+          <!-- Main Content -->
+          <div style="padding: 40px 30px;">
+            
+            <!-- Greeting -->
+            <div style="margin-bottom: 30px;">
+              <h2 style="color: #1f2937; margin: 0 0 8px 0; font-size: 24px; font-weight: 600;">Dear ${escapedContactName},</h2>
+              <p style="color: #6b7280; margin: 0; font-size: 16px;">
+                Thank you for your interest in partnering with Samarpan as a verified NGO.
+              </p>
+            </div>
+
+            <!-- Application Status -->
+            <div style="background: #fef2f2; border: 2px solid #fecaca; border-radius: 12px; padding: 24px; margin-bottom: 30px;">
+              <div style="display: flex; align-items: flex-start; gap: 16px;">
+                <div style="background: #ef4444; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+                  ⚠️
+                </div>
+                <div style="flex: 1;">
+                  <h3 style="color: #dc2626; margin: 0 0 12px 0; font-size: 18px; font-weight: 600;">Application Status Update</h3>
+                  <p style="color: #dc2626; margin: 0 0 16px 0; font-size: 15px; line-height: 1.5;">
+                    After careful review of your application for <strong>${escapedNgoName}</strong>, we regret to inform you that we are unable to approve your NGO registration at this time.
+                  </p>
+                  <div style="background: white; border: 1px solid #fca5a5; border-radius: 8px; padding: 16px;">
+                    <h4 style="color: #991b1b; margin: 0 0 8px 0; font-size: 14px; font-weight: 600;">Reason for Rejection:</h4>
+                    <p style="color: #991b1b; margin: 0; font-size: 14px; line-height: 1.4;">${escapedReason}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Next Steps -->
+            <div style="background: #eff6ff; border: 2px solid #bfdbfe; border-radius: 12px; padding: 24px; margin-bottom: 30px;">
+              <div style="display: flex; align-items: flex-start; gap: 16px;">
+                <div style="background: #3b82f6; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+                  💡
+                </div>
+                <div style="flex: 1;">
+                  <h3 style="color: #1e40af; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;">What You Can Do Next</h3>
+                  
+                  <div style="margin-bottom: 20px;">
+                    <h4 style="color: #1e40af; margin: 0 0 8px 0; font-size: 15px; font-weight: 600;">📞 Contact Our Support Team</h4>
+                    <p style="color: #1e40af; margin: 0 0 12px 0; font-size: 14px; line-height: 1.5;">
+                      If you believe this decision was made in error or need clarification on the requirements:
+                    </p>
+                    <div style="background: white; border-radius: 8px; padding: 16px; border: 1px solid #93c5fd;">
+                      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                        <span style="color: #1e40af; font-size: 16px;">📧</span>
+                        <span style="color: #1e40af; font-weight: 600; font-size: 14px;">support@samarpan.com</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="color: #1e40af; font-size: 16px;">📞</span>
+                        <span style="color: #1e40af; font-weight: 600; font-size: 14px;">+91-XXXX-XXXX-XX (Mon-Fri, 9 AM - 6 PM)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 style="color: #1e40af; margin: 0 0 8px 0; font-size: 15px; font-weight: 600;">🔄 Resubmit Your Application</h4>
+                    <p style="color: #1e40af; margin: 0; font-size: 14px; line-height: 1.5;">
+                      You may resubmit your application after addressing the mentioned concerns. Please ensure all documents meet our requirements before resubmission.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Requirements Reminder -->
+            <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 30px;">
+              <h3 style="color: #374151; margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">📋 Quick Requirements Reminder</h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 13px;">
+                <div>
+                  <h4 style="color: #6b7280; margin: 0 0 8px 0; font-weight: 600;">Required Documents:</h4>
+                  <ul style="color: #6b7280; margin: 0; padding-left: 16px; line-height: 1.6;">
+                    <li>NGO Registration Certificate</li>
+                    <li>Blood Bank/Donation License</li>
+                    <li>PAN Card of NGO</li>
+                    <li>Address Proof</li>
+                    <li>ID Proof of Authorized Person</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 style="color: #6b7280; margin: 0 0 8px 0; font-weight: 600;">Document Guidelines:</h4>
+                  <ul style="color: #6b7280; margin: 0; padding-left: 16px; line-height: 1.6;">
+                    <li>Clear, readable scans/photos</li>
+                    <li>Valid and up-to-date documents</li>
+                    <li>File size under 5MB</li>
+                    <li>PDF, JPG, or PNG format</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- Closing Message -->
+            <div style="text-align: center; margin-bottom: 20px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">
+                We appreciate your commitment to blood donation and community service. We hope to work with you in the future once all requirements are met.
+              </p>
+              <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                Together, we can save more lives through organized blood donation.
+              </p>
+            </div>
+
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.NEXT_PUBLIC_APP_URL}/ngo/register" style="display: inline-block; background: #dc2626; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                Resubmit Application
+              </a>
+            </div>
+          </div>
+
+          <!-- Footer with Samarpan Branding -->
+          <div style="background: #1f2937; color: #d1d5db; padding: 30px; text-align: center;">
+            <div style="margin-bottom: 20px;">
+              <h3 style="color: white; margin: 0 0 8px 0; font-size: 18px; font-weight: 600;">Samarpan Team</h3>
+              <p style="margin: 0; font-size: 14px; opacity: 0.8;">Connecting Donors, Saving Lives</p>
+            </div>
+            
+            <div style="border-top: 1px solid #374151; padding-top: 20px; margin-top: 20px;">
+              <p style="margin: 0 0 8px 0; font-size: 13px;">
+                <strong>Samarpan Blood Donation Network</strong>
+              </p>
+              <p style="margin: 0 0 8px 0; font-size: 12px; opacity: 0.7;">
+                📧 support@samarpan.com | 🌐 www.samarpan.com
+              </p>
+              <p style="margin: 0; font-size: 11px; opacity: 0.6;">
+                © 2024 Samarpan. All rights reserved. | This is an automated email, please do not reply directly.
+              </p>
+            </div>
           </div>
         </div>
       </div>

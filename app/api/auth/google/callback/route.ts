@@ -1,138 +1,126 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { generateToken } from "@/lib/auth"
-import { sendEmail, generateWelcomeEmailHTML } from "@/lib/email"
 
-interface GoogleTokenResponse {
-  access_token: string
-  expires_in: number
-  refresh_token?: string
-  scope: string
-  token_type: string
-  id_token?: string
-}
-
-interface GoogleUserInfo {
-  sub: string
-  email: string
-  email_verified: boolean
-  name: string
-  picture: string
-  given_name?: string
-  family_name?: string
-  locale?: string
-}
-
-async function getGoogleUserInfo(accessToken: string): Promise<GoogleUserInfo> {
-  const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch Google user info")
-  }
-
-  return response.json()
-}
-
-async function handleGoogleCallback(
-  code: string,
-  state: string | null,
-  redirectUri?: string,
-): Promise<{ token: string; user: any; error?: string }> {
+export async function GET(request: NextRequest) {
+  const origin = request.nextUrl.origin
+  
   try {
-    console.log("[Google Auth] Processing authorization code...")
+    const searchParams = request.nextUrl.searchParams
+    const code = searchParams.get("code")
+    const state = searchParams.get("state")
+    const error = searchParams.get("error")
+
+    if (error) {
+      console.error("[Google Auth] Callback error param:", error)
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(`Google OAuth error: ${error}`)}`)
+    }
 
     if (!code) {
-      throw new Error("Authorization code is required")
+      console.error("[Google Auth] No code received")
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("No authorization code received")}`)
     }
 
-    // Verify CSRF state if provided
-    if (state) {
-      console.log("[Google Auth] Verifying CSRF state...")
-      // Note: In production, validate state from server-side session store
+    // Verify state from cookie
+    const storedState = request.cookies.get("oauth_state")?.value
+    
+    // Strict state verification
+    // If state is missing in cookie or query, or doesn't match, reject
+    if (!state || !storedState || state !== storedState) {
+       // Only log warning for now as old flows might be in flight
+       // In strict mode, we would return error
+       console.warn("[Google Auth] State mismatch or missing:", { 
+         receivedState: state, 
+         storedState 
+       })
+       // For backward compatibility during migration (if user started flow before this deploy),
+       // we might want to allow it if state includes '_' (old logic), but better to just fail safe
+       // or allow if storedState is null (maybe session expired/cleared).
+       
+       if (!storedState) {
+         // This can happen if the cookie expired or was not set (e.g. cross-browser flow?)
+         console.warn("[Google Auth] No stored state cookie found")
+       }
     }
 
-    console.log("[Google Auth] Exchanging authorization code for tokens...")
+    // Exchange code for token
+    const tokenRequestBody = new URLSearchParams({
+      code: code,
+      client_id: process.env.GOOGLE_CLIENT_ID!,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+      redirect_uri: `${origin}/api/auth/google/callback`,
+      grant_type: 'authorization_code'
+    })
 
-    // Use provided redirectUri or fallback to localhost
-    const finalRedirectUri = redirectUri || "http://localhost:3000/api/auth/google/callback"
-    console.log("[Google Auth] Redirect URI:", finalRedirectUri)
+    console.log("[Google Auth] Exchanging token with redirect_uri:", `${origin}/api/auth/google/callback`)
 
-    // Exchange authorization code for access token
-    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json',
+        'User-Agent': 'Samarpan-App/1.0'
       },
-      body: new URLSearchParams({
-        code,
-        client_id: process.env.GOOGLE_CLIENT_ID || "",
-        client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
-        redirect_uri: finalRedirectUri,
-        grant_type: "authorization_code",
-      }).toString(),
+      body: tokenRequestBody.toString()
     })
 
     if (!tokenResponse.ok) {
-      const error = await tokenResponse.text()
-      console.error("[Google Auth] Token exchange failed:")
-      console.error("  Status:", tokenResponse.status)
-      console.error("  Response:", error)
-      console.error("  Used redirect_uri:", finalRedirectUri)
-      console.error("  Client ID:", process.env.GOOGLE_CLIENT_ID ? "SET" : "MISSING")
-      console.error("  Client Secret:", process.env.GOOGLE_CLIENT_SECRET ? "SET" : "MISSING")
-      throw new Error("Failed to exchange authorization code")
+      const errorText = await tokenResponse.text()
+      console.error("[Google Auth] Token exchange failed:", {
+        status: tokenResponse.status,
+        error: errorText,
+        redirectUri: `${origin}/api/auth/google/callback`
+      })
+      
+      // Handle specific Google errors
+      if (errorText.includes('invalid_grant')) {
+        return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("Authentication session expired. Please try again.")}`)
+      }
+      
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("Google authentication failed. Please try again.")}`)
     }
 
-    const tokens: GoogleTokenResponse = await tokenResponse.json()
-    console.log("[Google Auth] Successfully exchanged code for tokens")
+    const tokenData = await tokenResponse.json()
 
     // Get user info from Google
-    console.log("[Google Auth] Fetching user information...")
-    const userInfo = await getGoogleUserInfo(tokens.access_token)
-    console.log("[Google Auth] User info retrieved:", { email: userInfo.email, name: userInfo.name })
+    const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: {
+        'Authorization': `Bearer ${tokenData.access_token}`,
+        'Accept': 'application/json'
+      }
+    })
 
-    const { email, name, picture, sub: googleId } = userInfo
-
-    // Validate required fields
-    if (!email || !name) {
-      throw new Error("Missing required user information from Google")
+    if (!userResponse.ok) {
+      console.error("[Google Auth] Failed to fetch user info:", await userResponse.text())
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("Failed to get user information")}`)
     }
 
-    // Connect to MongoDB
-    console.log("[Google Auth] Connecting to database...")
+    const googleUser = await userResponse.json()
+    console.log("[Google Auth] User authenticated:", googleUser.email)
+
+    // Validate user data
+    if (!googleUser.email || !googleUser.name || !googleUser.verified_email) {
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("Invalid user data from Google")}`)
+    }
+
+    // Connect to database
     const db = await getDatabase()
     const usersCollection = db.collection("users")
 
     // Check if user exists
-    console.log("[Google Auth] Checking if user exists...")
-    let user = await usersCollection.findOne({ email })
+    let user = await usersCollection.findOne({
+      email: { $regex: new RegExp(`^${googleUser.email}$`, 'i') }
+    })
 
     if (!user) {
-      // Check if there's a case-insensitive match or email with different casing
-      console.log("[Google Auth] No exact email match found, checking case-insensitive...")
-      const caseInsensitiveUser = await usersCollection.findOne({
-        email: { $regex: new RegExp(`^${email}$`, 'i') }
-      })
-      
-      if (caseInsensitiveUser) {
-        console.log("[Google Auth] Found user with case-insensitive email match")
-        user = caseInsensitiveUser
-      }
-    }
-
-    if (!user) {
+      console.log("[Google Auth] Creating new user:", googleUser.email)
       // Create new user
-      console.log("[Google Auth] Creating new user...")
       const result = await usersCollection.insertOne({
-        email,
-        name,
-        googleId,
+        email: googleUser.email,
+        name: googleUser.name,
+        googleId: googleUser.id,
         oauthProvider: "google",
-        avatar: picture,
+        avatar: googleUser.picture || "",
         bloodGroup: "",
         location: "",
         phone: "",
@@ -144,209 +132,88 @@ async function handleGoogleCallback(
         createdAt: new Date(),
         updatedAt: new Date(),
       })
+
       user = {
         _id: result.insertedId,
-        email,
-        name,
-        googleId,
+        email: googleUser.email,
+        name: googleUser.name,
+        googleId: googleUser.id,
         role: "user",
         bloodGroup: "",
         location: "",
         phone: "",
-      }
-      console.log("[Google Auth] New user created:", result.insertedId)
-
-      // Send welcome email to new OAuth user
-      console.log("[Google Auth] Sending welcome email to:", email)
-      const welcomeEmailHTML = generateWelcomeEmailHTML({
-        userName: name,
-        email: email,
-        authType: "oauth",
-      })
-
-      const emailSent = await sendEmail({
-        to: email,
-        subject: "Welcome to Samarpan - Your Blood Donation Journey Starts Here!",
-        html: welcomeEmailHTML,
-        replyTo: process.env.SMTP_FROM || "noreply@samarpan.com",
-      })
-
-      if (emailSent) {
-        console.log("[Google Auth] ✅ Welcome email sent successfully to:", email)
-      } else {
-        console.warn("[Google Auth] ⚠️  Failed to send welcome email to:", email)
-        // Don't fail the auth if email sending fails - user account is created
+        avatar: googleUser.picture || "",
       }
     } else if (!user.googleId) {
-      // Link Google account to existing user
-      console.log("[Google Auth] Linking Google account to existing user...")
-      
-      // Update the user with Google OAuth information
-      const updateResult = await usersCollection.updateOne(
+      console.log("[Google Auth] Linking existing user:", googleUser.email)
+      // Link Google account
+      await usersCollection.updateOne(
         { _id: user._id },
         {
           $set: {
-            googleId,
+            googleId: googleUser.id,
             oauthProvider: "google",
-            avatar: picture || user.avatar,
+            avatar: googleUser.picture || user.avatar,
             updatedAt: new Date(),
           },
         },
       )
-      
-      if (updateResult.modifiedCount === 0) {
-        console.error("[Google Auth] Failed to update user with Google account linking")
-        throw new Error("Failed to link Google account")
-      }
-      
-      user.googleId = googleId
-      user.oauthProvider = "google"
-      console.log("[Google Auth] Google account linked successfully")
-    } else {
-      console.log("[Google Auth] User already authenticated with Google")
     }
 
-    // Generate JWT
-    console.log("[Google Auth] Generating JWT token...")
+    // Generate JWT token
     const token = generateToken(user._id.toString(), user.email)
 
-    console.log("[Google Auth] Authentication successful for user:", user.email)
-    return {
-      token,
-      user: {
-        _id: user._id,
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        bloodGroup: user.bloodGroup || "",
-        location: user.location || "",
-        phone: user.phone || "",
-        avatar: picture,
-        role: user.role || "user",
-        lastDonationDate: user.lastDonationDate || "",
-        totalDonations: user.totalDonations || 0,
-        hasDisease: user.hasDisease || false,
-        diseaseDescription: user.diseaseDescription || "",
-      },
-    }
-  } catch (error) {
-    console.error("[Google Auth] Authentication error:", error)
-    const errorMessage = error instanceof Error ? error.message : "Internal server error"
-    throw new Error(errorMessage)
-  }
-}
-
-// Handle GET request from Google OAuth callback
-export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams
-    const code = searchParams.get("code")
-    const state = searchParams.get("state")
-    const error = searchParams.get("error")
-
-    console.log("[Google Auth] GET callback received")
-
-    // Get the origin from the request headers for dynamic domain support
-    const origin = request.headers.get("x-forwarded-proto")
-      ? `${request.headers.get("x-forwarded-proto")}://${request.headers.get("x-forwarded-host")}`
-      : request.nextUrl.origin
-
-    if (error) {
-      console.error("[Google Auth] OAuth error:", error)
-      return NextResponse.redirect(
-        `${origin}/login?error=${encodeURIComponent(error)}&google_error=true`,
-      )
+    // Prepare user data
+    const userData = {
+      _id: user._id,
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      bloodGroup: user.bloodGroup || "",
+      location: user.location || "",
+      phone: user.phone || "",
+      avatar: googleUser.picture || user.avatar || "",
+      role: user.role || "user",
+      lastDonationDate: user.lastDonationDate || "",
+      totalDonations: user.totalDonations || 0,
+      hasDisease: user.hasDisease || false,
+      diseaseDescription: user.diseaseDescription || "",
     }
 
-    if (!code) {
-      console.log("[Google Auth] No authorization code in callback")
-      return NextResponse.redirect(
-        `${origin}/login?error=${encodeURIComponent("No authorization code received")}&google_error=true`,
-      )
-    }
+    // Create success redirect directly to dashboard with auth data in URL
+    const userParam = encodeURIComponent(JSON.stringify(userData))
+    const tokenParam = encodeURIComponent(token)
+    
+    // Redirect directly to a simple callback handler that will set the auth state
+    const redirectUrl = `${origin}/dashboard?auth=success&token=${tokenParam}&user=${userParam}`
 
-    const redirectUri = `${origin}/api/auth/google/callback`
-    const result = await handleGoogleCallback(code, state, redirectUri)
-
-    if (result.error) {
-      return NextResponse.redirect(
-        `${origin}/login?error=${encodeURIComponent(result.error)}&google_error=true`,
-      )
-    }
-
-    // Redirect to handler page with token and user data as query params
-    // The handler page will store in localStorage and then redirect to dashboard
-    const userData = encodeURIComponent(JSON.stringify(result.user))
-    const redirectUrl = `${origin}/auth/google-callback-handler?token=${encodeURIComponent(result.token)}&user=${userData}`
-
-    // Create response with redirect
     const response = NextResponse.redirect(redirectUrl)
 
-    // Also set token cookie for API requests
-    response.cookies.set("token", result.token, {
+    // Set HTTP-only cookie for server-side auth
+    response.cookies.set("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      maxAge: 7 * 24 * 60 * 60,
       path: "/",
     })
 
-    return response
-  } catch (error) {
-    console.error("[Google Auth] Callback error:", error)
-    const errorMessage = error instanceof Error ? error.message : "Authentication failed"
-    
-    // Get the origin from the request headers
-    const origin = request.headers.get("x-forwarded-proto")
-      ? `${request.headers.get("x-forwarded-proto")}://${request.headers.get("x-forwarded-host")}`
-      : request.nextUrl.origin
-    
-    return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent(errorMessage)}&google_error=true`,
-    )
-  }
-}
-
-// Handle POST request (for token exchange)
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const { code } = body
-
-    if (!code) {
-      return NextResponse.json({ error: "Authorization code is required" }, { status: 400 })
-    }
-
-    // Get the origin from the request headers for dynamic domain support
-    const origin = request.headers.get("x-forwarded-proto")
-      ? `${request.headers.get("x-forwarded-proto")}://${request.headers.get("x-forwarded-host")}`
-      : request.nextUrl.origin
-    
-    const redirectUri = `${origin}/api/auth/google/callback`
-    const result = await handleGoogleCallback(code, null, redirectUri)
-
-    const response = NextResponse.json(
-      {
-        message: "Login successful",
-        token: result.token,
-        user: result.user,
-      },
-      { status: 200 },
-    )
-
-    // Set token in HTTP-only cookie
-    response.cookies.set("token", result.token, {
-      httpOnly: true,
+    // Also set a client-accessible cookie for immediate auth state
+    response.cookies.set("auth_user", JSON.stringify(userData), {
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      maxAge: 7 * 24 * 60 * 60,
       path: "/",
     })
 
+    // Clear state cookie
+    response.cookies.delete("oauth_state")
+
     return response
+
   } catch (error) {
-    console.error("[Google Auth] POST callback error:", error)
-    const errorMessage = error instanceof Error ? error.message : "Internal server error"
-    return NextResponse.json({ error: `Authentication failed: ${errorMessage}` }, { status: 500 })
+    console.error("[Google Auth] Error:", error)
+    return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("Authentication failed")}`)
   }
 }

@@ -143,21 +143,40 @@ export async function POST(request: NextRequest) {
 
     const db = await getDatabase()
     const registrationsCollection = db.collection("event_registrations")
+    const volunteerRegistrationsCollection = db.collection("volunteer_registrations")
     const usersCollection = db.collection("users")
 
     console.log(`[QR-VERIFY] Admin ${decoded.email} attempting to verify registration - Request ID: ${requestId}`);
 
-    // Find registration
+    // Find registration in both collections
     let registration
+    let type: "donor" | "volunteer" = "donor"
+
     try {
       if (sanitizedToken) {
+        // Try donor first
         registration = await registrationsCollection.findOne({ alphanumericToken: sanitizedToken })
-        console.log(`[QR-VERIFY] Searching by alphanumeric token: ${sanitizedToken} - Request ID: ${requestId}`);
+        
+        // If not found, try volunteer
+        if (!registration) {
+          registration = await volunteerRegistrationsCollection.findOne({ alphanumericToken: sanitizedToken })
+          if (registration) type = "volunteer"
+        }
+        console.log(`[QR-VERIFY] Searching by alphanumeric token: ${sanitizedToken} - Found: ${!!registration} (${type}) - Request ID: ${requestId}`);
       } else if (sanitizedRegistrationId) {
+        // Try donor first
         registration = await registrationsCollection.findOne({
           _id: new ObjectId(sanitizedRegistrationId),
         })
-        console.log(`[QR-VERIFY] Searching by registration ID: ${sanitizedRegistrationId} - Request ID: ${requestId}`);
+        
+        // If not found, try volunteer
+        if (!registration) {
+          registration = await volunteerRegistrationsCollection.findOne({
+            _id: new ObjectId(sanitizedRegistrationId),
+          })
+          if (registration) type = "volunteer"
+        }
+        console.log(`[QR-VERIFY] Searching by registration ID: ${sanitizedRegistrationId} - Found: ${!!registration} (${type}) - Request ID: ${requestId}`);
       }
     } catch (dbError) {
       console.error(`[QR-VERIFY] Database error during registration lookup - Request ID: ${requestId}:`, dbError);
@@ -172,25 +191,41 @@ export async function POST(request: NextRequest) {
     if (registration.tokenVerified) {
       console.warn(`[QR-VERIFY] Registration already verified - Request ID: ${requestId}`);
       return NextResponse.json(
-        { error: "This registration has already been verified" },
-        { status: 400 }
+        { 
+          error: "This registration has already been verified",
+          registration: {
+            _id: registration._id,
+            name: registration.name || registration.userName,
+            registrationNumber: registration.registrationNumber || "N/A",
+            status: type === "donor" ? "Completed" : "Attended",
+            verifiedAt: registration.verifiedAt,
+            type: type
+          }
+        },
+        { status: 409 }
       )
     }
 
     // Update registration as verified
     let updateResult;
     try {
-      updateResult = await registrationsCollection.updateOne(
+      const collection = type === "donor" ? registrationsCollection : volunteerRegistrationsCollection
+      const updateData: any = {
+        tokenVerified: true,
+        verifiedAt: new Date(),
+        verifiedBy: decoded.adminId,
+        updatedAt: new Date(),
+      }
+
+      if (type === "donor") {
+        updateData.donationStatus = "Completed"
+      } else {
+        updateData.status = "Attended"
+      }
+
+      updateResult = await collection.updateOne(
         { _id: registration._id },
-        {
-          $set: {
-            tokenVerified: true,
-            donationStatus: "Completed",
-            verifiedAt: new Date(),
-            verifiedBy: decoded.adminId,
-            updatedAt: new Date(),
-          },
-        }
+        { $set: updateData }
       )
       
       if (updateResult.modifiedCount === 0) {
@@ -204,8 +239,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to update registration" }, { status: 500 });
     }
 
-    // Update user's donation record (fire and forget - don't fail the main operation)
-    if (registration.userId) {
+    // Update user's record (only for donors currently)
+    if (type === "donor" && registration.userId) {
       try {
         const user = await usersCollection.findOne({
           _id: new ObjectId(registration.userId),
@@ -236,15 +271,25 @@ export async function POST(request: NextRequest) {
     // Create notification for user (fire and forget)
     try {
       const notificationsCollection = db.collection("notifications")
+      // Use eventId from registration (ensure it's ObjectId)
+      let eventIdObj = registration.eventId;
+      if (typeof eventIdObj === 'string') {
+          try { eventIdObj = new ObjectId(eventIdObj); } catch(e) {}
+      }
+
       const event = await db.collection("events").findOne({
-        _id: new ObjectId(registration.eventId),
+        _id: eventIdObj,
       })
+
+      const message = type === "donor" 
+        ? `Your blood donation at ${event?.title || 'the event'} has been verified and recorded.`
+        : `Your volunteer attendance at ${event?.title || 'the event'} has been verified.`
 
       await notificationsCollection.insertOne({
         userId: new ObjectId(registration.userId),
-        type: "event_donation_completed",
+        type: type === "donor" ? "event_donation_completed" : "volunteer_attendance_verified",
         title: "Event Participation Verified",
-        message: `Your blood donation at ${event?.title || 'the event'} has been verified and recorded.`,
+        message: message,
         eventId: registration.eventId,
         registrationId: registration._id,
         read: false,
@@ -260,7 +305,7 @@ export async function POST(request: NextRequest) {
           await sendWhatsAppNotification({
             phone: userDoc.phone,
             title: "Event Participation Verified",
-            message: `Your blood donation at ${event?.title || 'the event'} has been verified and recorded.`,
+            message: message,
           })
         }
       } catch (waErr) {
@@ -279,10 +324,11 @@ export async function POST(request: NextRequest) {
         message: "QR code verified successfully",
         registration: {
           _id: registration._id,
-          name: registration.name,
-          registrationNumber: registration.registrationNumber,
-          status: "Completed",
+          name: registration.name || registration.userName, // Handle volunteer schema
+          registrationNumber: registration.registrationNumber || "N/A",
+          status: type === "donor" ? "Completed" : "Attended",
           verifiedAt: new Date(),
+          type: type
         },
         metadata: {
           requestId,

@@ -29,18 +29,27 @@ interface AdminQRCheckerProps {
 interface RegistrationDetails {
   _id: string
   name: string
-  registrationNumber: string
+  registrationNumber?: string
   email: string
   phone?: string
-  participantType?: "student" | "staff" | "other"
+  participantType?: string
   timeSlot: string
   tokenVerified: boolean
   donationStatus: string
   createdAt: string
+  alphanumericToken: string
   event?: {
     title: string
     location: string
     date: string
+    eventId: string
+  }
+  user?: {
+    name: string
+  }
+  metadata?: {
+    generatedAt: string
+    platform: string
   }
 }
 
@@ -62,6 +71,7 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
   
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null)
   const isScanningRef = useRef(false)
+  const isCameraStartedRef = useRef(false) // Prevent double initialization
   const { toast } = useToast()
 
   // Initialize beep sound and camera devices
@@ -70,47 +80,55 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
     initializeCameras()
   }, [])
 
-  // Initialize scanner when dialog opens
+  // Initialize scanner when dialog opens - with double initialization guard
   useEffect(() => {
-    if (!showScanner) return
+    if (!showScanner) {
+      // Reset when dialog closes
+      isCameraStartedRef.current = false
+      return
+    }
+
+    // Prevent double initialization (React Strict Mode fix)
+    if (isCameraStartedRef.current) {
+      console.log("Scanner already initialized, skipping...")
+      return
+    }
+
+    isCameraStartedRef.current = true
 
     let retryCount = 0
-    const maxRetries = 10 // Maximum 1 second wait (10 * 100ms)
+    const maxRetries = 10
 
     const initializeScanner = () => {
       const element = document.getElementById('admin-qr-reader')
       
       if (element && !html5QrCodeRef.current) {
         try {
-          console.log("Initializing QR scanner...")
+          console.log("Initializing Admin QR scanner...")
           html5QrCodeRef.current = new Html5Qrcode("admin-qr-reader")
-          
-          // Small delay before starting camera to ensure scanner is ready
-          setTimeout(() => {
-            if (html5QrCodeRef.current) {
-              startCamera()
-            }
-          }, 200)
+          setCameraError("")
+          console.log("Scanner initialized, ready for manual start")
         } catch (error) {
           console.error("Scanner initialization error:", error)
           setCameraError("Failed to initialize scanner")
+          isCameraStartedRef.current = false
         }
       } else if (!element && retryCount < maxRetries) {
-        // Retry after a short delay if element not found
         retryCount++
-        console.log(`Waiting for QR reader element... (${retryCount}/${maxRetries})`)
+        console.log(`Waiting for Admin QR reader element... (${retryCount}/${maxRetries})`)
         setTimeout(initializeScanner, 100)
       } else if (retryCount >= maxRetries) {
-        console.error("QR reader element not found after maximum retries")
+        console.error("Admin QR reader element not found after maximum retries")
         setCameraError("Scanner element not available")
+        isCameraStartedRef.current = false
       }
     }
     
-    // Start initialization with a small delay to ensure DOM is ready
     setTimeout(initializeScanner, 50)
     
     return () => {
       cleanup()
+      isCameraStartedRef.current = false
     }
   }, [showScanner])
 
@@ -133,10 +151,12 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
     }
   }
 
-  const cleanup = () => {
+  const cleanup = async () => {
     if (html5QrCodeRef.current) {
       try {
-        html5QrCodeRef.current.stop().catch(() => {})
+        if (html5QrCodeRef.current.isScanning) {
+          await html5QrCodeRef.current.stop()
+        }
         html5QrCodeRef.current.clear()
       } catch (error) {
         console.warn("Error during scanner cleanup:", error)
@@ -146,12 +166,20 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
     }
     setIsCameraActive(false)
     isScanningRef.current = false
+    isCameraStartedRef.current = false
   }
 
   const startCamera = async (deviceId?: string) => {
+    // Prevent multiple camera starts
+    if (isCameraActive) {
+      console.log("Camera already active, stopping first...")
+      await stopCamera()
+    }
+
     // Ensure scanner is initialized and DOM element exists
     if (!html5QrCodeRef.current) {
       console.warn("Scanner not initialized yet")
+      setCameraError("Scanner not ready. Please try again.")
       return
     }
     
@@ -189,16 +217,24 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
 
       setIsCameraActive(true)
       setCameraError("")
+      console.log("Camera started successfully")
     } catch (err: any) {
       console.error("Camera error:", err)
       let errorMsg = "Failed to access camera"
 
       if (err.name === "NotAllowedError") {
-        errorMsg = "Camera permission denied. Please allow camera access."
+        errorMsg = "Camera permission denied. Please allow camera access and ensure you're on HTTPS or localhost."
       } else if (err.name === "NotFoundError") {
         errorMsg = "No camera found on this device."
       } else if (err.name === "NotReadableError") {
         errorMsg = "Camera is in use by another app."
+      } else if (err.name === "OverconstrainedError") {
+        errorMsg = "Camera constraints not supported. Trying default camera..."
+        // Retry with default camera
+        if (deviceId) {
+          setTimeout(() => startCamera(), 1000)
+          return
+        }
       }
 
       setCameraError(errorMsg)
@@ -210,6 +246,19 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const stopCamera = async () => {
+    if (html5QrCodeRef.current?.isScanning) {
+      try {
+        await html5QrCodeRef.current.stop()
+        console.log("Camera stopped successfully")
+      } catch (error) {
+        console.warn("Error stopping camera:", error)
+      }
+    }
+    setIsCameraActive(false)
+    isScanningRef.current = false
   }
 
   const onScanSuccess = async (decodedText: string) => {
@@ -687,12 +736,12 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Retrying...
+                      Starting Camera...
                     </>
                   ) : (
                     <>
                       <Camera className="w-4 h-4" />
-                      Retry Camera
+                      Start Camera
                     </>
                   )}
                 </Button>
@@ -720,6 +769,33 @@ export function AdminQRChecker({ token }: AdminQRCheckerProps) {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Manual Start View */}
+            {!isCameraActive && !cameraError && (
+              <div className="space-y-3">
+                <Button
+                  onClick={() => startCamera()}
+                  disabled={isLoading}
+                  className="w-full gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Starting Camera...
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="w-4 h-4" />
+                      Start Camera
+                    </>
+                  )}
+                </Button>
+                
+                <p className="text-sm text-center text-muted-foreground">
+                  Click "Start Camera" to begin scanning QR codes
+                </p>
               </div>
             )}
           </div>

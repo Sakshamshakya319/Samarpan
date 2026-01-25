@@ -194,7 +194,7 @@ export function ResetPasswordForm() {
           <div className="text-center py-8">
             <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto mb-4" />
             <div className="space-y-2">
-              <h3 className="font-semibold text-lg">Your password has been reset!</h3>
+              <h3 className="font-heading font-semibold text-lg">Your password has been reset!</h3>
               <p className="text-sm text-muted-foreground">
                 You can now log in with your new password. Redirecting to login page...
               </p>

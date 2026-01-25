@@ -1,15 +1,24 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Analytics } from "@vercel/analytics/next"
+import { Inter, Playfair_Display } from "next/font/google"
 import "./globals.css"
 import { ReduxProvider } from "@/components/redux-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { Toaster as ToastToaster } from "@/components/ui/toaster"
 
-// NOTE: Removed Google font imports (Geist, Geist Mono) to avoid
-// build-time network fetches in restricted/offline environments.
-// The app will use system fonts via Tailwind's `font-sans` and
-// monospace fallbacks defined in globals.css.
+// Configure Google Fonts
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+})
+
+const playfairDisplay = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
+  display: "swap",
+})
 
 export const metadata: Metadata = {
   title: "Samarpan - Blood Donor Platform",
@@ -24,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`font-sans antialiased`}>
+      <body className={`${inter.variable} ${playfairDisplay.variable} font-sans antialiased`}>
         <ReduxProvider>{children}</ReduxProvider>
         <Toaster />
         <ToastToaster />

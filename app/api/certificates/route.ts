@@ -17,13 +17,20 @@ export async function GET(request: NextRequest) {
 
     const db = await getDatabase()
     const certificatesCollection = db.collection("certificates")
+    const volunteerCertificatesCollection = db.collection("volunteer_certificates")
 
-    const certificates = await certificatesCollection
-      .find({ userId: new ObjectId(decoded.userId) })
-      .sort({ issuedDate: -1 })
-      .toArray()
+    const [certificates, volunteerCertificates] = await Promise.all([
+      certificatesCollection
+        .find({ userId: new ObjectId(decoded.userId) })
+        .sort({ issuedDate: -1 })
+        .toArray(),
+      volunteerCertificatesCollection
+        .find({ userId: new ObjectId(decoded.userId) })
+        .sort({ issuedDate: -1 })
+        .toArray()
+    ])
 
-    return NextResponse.json({ certificates })
+    return NextResponse.json({ certificates, volunteerCertificates })
   } catch (error) {
     console.error("Get certificates error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

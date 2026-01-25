@@ -5,12 +5,11 @@ import { useRouter, useParams } from "next/navigation"
 import { useAppSelector } from "@/lib/hooks"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, AlertCircle, CheckCircle2, ArrowLeft, Calendar, MapPin, Users, Clock } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { Loader2, AlertCircle, CheckCircle2, ArrowLeft, Calendar, MapPin, Users, Clock, Building, ExternalLink } from "lucide-react"
+import { EventRegistrationForm } from "@/components/event-registration-form"
+import { EventRegistrationStatus } from "@/components/event-registration-status"
 
 interface Event {
   _id: string
@@ -29,57 +28,25 @@ interface Event {
   ngoLogo?: string
   ngoWebsite?: string
   organizedBy?: string
-}
-
-// Generate 2-hour time slots based on event end time
-const generateTimeSlots = (endTime: string): string[] => {
-  const slots = []
-  
-  // Parse end time (format: "HH:MM" or "H:MM")
-  let endHour = 17 // default to 5 PM
-  if (endTime) {
-    const [hourStr] = endTime.split(":")
-    const hour = parseInt(hourStr)
-    endHour = hour
-  }
-  
-  // Generate slots from 9am, ensuring last slot doesn't exceed end time
-  for (let hour = 9; hour < endHour; hour++) {
-    const startHour = hour.toString().padStart(2, "0")
-    const slotEndHour = (hour + 2).toString().padStart(2, "0")
-    
-    // Only add slot if it ends on or before the event end time
-    const slotEndHourNum = hour + 2
-    if (slotEndHourNum <= endHour) {
-      slots.push(`${startHour}:00-${slotEndHour}:00`)
-    }
-  }
-  
-  return slots
+  locationType?: string
+  participantCategories?: string[]
 }
 
 export default function EventRegistrationPage() {
   const router = useRouter()
   const params = useParams()
   const eventId = params.eventId as string
-  const { toast } = useToast()
 
   const [event, setEvent] = useState<Event | null>(null)
   const [isLoadingEvent, setIsLoadingEvent] = useState(true)
   const [eventError, setEventError] = useState("")
-
-  const [registrationNumber, setRegistrationNumber] = useState("")
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState("")
-  const [participantType, setParticipantType] = useState<"student" | "staff" | "other" | "">("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState("")
-  const [isSuccess, setIsSuccess] = useState(false)
-  const [timeSlots, setTimeSlots] = useState<string[]>([])
-  const [phoneNumber, setPhoneNumber] = useState("")
   const [isCheckingRegistration, setIsCheckingRegistration] = useState(true)
   const [isAlreadyRegistered, setIsAlreadyRegistered] = useState(false)
+  const [registrationStatus, setRegistrationStatus] = useState({
+    isDonorRegistered: false,
+    isVolunteerRegistered: false
+  })
 
-  const { data: user } = useAppSelector((state) => state.user)
   const { isAuthenticated, token } = useAppSelector((state) => state.auth)
 
   // Redirect if not authenticated
@@ -101,9 +68,6 @@ export default function EventRegistrationPage() {
           const eventData = data.events?.find((e: Event) => e._id === eventId)
           if (eventData) {
             setEvent(eventData)
-            // Generate time slots based on event end time
-            const slots = generateTimeSlots(eventData.endTime)
-            setTimeSlots(slots)
           } else {
             setEventError("Event not found")
           }
@@ -121,30 +85,7 @@ export default function EventRegistrationPage() {
     fetchEvent()
   }, [eventId])
 
-  // Fetch user profile to get phone number
-  useEffect(() => {
-    if (!token) return
-
-    const fetchUserProfile = async () => {
-      try {
-        const response = await fetch("/api/users/profile", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-        if (response.ok) {
-          const data = await response.json()
-          setPhoneNumber(data.user?.phone || "")
-        }
-      } catch (err) {
-        console.error("Error fetching user profile:", err)
-      }
-    }
-
-    fetchUserProfile()
-  }, [token])
-
-  // Check if user is already registered for this event
+  // Check if user is already registered for this event (as donor or volunteer)
   useEffect(() => {
     if (!eventId || !token) {
       setIsCheckingRegistration(false)
@@ -153,15 +94,38 @@ export default function EventRegistrationPage() {
 
     const checkUserRegistration = async () => {
       try {
-        const response = await fetch(`/api/event-registrations?eventId=${eventId}&checkUser=true`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-        if (response.ok) {
-          const data = await response.json()
-          setIsAlreadyRegistered(data.isRegistered || false)
+        // Check both donor and volunteer registrations
+        const [donorResponse, volunteerResponse] = await Promise.all([
+          fetch(`/api/event-registrations?eventId=${eventId}&checkUser=true`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`/api/volunteer-registrations?eventId=${eventId}&checkUser=true`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+        ])
+
+        let isDonorRegistered = false
+        let isVolunteerRegistered = false
+
+        if (donorResponse.ok) {
+          const donorData = await donorResponse.json()
+          isDonorRegistered = donorData.isRegistered || false
         }
+
+        if (volunteerResponse.ok) {
+          const volunteerData = await volunteerResponse.json()
+          isVolunteerRegistered = volunteerData.isRegistered || false
+        }
+
+        // Set registration status - user is registered if they're registered as either donor or volunteer
+        setIsAlreadyRegistered(isDonorRegistered || isVolunteerRegistered)
+        
+        // Store the specific registration types for display
+        setRegistrationStatus({
+          isDonorRegistered,
+          isVolunteerRegistered
+        })
+
       } catch (err) {
         console.error("Error checking registration status:", err)
       } finally {
@@ -171,78 +135,6 @@ export default function EventRegistrationPage() {
 
     checkUserRegistration()
   }, [eventId, token])
-
-  const handleSubmit = async () => {
-    if (!token) {
-      setSubmitError("Please login to register")
-      return
-    }
-
-    if (!participantType) {
-      setSubmitError("Please select participant type")
-      return
-    }
-
-    if ((participantType === "student" || participantType === "staff") && !registrationNumber.trim()) {
-      setSubmitError(participantType === "student" ? "Registration number is required for LPU Student" : "UID is required for LPU Staff")
-      return
-    }
-
-    if (!selectedTimeSlot) {
-      setSubmitError("Please select a time slot")
-      return
-    }
-
-    if (!user?.name) {
-      setSubmitError("User name not found. Please update your profile.")
-      return
-    }
-
-    setIsSubmitting(true)
-    setSubmitError("")
-
-    try {
-      const response = await fetch("/api/event-registrations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          eventId,
-          registrationNumber,
-          participantType,
-          name: user.name,
-          timeSlot: selectedTimeSlot,
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setIsSuccess(true)
-        toast({
-          title: "Registration Successful!",
-          description: `You have been registered for ${event?.title}`,
-          variant: "default",
-        })
-        
-        // Redirect to confirmation page with registration ID
-        setTimeout(() => {
-          router.push(
-            `/events/${eventId}/register/confirmation?registrationId=${data.registrationId}`
-          )
-        }, 1500)
-      } else {
-        const data = await response.json()
-        setSubmitError(data.error || "Failed to register")
-      }
-    } catch (err) {
-      setSubmitError("Error registering for event")
-      console.error(err)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-US", {
@@ -262,7 +154,7 @@ export default function EventRegistrationPage() {
 
   const availableSlots = event ? event.volunteerSlotsNeeded - event.registeredVolunteers : 0
   const isFull = availableSlots <= 0
-  const identifierLabel = participantType === "student" ? "Registration Number" : participantType === "staff" ? "UID" : "Identifier (optional)"
+  const isNGOEvent = event?.ngoName && event.ngoName.trim() !== ""
 
   if (isLoadingEvent) {
     return (
@@ -300,7 +192,7 @@ export default function EventRegistrationPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background py-12 md:py-20">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back Button */}
         <Button
           variant="outline"
@@ -311,437 +203,177 @@ export default function EventRegistrationPage() {
           Back to Events
         </Button>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          {/* Left Column - Event Details */}
-          <div className="md:col-span-2 space-y-6">
-            {/* Event Card */}
-            <Card className="border-2 border-primary/20">
-              <CardHeader>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-3xl font-bold">{event.title}</h1>
-                    <Badge variant="secondary">{formatEventType(event.eventType)}</Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <p className="text-lg text-muted-foreground">{event.description}</p>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="flex items-start gap-3">
-                    <Calendar className="w-5 h-5 text-primary mt-1" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Date</p>
-                      <p className="text-lg font-semibold">{formatDate(event.eventDate)}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Clock className="w-5 h-5 text-primary mt-1" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Time</p>
-                      <p className="text-lg font-semibold">{event.startTime || "TBA"}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-primary mt-1" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Location</p>
-                      <p className="text-lg font-semibold">{event.location}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Users className="w-5 h-5 text-primary mt-1" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Volunteers</p>
-                      <p className="text-lg font-semibold">
-                        {event.registeredVolunteers} / {event.volunteerSlotsNeeded}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium">Volunteer Slots Filled</span>
-                    <span className="text-sm font-semibold text-primary">
-                      {Math.round((event.registeredVolunteers / event.volunteerSlotsNeeded) * 100)}%
-                    </span>
-                  </div>
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary transition-all duration-300"
-                      style={{
-                        width: `${Math.min(
-                          (event.registeredVolunteers / event.volunteerSlotsNeeded) * 100,
-                          100
-                        )}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* NGO Details Section */}
-                {(event.ngoName || event.ngoLogo || event.organizedBy) && (
-                  <div className="border-t pt-6 mt-6">
-                    <h3 className="text-lg font-semibold mb-4">Event Organizer Information</h3>
-                    <div className="space-y-4">
-                      {event.ngoLogo && (
-                        <div className="flex justify-center">
-                          <img
-                            src={event.ngoLogo}
-                            alt={event.ngoName || "NGO Logo"}
-                            className="h-16 w-auto rounded"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = "none"
-                            }}
-                          />
-                        </div>
+        <div className="space-y-6">
+          {/* Event Details Card */}
+          <Card className="border-2 border-primary/20">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
+                    <h1 className="font-heading text-3xl font-bold">{event.title}</h1>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="secondary">{formatEventType(event.eventType)}</Badge>
+                      {isNGOEvent && (
+                        <Badge className="bg-green-100 text-green-800 border-green-200 font-medium">
+                          <CheckCircle2 className="w-3 h-3 mr-1" />
+                          Verified NGO
+                        </Badge>
                       )}
-                      {event.ngoName && (
-                        <div className="text-center">
-                          <p className="text-sm font-medium text-muted-foreground mb-1">NGO Name</p>
-                          {event.ngoWebsite ? (
-                            <a
-                              href={event.ngoWebsite}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-lg font-semibold text-blue-600 hover:underline"
-                            >
-                              {event.ngoName}
-                            </a>
-                          ) : (
-                            <p className="text-lg font-semibold">{event.ngoName}</p>
+                    </div>
+                  </div>
+                  
+                  {/* NGO Information - Prominent Display */}
+                  {isNGOEvent && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <Building className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-medium text-blue-900">Organized by</span>
+                            <CheckCircle2 className="w-4 h-4 text-green-600" />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {event.ngoWebsite ? (
+                              <a
+                                href={event.ngoWebsite}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-semibold text-blue-700 hover:text-blue-800 hover:underline flex items-center gap-1"
+                              >
+                                {event.ngoName}
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            ) : (
+                              <span className="font-semibold text-blue-700">{event.ngoName}</span>
+                            )}
+                          </div>
+                          {event.organizedBy && (
+                            <p className="text-sm text-blue-600 mt-1">{event.organizedBy}</p>
                           )}
                         </div>
-                      )}
-                      {event.organizedBy && (
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground mb-2">Organised By</p>
-                          <p className="text-muted-foreground whitespace-pre-wrap">{event.organizedBy}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Registration Form */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Complete Your Registration</CardTitle>
-                <CardDescription>
-                  Fill in the details below to register as a volunteer
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Already Registered Message */}
-                {isAlreadyRegistered && (
-                  <Alert className="bg-blue-50 border-blue-200">
-                    <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                    <AlertDescription className="text-blue-800">
-                      You are already registered for this event. Thank you for your participation!
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {/* Success Message */}
-                {isSuccess && (
-                  <Alert className="bg-green-50 border-green-200">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="text-green-800">
-                      Registration successful! You will be redirected shortly...
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {/* Error Message */}
-                {submitError && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{submitError}</AlertDescription>
-                  </Alert>
-                )}
-
-                {/* Full Event Message */}
-                {isFull && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      All volunteer slots for this event are filled. Please check back later for other events.
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {!isFull && !isAlreadyRegistered && (
-                  <>
-                    {/* Participant Type Selection - FIRST */}
-                    <div>
-                      <label className="text-sm font-semibold mb-3 block">
-                        Participant Type <span className="text-red-500">*</span>
-                      </label>
-                      <div className="grid grid-cols-3 gap-3">
-                        <label className="flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer hover:border-primary/50">
-                          <Checkbox
-                            checked={participantType === "student"}
-                            onCheckedChange={(checked) => setParticipantType(checked ? "student" : "")}
-                            disabled={isSubmitting}
-                          />
-                          <span className="text-sm font-medium">LPU Student</span>
-                        </label>
-                        <label className="flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer hover:border-primary/50">
-                          <Checkbox
-                            checked={participantType === "staff"}
-                            onCheckedChange={(checked) => setParticipantType(checked ? "staff" : "")}
-                            disabled={isSubmitting}
-                          />
-                          <span className="text-sm font-medium">LPU Staff</span>
-                        </label>
-                        <label className="flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer hover:border-primary/50">
-                          <Checkbox
-                            checked={participantType === "other"}
-                            onCheckedChange={(checked) => setParticipantType(checked ? "other" : "")}
-                            disabled={isSubmitting}
-                          />
-                          <span className="text-sm font-medium">Others</span>
-                        </label>
+                        {event.ngoLogo && (
+                          <div className="flex-shrink-0">
+                            <img
+                              src={event.ngoLogo}
+                              alt={event.ngoName}
+                              className="h-12 w-12 rounded-lg object-cover border border-blue-200"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = "none"
+                              }}
+                            />
+                          </div>
+                        )}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Select your participant category. Identifier is required for Students and Staff.
-                      </p>
                     </div>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="space-y-6">
+              <p className="text-lg text-muted-foreground">{event.description}</p>
 
-                    {/* Registration Identifier - SECOND (shown only for Student/Staff) */}
-                    {(participantType === "student" || participantType === "staff") && (
-                      <div>
-                        <label className="text-sm font-semibold mb-2 block">
-                          {identifierLabel} <span className="text-red-500">*</span>
-                        </label>
-                        <Input
-                          type="text"
-                          placeholder={participantType === "student" ? "Enter your registration number" : "Enter your UID"}
-                          value={registrationNumber}
-                          onChange={(e) => setRegistrationNumber(e.target.value)}
-                          disabled={isSubmitting}
-                        />
-                      </div>
+              {/* Event Details Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-5 h-5 text-gray-500" />
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Date</p>
+                    <p className="font-medium text-gray-900">
+                      {new Date(event.eventDate).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
+                    {event.startTime && (
+                      <p className="text-sm text-gray-600">{event.startTime}</p>
                     )}
-
-                    {/* Your Name - SECOND */}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <MapPin className="w-5 h-5 text-gray-500" />
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Location</p>
+                    <p className="font-medium text-gray-900 text-sm">{event.location}</p>
+                  </div>
+                </div>
+                
+                {event.expectedAttendees > 0 && (
+                  <div className="flex items-center gap-3">
+                    <Users className="w-5 h-5 text-gray-500" />
                     <div>
-                      <label className="text-sm font-semibold mb-2 block">Your Name</label>
-                      <Input
-                        type="text"
-                        value={user?.name || ""}
-                        disabled
-                        className="bg-muted"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Auto-filled from your profile
-                      </p>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">Expected</p>
+                      <p className="font-medium text-gray-900">{event.expectedAttendees} attendees</p>
                     </div>
-
-                    {/* Event Date - THIRD */}
-                    <div>
-                      <label className="text-sm font-semibold mb-2 block">Event Date</label>
-                      <Input
-                        type="text"
-                        value={formatDate(event.eventDate)}
-                        disabled
-                        className="bg-muted"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Auto-filled from event
-                      </p>
-                    </div>
-
-                    {/* Participant Type Selection - FOURTH */}
-                    <div>
-                      <label className="text-sm font-semibold mb-3 block">
-                        Participant Type <span className="text-red-500">*</span>
-                      </label>
-                      <div className="grid grid-cols-3 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setParticipantType("student")}
-                          disabled={isSubmitting}
-                          className={`p-3 text-sm border-2 rounded-lg font-medium transition-all ${
-                            participantType === "student"
-                              ? "bg-primary text-primary-foreground border-primary shadow-lg"
-                              : "bg-background border-border hover:border-primary/50 hover:shadow-md"
-                          }`}
-                        >
-                          LPU Student
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setParticipantType("staff")}
-                          disabled={isSubmitting}
-                          className={`p-3 text-sm border-2 rounded-lg font-medium transition-all ${
-                            participantType === "staff"
-                              ? "bg-primary text-primary-foreground border-primary shadow-lg"
-                              : "bg-background border-border hover:border-primary/50 hover:shadow-md"
-                          }`}
-                        >
-                          LPU Staff
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setParticipantType("other")}
-                          disabled={isSubmitting}
-                          className={`p-3 text-sm border-2 rounded-lg font-medium transition-all ${
-                            participantType === "other"
-                              ? "bg-primary text-primary-foreground border-primary shadow-lg"
-                              : "bg-background border-border hover:border-primary/50 hover:shadow-md"
-                          }`}
-                        >
-                          Others
-                        </button>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {participantType === "student"
-                          ? "For LPU Students, enter your Registration Number"
-                          : participantType === "staff"
-                          ? "For LPU Staff, enter your UID"
-                          : "For others, identifier is optional"}
-                      </p>
-                    </div>
-
-                    {/* Phone Number - FOURTH */}
-                    <div>
-                      <label className="text-sm font-semibold mb-2 block">Phone Number</label>
-                      <Input
-                        type="tel"
-                        value={phoneNumber}
-                        disabled
-                        className="bg-muted"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Auto-filled from your profile
-                      </p>
-                    </div>
-
-                    {/* Time Slot Selection */}
-                    <div>
-                      <label className="text-sm font-semibold mb-3 block">
-                        Select Time Slot (2 hours) <span className="text-red-500">*</span>
-                      </label>
-                      {timeSlots.length === 0 ? (
-                        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-                          No time slots available for this event
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                          {timeSlots.map((slot) => (
-                            <button
-                              key={slot}
-                              onClick={() => setSelectedTimeSlot(slot)}
-                              disabled={isSubmitting}
-                              className={`p-3 text-sm border-2 rounded-lg font-medium transition-all ${
-                                selectedTimeSlot === slot
-                                  ? "bg-primary text-primary-foreground border-primary shadow-lg"
-                                  : "bg-background border-border hover:border-primary/50 hover:shadow-md"
-                              }`}
-                            >
-                              {slot}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Submit Button */}
-                    <Button
-                      onClick={handleSubmit}
-                      disabled={
-                        isSubmitting ||
-                        !participantType ||
-                        !selectedTimeSlot ||
-                        ((participantType === "student" || participantType === "staff") && !registrationNumber.trim())
-                      }
-                      size="lg"
-                      className="w-full bg-green-600 hover:bg-green-700"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          Registering...
-                        </>
-                      ) : (
-                        "Complete Registration"
-                      )}
-                    </Button>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column - Summary */}
-          <div>
-            <Card className="sticky top-20 bg-primary/5 border-primary/20">
-              <CardHeader>
-                <CardTitle className="text-lg">Registration Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 text-sm">
-                <div className="space-y-2">
-                  <p className="text-muted-foreground">Registration Number</p>
-                  <p className="font-semibold text-base">
-                    {registrationNumber || "Not entered"}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-muted-foreground">Participant Type</p>
-                  <p className="font-semibold text-base">
-                    {participantType ? (participantType === "student" ? "LPU Student" : participantType === "staff" ? "LPU Staff" : "Others") : "Not selected"}
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-muted-foreground">Your Name</p>
-                  <p className="font-semibold text-base">{user?.name || "-"}</p>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-muted-foreground">Phone Number</p>
-                  <p className="font-semibold text-base">{phoneNumber || "-"}</p>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-muted-foreground">Selected Time Slot</p>
-                  <p className="font-semibold text-base">
-                    {selectedTimeSlot || "Not selected"}
-                  </p>
-                </div>
-
-                <div className="border-t pt-4">
-                  <p className="text-muted-foreground">Status</p>
-                  <Badge variant={isSuccess ? "default" : "outline"} className="mt-1">
-                    {isSuccess ? "Registered" : "Pending"}
-                  </Badge>
-                </div>
-
-                {isFull && (
-                  <div className="border-t pt-4">
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>Event is full</AlertDescription>
-                    </Alert>
                   </div>
                 )}
+                
+                <div className="flex items-center gap-3">
+                  <Users className="w-5 h-5 text-gray-500" />
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Volunteers</p>
+                    <p className="font-medium text-gray-900">
+                      {event.registeredVolunteers} / {event.volunteerSlotsNeeded}
+                    </p>
+                    <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                      <div 
+                        className="bg-primary h-1.5 rounded-full transition-all duration-300" 
+                        style={{ 
+                          width: `${Math.min((event.registeredVolunteers / event.volunteerSlotsNeeded) * 100, 100)}%` 
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-                <div className="border-t pt-4">
-                  <p className="text-xs text-muted-foreground">
-                    Available Slots: <span className="font-semibold text-primary">{Math.max(0, availableSlots)}</span>
+              {/* Trust Indicators for NGO Events */}
+              {isNGOEvent && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm text-green-800">
+                    <CheckCircle2 className="w-4 h-4 text-green-600" />
+                    <span className="font-medium">Verified NGO Event</span>
+                  </div>
+                  <p className="text-xs text-green-700 mt-1">
+                    This event is organized by a verified NGO and has been approved by our admin team for quality and safety.
                   </p>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Registration Status Messages */}
+          <EventRegistrationStatus 
+            isAlreadyRegistered={isAlreadyRegistered}
+            registrationStatus={registrationStatus}
+          />
+
+          {isFull && !isAlreadyRegistered && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                All volunteer slots for this event are filled. Please check back later for other events.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Registration Form */}
+          {!isAlreadyRegistered && !isFull && (
+            <EventRegistrationForm
+              eventId={eventId}
+              eventTitle={event.title}
+              eventDate={event.eventDate}
+              volunteerSlotsNeeded={event.volunteerSlotsNeeded}
+              registeredVolunteers={event.registeredVolunteers}
+              token={token}
+              isAlreadyRegistered={isAlreadyRegistered}
+              registrationStatus={registrationStatus}
+            />
+          )}
         </div>
       </div>
     </main>

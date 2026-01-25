@@ -4,10 +4,7 @@ import { verifyToken } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 import { generateCertificateDesign } from "@/lib/certificate-generator"
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export async function GET(request: NextRequest) {
   try {
     const token = request.headers.get("authorization")?.split(" ")[1]
     if (!token) {
@@ -19,13 +16,28 @@ export async function GET(
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
 
+    const url = new URL(request.url)
+    const id = url.searchParams.get("id")
+
+    if (!id) {
+        return NextResponse.json({ error: "Certificate ID is required" }, { status: 400 })
+    }
+
     const db = await getDatabase()
     const certificates = db.collection("certificates")
     const users = db.collection("users")
 
-    const certificate = await certificates.findOne({
-      userId: new ObjectId(decoded.userId),
-    })
+    let query: any = {
+        userId: new ObjectId(decoded.userId),
+    }
+
+    if (ObjectId.isValid(id)) {
+        query._id = new ObjectId(id)
+    } else {
+        query.certificateId = id
+    }
+
+    const certificate = await certificates.findOne(query)
 
     if (!certificate)
       return NextResponse.json({ error: "Certificate not found" }, { status: 404 })
@@ -51,258 +63,3 @@ export async function GET(
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
-
-// design function moved to shared lib
-/*async function generateCertificateDesign(
-  certificate: any,
-  user: any,
-  options?: { logoData?: string | null; signatureData?: string | null },
-): Promise<Uint8Array> {
-  const pdfDoc = await PDFDocument.create()
-  const page = pdfDoc.addPage([2000, 1545])
-  const { width, height } = page.getSize()
-
-  const scale = height / 841.89
-  const margin = 90 * scale
-  const innerWidth = width - 2 * margin
-
-  const primaryBlue = rgb(0.11, 0.36, 0.70)
-  const darkGray = rgb(0.22, 0.22, 0.22)
-  const lightGray = rgb(0.45, 0.45, 0.45)
-  const white = rgb(1, 1, 1)
-
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
-  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
-
-  // Outer Frame
-  page.drawRectangle({
-    x: margin - 20 * scale,
-    y: margin - 20 * scale,
-    width: innerWidth + 40 * scale,
-    height: height - 2 * (margin - 20 * scale),
-    borderColor: primaryBlue,
-    borderWidth: 3 * scale,
-  })
-  page.drawRectangle({
-    x: margin - 8 * scale,
-    y: margin - 8 * scale,
-    width: innerWidth + 16 * scale,
-    height: height - 2 * (margin - 8 * scale),
-    borderColor: primaryBlue,
-    borderWidth: 1 * scale,
-  })
-
-  // Top Accent Bar
-  const barHeight = 120 * scale
-  page.drawRectangle({
-    x: margin,
-    y: height - margin - barHeight,
-    width: innerWidth,
-    height: barHeight,
-    color: rgb(0.96, 0.98, 1),
-  })
-
-  // Logo (auto-managed)
-  if (options?.logoData) {
-    try {
-      const isPng = options.logoData.startsWith("data:image/png")
-      const logoBytes = Buffer.from(
-        options.logoData.replace(/^data:image\/\w+;base64,/, ""),
-        "base64",
-      )
-      const logo = isPng
-        ? await pdfDoc.embedPng(logoBytes)
-        : await pdfDoc.embedJpg(logoBytes)
-      page.drawImage(logo, {
-        x: margin + 30 * scale,
-        y: height - margin - barHeight + 10 * scale,
-        width: 100 * scale,
-        height: 100 * scale,
-      })
-    } catch (err) {
-      console.error("Error embedding logo:", err)
-    }
-  }
-
-  // Title
-  const title = "CERTIFICATE OF APPRECIATION"
-  const titleSize = 40 // fixed px
-  const titleWidth = fontBold.widthOfTextAtSize(title, titleSize)
-  const titleX = margin + (innerWidth - titleWidth) / 2
-  const titleY = height - margin - barHeight / 2 + 5 * scale
-  page.drawText(title, {
-    x: titleX,
-    y: titleY,
-    size: titleSize,
-    font: fontBold,
-    color: primaryBlue,
-  })
-
-  // Underline accent
-  const underlineWidth = titleWidth * 0.5
-  const underlineX = margin + (innerWidth - underlineWidth) / 2
-  const underlineY = titleY - 8 * scale
-  page.drawLine({
-    start: { x: underlineX, y: underlineY },
-    end: { x: underlineX + underlineWidth, y: underlineY },
-    color: primaryBlue,
-    thickness: 2 * scale,
-  })
-
-  // Body
-  let currentY = height - margin - barHeight - 100 * scale // decreased margin
-
-  const subtitle = "This is to certify that"
-  const subtitleSize = 16 * scale
-  const subtitleWidth = font.widthOfTextAtSize(subtitle, subtitleSize)
-  page.drawText(subtitle, {
-    x: margin + (innerWidth - subtitleWidth) / 2,
-    y: currentY,
-    size: subtitleSize,
-    font,
-    color: darkGray,
-  })
-
-  currentY -= 60 * scale
-
-  const name = (user.name || "").toUpperCase()
-  const nameSize = 50 * scale
-  const nameWidth = fontBold.widthOfTextAtSize(name, nameSize)
-  page.drawText(name, {
-    x: margin + (innerWidth - nameWidth) / 2,
-    y: currentY,
-    size: nameSize,
-    font: fontBold,
-    color: primaryBlue,
-  })
-
-  currentY -= 70 * scale
-
-  const bodyText = "has generously donated blood and contributed to saving lives."
-  const bodySize = 16 * scale
-  const bodyWidth = font.widthOfTextAtSize(bodyText, bodySize)
-  page.drawText(bodyText, {
-    x: margin + (innerWidth - bodyWidth) / 2,
-    y: currentY,
-    size: bodySize,
-    font,
-    color: darkGray,
-  })
-
-  currentY -= 90 * scale
-
-  // Donation Pill
-  const pillWidth = 360 * scale
-  const pillHeight = 45 * scale
-  const pillX = margin + (innerWidth - pillWidth) / 2
-  const pillY = currentY - pillHeight
-  page.drawRectangle({
-    x: pillX,
-    y: pillY,
-    width: pillWidth,
-    height: pillHeight,
-    color: primaryBlue,
-  })
-  const pillText = `Total Donations: ${certificate.donationCount}`
-  const pillTextSize = 20 * scale
-  const pillTextWidth = fontBold.widthOfTextAtSize(pillText, pillTextSize)
-  page.drawText(pillText, {
-    x: margin + (innerWidth - pillTextWidth) / 2,
-    y: pillY + 13 * scale,
-    size: pillTextSize,
-    font: fontBold,
-    color: white,
-  })
-
-  // Footer
-  currentY -= 140 * scale
-  const leftX = margin + 25 * scale
-  const rightX = width - margin - 300 * scale
-
-  const issuedDate = new Date(certificate.issuedDate).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  })
-
-  page.drawText(`Certificate ID: ${certificate.certificateId}`, {
-    x: leftX,
-    y: currentY,
-    size: 12 * scale,
-    font,
-    color: lightGray,
-  })
-  page.drawText(`Issued Date: ${issuedDate}`, {
-    x: leftX,
-    y: currentY - 18 * scale,
-    size: 12 * scale,
-    font,
-    color: lightGray,
-  })
-
-  page.drawText("To Verify Certificate:", {
-    x: rightX,
-    y: currentY,
-    size: 12 * scale,
-    font,
-    color: darkGray,
-  })
-  page.drawText("Visit: /verify-certificate", {
-    x: rightX,
-    y: currentY - 18 * scale,
-    size: 12 * scale,
-    font,
-    color: primaryBlue,
-  })
-
-  // Signature
-  currentY -= 80 * scale
-  page.drawLine({
-    start: { x: leftX, y: currentY },
-    end: { x: leftX + 200 * scale, y: currentY },
-    color: rgb(0, 0, 0),
-    thickness: 1.2 * scale,
-  })
-  page.drawText("Authorized Signature", {
-    x: leftX,
-    y: currentY - 20 * scale,
-    size: 10 * scale,
-    font,
-    color: darkGray,
-  })
-
-  // Footer line
-  currentY -= 60 * scale
-  page.drawLine({
-    start: { x: margin + 25 * scale, y: currentY },
-    end: { x: width - margin - 25 * scale, y: currentY },
-    color: primaryBlue,
-    thickness: 2 * scale,
-  })
-
-  currentY -= 30 * scale
-  const org = "Samarpan: Be a Real Life Hero"
-  const orgSize = 14 * scale
-  const orgWidth = fontBold.widthOfTextAtSize(org, orgSize)
-  page.drawText(org, {
-    x: margin + (innerWidth - orgWidth) / 2,
-    y: currentY,
-    size: orgSize,
-    font: fontBold,
-    color: primaryBlue,
-  })
-
-  currentY -= 16 * scale
-  const tagline = "Dedicated to Saving Lives Through Samarpan"
-  const tagSize = 10 * scale
-  const tagWidth = font.widthOfTextAtSize(tagline, tagSize)
-  page.drawText(tagline, {
-    x: margin + (innerWidth - tagWidth) / 2,
-    y: currentY,
-    size: tagSize,
-    font,
-    color: lightGray,
-  })
-
-  return await pdfDoc.save()
-}*/

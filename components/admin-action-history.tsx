@@ -66,33 +66,66 @@ export function AdminActionHistory({ token }: AdminActionHistoryProps) {
         <CardTitle>Admin Action History</CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Admin</TableHead>
-              <TableHead>Action</TableHead>
-              <TableHead>Details</TableHead>
-              <TableHead>Timestamp</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {history.map((item) => (
-              <TableRow key={item._id}>
-                <TableCell>
-                  <div>{item.admin.name}</div>
-                  <div className="text-sm text-gray-500">{item.admin.email}</div>
-                </TableCell>
-                <TableCell>
-                  <Badge>{item.action}</Badge>
-                </TableCell>
-                <TableCell>
-                  <pre className="text-xs">{JSON.stringify(item.details, null, 2)}</pre>
-                </TableCell>
-                <TableCell>{new Date(item.timestamp).toLocaleString()}</TableCell>
+        {/* Mobile Card View */}
+        <div className="block lg:hidden space-y-4">
+          {history.map((item) => (
+            <Card key={item._id} className="p-4 bg-muted/50">
+              <div className="space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-semibold">{item.admin.name}</p>
+                    <p className="text-sm text-muted-foreground">{item.admin.email}</p>
+                  </div>
+                  <Badge variant="secondary">{item.action}</Badge>
+                </div>
+                
+                <div className="text-sm">
+                  <span className="text-muted-foreground block mb-1">Details:</span>
+                  <div className="bg-background p-2 rounded border text-xs font-mono whitespace-pre-wrap break-all max-h-40 overflow-y-auto">
+                    {JSON.stringify(item.details, null, 2)}
+                  </div>
+                </div>
+
+                <div className="text-xs text-muted-foreground pt-2 border-t">
+                  {new Date(item.timestamp).toLocaleString()}
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Admin</TableHead>
+                <TableHead>Action</TableHead>
+                <TableHead>Details</TableHead>
+                <TableHead>Timestamp</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {history.map((item) => (
+                <TableRow key={item._id}>
+                  <TableCell>
+                    <div>{item.admin.name}</div>
+                    <div className="text-sm text-gray-500">{item.admin.email}</div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge>{item.action}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <pre className="text-xs whitespace-pre-wrap break-all max-w-md max-h-40 overflow-y-auto">
+                      {JSON.stringify(item.details, null, 2)}
+                    </pre>
+                  </TableCell>
+                  <TableCell>{new Date(item.timestamp).toLocaleString()}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );

@@ -128,7 +128,7 @@ export function AdminContactSubmissionsManager({ token }: AdminContactSubmission
       {/* Submissions List */}
       <div className="lg:col-span-1">
         <Card className="p-4">
-          <h2 className="text-lg font-semibold mb-4">Contact Submissions</h2>
+          <h2 className="font-heading text-lg font-semibold mb-4">Contact Submissions</h2>
           
           {/* Filter Buttons */}
           <div className="flex gap-2 mb-4">
@@ -218,7 +218,7 @@ export function AdminContactSubmissionsManager({ token }: AdminContactSubmission
             <div className="mb-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h2 className="text-2xl font-bold">{selectedSubmission.subject}</h2>
+                  <h2 className="font-heading text-2xl font-bold">{selectedSubmission.subject}</h2>
                   <p className="text-muted-foreground">From: {selectedSubmission.name}</p>
                 </div>
                 {getStatusBadge(selectedSubmission.status)}
@@ -249,7 +249,7 @@ export function AdminContactSubmissionsManager({ token }: AdminContactSubmission
 
             {/* Message */}
             <div className="mb-6">
-              <h3 className="font-semibold mb-2 flex items-center gap-2">
+              <h3 className="font-heading font-semibold mb-2 flex items-center gap-2">
                 <MessageSquare className="w-4 h-4" />
                 Message
               </h3>
@@ -264,7 +264,7 @@ export function AdminContactSubmissionsManager({ token }: AdminContactSubmission
             {/* Previous Reply if exists */}
             {selectedSubmission.adminReply && (
               <div className="mb-6">
-                <h3 className="font-semibold mb-2 flex items-center gap-2">
+                <h3 className="font-heading font-semibold mb-2 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-green-600" />
                   Previous Reply
                 </h3>
@@ -280,7 +280,7 @@ export function AdminContactSubmissionsManager({ token }: AdminContactSubmission
             {/* Reply Form */}
             {selectedSubmission.status !== "replied" ? (
               <div>
-                <h3 className="font-semibold mb-2 flex items-center gap-2">
+                <h3 className="font-heading font-semibold mb-2 flex items-center gap-2">
                   <Reply className="w-4 h-4" />
                   Send Reply
                 </h3>

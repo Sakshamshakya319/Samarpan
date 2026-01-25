@@ -368,7 +368,7 @@ export function AdminDonationsManagerEnhanced({ token }: AdminDonationsManagerEn
                   {/* Header with Blood Type and Status */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-4">
-                      <div className="text-3xl font-bold text-red-600">{donation.bloodGroup}</div>
+                      <div className="font-heading text-3xl font-bold text-red-600">{donation.bloodGroup}</div>
                       <div>
                         <p className="font-semibold text-gray-900">Blood Type Accepted</p>
                         <p className="text-sm text-gray-600">{donation.quantity} unit(s) • Urgency: {donation.bloodRequest.urgency}</p>

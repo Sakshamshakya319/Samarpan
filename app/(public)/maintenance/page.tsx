@@ -191,7 +191,7 @@ export default function MaintenancePage() {
               <h1 className={`text-4xl md:text-6xl lg:text-7xl font-bold bg-gradient-to-r ${priorityConfig.color} bg-clip-text text-transparent`}>
                 SAMARPAN
               </h1>
-              <h2 className="text-2xl md:text-3xl font-semibold text-gray-700">
+              <h2 className="font-heading text-2xl md:text-3xl font-semibold text-gray-700">
                 Under Maintenance
               </h2>
               <p className={`text-sm ${priorityConfig.textColor} font-medium`}>
@@ -215,7 +215,7 @@ export default function MaintenancePage() {
               <div className="flex items-center justify-center mb-2">
                 <Clock className="w-5 h-5 text-blue-600" />
               </div>
-              <h3 className="text-sm font-semibold mb-1 text-gray-700">Current Time</h3>
+              <h3 className="font-heading text-sm font-semibold mb-1 text-gray-700">Current Time</h3>
               <p className="text-lg font-mono text-gray-900">
                 {currentTime.toLocaleTimeString('en-US', { 
                   hour12: false,
@@ -239,7 +239,7 @@ export default function MaintenancePage() {
                 <div className="flex items-center justify-center mb-2">
                   <Calendar className="w-5 h-5 text-green-600" />
                 </div>
-                <h3 className="text-sm font-semibold mb-1 text-gray-700">Started At</h3>
+                <h3 className="font-heading text-sm font-semibold mb-1 text-gray-700">Started At</h3>
                 <p className="text-sm font-mono text-gray-900">
                   {new Date(settings.enabledAt).toLocaleTimeString('en-US', { 
                     hour12: false,
@@ -262,7 +262,7 @@ export default function MaintenancePage() {
                 <div className="flex items-center justify-center mb-2">
                   <Timer className="w-5 h-5 text-yellow-600" />
                 </div>
-                <h3 className="text-sm font-semibold mb-1 text-gray-700">Duration</h3>
+                <h3 className="font-heading text-sm font-semibold mb-1 text-gray-700">Duration</h3>
                 <p className="text-lg font-mono text-gray-900">
                   {duration.hours > 0 ? `${duration.hours}h ` : ''}{duration.minutes}m
                 </p>
@@ -277,7 +277,7 @@ export default function MaintenancePage() {
               <div className="flex items-center justify-center mb-2">
                 <RefreshCw className={`w-5 h-5 text-purple-600 ${countdown <= 5 ? 'animate-spin' : ''}`} />
               </div>
-              <h3 className="text-sm font-semibold mb-1 text-gray-700">Auto Refresh</h3>
+              <h3 className="font-heading text-sm font-semibold mb-1 text-gray-700">Auto Refresh</h3>
               <p className="text-lg font-mono text-gray-900">
                 {countdown}s
               </p>

@@ -285,312 +285,384 @@ export function AdminAdminManager({ token }: AdminAdminManagerProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Admin Management</h2>
+      <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center gap-3 xs:gap-4">
+        <div className="flex-1 min-w-0">
+          <h2 className="font-heading text-lg sm:text-xl lg:text-2xl font-bold">Admin Management</h2>
           <p className="text-sm text-muted-foreground mt-1">
             Create and manage admin accounts with specific permissions
           </p>
         </div>
-        <Button onClick={handleOpenDialog} className="gap-2">
+        <Button onClick={handleOpenDialog} className="gap-2 w-full xs:w-auto h-9 sm:h-10">
           <Plus className="w-4 h-4" />
-          Create Admin
+          <span className="hidden xs:inline">Create Admin</span>
+          <span className="xs:hidden">New Admin</span>
         </Button>
       </div>
 
       {/* Admins Table */}
-      <Card>
+      <Card className="p-3 sm:p-6">
         {admins.length === 0 ? (
-          <div className="p-8 text-center">
-            <p className="text-muted-foreground">No admin accounts found</p>
+          <div className="p-6 sm:p-8 text-center">
+            <p className="text-muted-foreground text-sm sm:text-base">No admin accounts found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Permissions</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {admins.map((admin) => (
-                  <TableRow key={admin._id}>
-                    <TableCell className="font-medium">{admin.name}</TableCell>
-                    <TableCell>{admin.email}</TableCell>
-                    <TableCell>
-                      <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
-                        {admin.role === "superadmin"
-                          ? "Super Admin"
-                          : "Admin"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
-                          admin.status === "active"
-                            ? "bg-green-500/10 text-green-700"
-                            : "bg-red-500/10 text-red-700"
-                        }`}
-                      >
-                        {admin.status}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {admin.role === "superadmin" ? (
-                        <span className="text-xs text-muted-foreground">
-                          All
-                        </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">
-                          {admin.permissions?.length || 0} permissions
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {admin.role !== "superadmin" && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditAdmin(admin)}
-                              className="gap-1"
-                            >
-                              <Edit2 className="w-3 h-3" />
-                              Edit
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDeleteAdmin(admin._id)}
-                              className="gap-1"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              Delete
-                            </Button>
-                          </>
-                        )}
+          <>
+            {/* Mobile Cards View */}
+            <div className="block lg:hidden space-y-3">
+              {admins.map((admin) => (
+                <Card key={admin._id} className="p-3 sm:p-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-sm sm:text-base truncate">{admin.name}</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate">{admin.email}</p>
                       </div>
-                    </TableCell>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
+                          {admin.role === "superadmin" ? "Super Admin" : "Admin"}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
+                            admin.status === "active"
+                              ? "bg-green-500/10 text-green-700"
+                              : "bg-red-500/10 text-red-700"
+                          }`}
+                        >
+                          {admin.status}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {admin.role === "superadmin" 
+                            ? "All permissions" 
+                            : `${admin.permissions?.length || 0} permissions`}
+                        </span>
+                      </div>
+                      
+                      {admin.role !== "superadmin" && (
+                        <div className="flex gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditAdmin(admin)}
+                            className="h-7 px-2 text-xs"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteAdmin(admin._id)}
+                            className="h-7 px-2 text-xs"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Permissions</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {admins.map((admin) => (
+                    <TableRow key={admin._id}>
+                      <TableCell className="font-medium">{admin.name}</TableCell>
+                      <TableCell>{admin.email}</TableCell>
+                      <TableCell>
+                        <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
+                          {admin.role === "superadmin"
+                            ? "Super Admin"
+                            : "Admin"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
+                            admin.status === "active"
+                              ? "bg-green-500/10 text-green-700"
+                              : "bg-red-500/10 text-red-700"
+                          }`}
+                        >
+                          {admin.status}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {admin.role === "superadmin" ? (
+                          <span className="text-xs text-muted-foreground">
+                            All
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            {admin.permissions?.length || 0} permissions
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          {admin.role !== "superadmin" && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditAdmin(admin)}
+                                className="gap-1"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                                Edit
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeleteAdmin(admin._id)}
+                                className="gap-1"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                Delete
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </Card>
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="w-[95vw] max-w-2xl h-[95vh] max-h-[95vh] overflow-hidden flex flex-col p-3 sm:p-6">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="text-base sm:text-lg">
               {isEditMode ? "Edit Admin Account" : "Create New Admin Account"}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm">
               {isEditMode
                 ? "Update admin account details and permissions"
                 : "Create a new admin account and assign permissions"}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="flex items-start gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-destructive">{error}</p>
-              </div>
-            )}
+          <div className="flex-1 overflow-y-auto">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 p-1">
+              {error && (
+                <div className="flex items-start gap-3 p-3 sm:p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-destructive flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-destructive">{error}</p>
+                </div>
+              )}
 
-            {/* Basic Info */}
-            <div className="space-y-4">
-              <h3 className="font-semibold">Admin Details</h3>
+              {/* Basic Info */}
+              <div className="space-y-3 sm:space-y-4">
+                <h3 className="font-heading font-semibold text-sm sm:text-base">Admin Details</h3>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Full Name
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Enter full name"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, name: e.target.value }))
-                  }
-                  required
-                  disabled={isCreating}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Email</label>
-                <Input
-                  type="email"
-                  placeholder="Enter email address"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, email: e.target.value }))
-                  }
-                  required
-                  disabled={isCreating || isEditMode}
-                />
-                {isEditMode && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Email cannot be changed
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Password {isEditMode && "(leave empty to keep current)"}
-                </label>
-                <div className="relative">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Full Name
+                  </label>
                   <Input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter password"
-                    value={formData.password}
+                    type="text"
+                    placeholder="Enter full name"
+                    value={formData.name}
                     onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        password: e.target.value,
-                      }))
+                      setFormData((prev) => ({ ...prev, name: e.target.value }))
                     }
-                    required={!isEditMode}
+                    required
                     disabled={isCreating}
+                    className="h-9 sm:h-10"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Email</label>
+                  <Input
+                    type="email"
+                    placeholder="Enter email address"
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, email: e.target.value }))
+                    }
+                    required
+                    disabled={isCreating || isEditMode}
+                    className="h-9 sm:h-10"
+                  />
+                  {isEditMode && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Email cannot be changed
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Password {isEditMode && "(leave empty to keep current)"}
+                  </label>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter password"
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          password: e.target.value,
+                        }))
+                      }
+                      required={!isEditMode}
+                      disabled={isCreating}
+                      className="h-9 sm:h-10 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* NGO Account */}
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="ngo-account"
-                  checked={formData.isNgoAccount}
-                  onCheckedChange={(checked) => handleNgoAccountToggle(checked as boolean)}
-                  disabled={isCreating}
-                />
-                <label
-                  htmlFor="ngo-account"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  NGO Account
-                </label>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                NGO accounts can only manage event donation blood labels. This will automatically assign the required permission.
-              </p>
-            </div>
-
-            {/* Permissions */}
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-semibold mb-1">Select Features/Permissions</h3>
+              {/* NGO Account */}
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="ngo-account"
+                    checked={formData.isNgoAccount}
+                    onCheckedChange={(checked) => handleNgoAccountToggle(checked as boolean)}
+                    disabled={isCreating}
+                  />
+                  <label
+                    htmlFor="ngo-account"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    NGO Account
+                  </label>
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Choose which features this admin can access and manage
+                  NGO accounts can only manage event donation blood labels. This will automatically assign the required permission.
                 </p>
               </div>
 
-              {/* Permission Groups */}
-              <div className="space-y-3">
-                {permissionGroups.map((group) => {
-                  const groupPermissions = group.permissions.filter((p) =>
-                    permissions.find((perm) => perm.id === p),
-                  )
-                  const allSelected = groupPermissions.every((p) =>
-                    formData.permissions.includes(p),
-                  )
+              {/* Permissions */}
+              <div className="space-y-3 sm:space-y-4">
+                <div>
+                  <h3 className="font-heading font-semibold mb-1 text-sm sm:text-base">Select Features/Permissions</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Choose which features this admin can access and manage
+                  </p>
+                </div>
 
-                  return (
-                    <div key={group.id} className="border rounded-lg p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Checkbox
-                          checked={allSelected}
-                          onCheckedChange={() => handleGroupToggle(group)}
-                          disabled={isCreating}
-                        />
-                        <label className="font-medium text-sm cursor-pointer">
-                          {group.name}
-                        </label>
-                      </div>
+                {/* Permission Groups */}
+                <div className="space-y-2 sm:space-y-3">
+                  {permissionGroups.map((group) => {
+                    const groupPermissions = group.permissions.filter((p) =>
+                      permissions.find((perm) => perm.id === p),
+                    )
+                    const allSelected = groupPermissions.every((p) =>
+                      formData.permissions.includes(p),
+                    )
 
-                      {/* Individual Permissions */}
-                      <div className="pl-6 space-y-2">
-                        {groupPermissions.map((permId) => {
-                          const perm = permissions.find(
-                            (p) => p.id === permId,
-                          )
-                          return (
-                            <div
-                              key={permId}
-                              className="flex items-center gap-2"
-                            >
-                              <Checkbox
-                                checked={formData.permissions.includes(permId)}
-                                onCheckedChange={() =>
-                                  handlePermissionToggle(permId)
-                                }
-                                disabled={isCreating}
-                              />
-                              <label className="text-sm cursor-pointer">
-                                {perm?.label}
-                              </label>
-                            </div>
-                          )
-                        })}
+                    return (
+                      <div key={group.id} className="border rounded-lg p-2 sm:p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Checkbox
+                            checked={allSelected}
+                            onCheckedChange={() => handleGroupToggle(group)}
+                            disabled={isCreating}
+                          />
+                          <label className="font-medium text-sm cursor-pointer">
+                            {group.name}
+                          </label>
+                        </div>
+
+                        {/* Individual Permissions */}
+                        <div className="pl-4 sm:pl-6 space-y-1 sm:space-y-2">
+                          {groupPermissions.map((permId) => {
+                            const perm = permissions.find(
+                              (p) => p.id === permId,
+                            )
+                            return (
+                              <div
+                                key={permId}
+                                className="flex items-center gap-2"
+                              >
+                                <Checkbox
+                                  checked={formData.permissions.includes(permId)}
+                                  onCheckedChange={() =>
+                                    handlePermissionToggle(permId)
+                                  }
+                                  disabled={isCreating}
+                                />
+                                <label className="text-sm cursor-pointer break-words">
+                                  {perm?.label}
+                                </label>
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
-            </div>
+            </form>
+          </div>
 
-            {/* Actions */}
-            <div className="flex gap-3 pt-4">
-              <Button
-                type="submit"
-                disabled={isCreating}
-                className="flex-1"
-              >
-                {isCreating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {isEditMode ? "Updating..." : "Creating..."}
-                  </>
-                ) : isEditMode ? (
-                  "Update Admin"
-                ) : (
-                  "Create Admin"
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-                disabled={isCreating}
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
+          {/* Actions */}
+          <div className="flex-shrink-0 flex flex-col xs:flex-row gap-2 sm:gap-3 pt-3 sm:pt-4 border-t">
+            <Button
+              type="submit"
+              disabled={isCreating}
+              onClick={handleSubmit}
+              className="flex-1 h-9 sm:h-10 text-sm"
+            >
+              {isCreating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {isEditMode ? "Updating..." : "Creating..."}
+                </>
+              ) : isEditMode ? (
+                "Update Admin"
+              ) : (
+                "Create Admin"
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsDialogOpen(false)}
+              disabled={isCreating}
+              className="h-9 sm:h-10 text-sm"
+            >
+              Cancel
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

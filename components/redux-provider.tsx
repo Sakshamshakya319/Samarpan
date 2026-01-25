@@ -4,25 +4,24 @@ import { useEffect } from "react"
 import { Provider } from "react-redux"
 import { store } from "@/lib/store"
 import { initializeAuth } from "@/lib/slices/authSlice"
-import { setUser } from "@/lib/slices/userSlice"
 import type React from "react"
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    // Initialize auth state from localStorage on client side
-    store.dispatch(initializeAuth())
-
-    // Also initialize user state from localStorage if it exists
-    const userJson = localStorage.getItem("user")
-    if (userJson) {
+    console.log("[Redux Provider] Initializing auth state...")
+    
+    // Small delay to ensure localStorage is available
+    const initAuth = () => {
       try {
-        const user = JSON.parse(userJson)
-        store.dispatch(setUser(user))
-        console.log("[Redux Init] User state initialized from localStorage")
-      } catch (err) {
-        console.warn("[Redux Init] Failed to parse user from localStorage:", err)
+        store.dispatch(initializeAuth())
+      } catch (error) {
+        console.error("[Redux Provider] Failed to initialize auth:", error)
       }
     }
+    
+    // Initialize immediately and also after a small delay
+    initAuth()
+    setTimeout(initAuth, 100)
   }, [])
 
   return <>{children}</>

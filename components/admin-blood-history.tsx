@@ -188,66 +188,80 @@ export function AdminBloodHistory({ token }: AdminBloodHistoryProps) {
         </CardHeader>
         <CardContent>
           {/* Search and Filter Controls */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 placeholder="Search by name, email, or blood group..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-9 sm:h-10"
               />
             </div>
-            <Select value={eventFilter} onValueChange={setEventFilter}>
-              <SelectTrigger className="w-44">
-                <SelectValue placeholder="Filter by Event" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Donations</SelectItem>
-                {events.map(event => (
-                  <SelectItem key={event._id} value={event._id}>
-                    {event.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={bloodGroupFilter} onValueChange={setBloodGroupFilter}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Blood Group" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Groups</SelectItem>
-                {bloodGroups.map(group => (
-                  <SelectItem key={group} value={group}>{group}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Donation Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {donationTypes.map(type => (
-                  <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+              <Select value={eventFilter} onValueChange={setEventFilter}>
+                <SelectTrigger className="h-9 sm:h-10">
+                  <SelectValue placeholder="Filter by Event" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Donations</SelectItem>
+                  {events.map(event => (
+                    <SelectItem key={event._id} value={event._id}>
+                      {event.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={bloodGroupFilter} onValueChange={setBloodGroupFilter}>
+                <SelectTrigger className="h-9 sm:h-10">
+                  <SelectValue placeholder="Blood Group" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Groups</SelectItem>
+                  {bloodGroups.map(group => (
+                    <SelectItem key={group} value={group}>{group}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="h-9 sm:h-10">
+                  <SelectValue placeholder="Donation Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {donationTypes.map(type => (
+                    <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setSearchTerm("")
+                  setBloodGroupFilter("all")
+                  setTypeFilter("all")
+                  setEventFilter("all")
+                }}
+                className="h-9 sm:h-10 text-xs sm:text-sm"
+              >
+                Clear Filters
+              </Button>
+            </div>
           </div>
 
           {/* Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-blue-50 p-4 rounded-lg">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+            <div className="bg-blue-50 p-3 sm:p-4 rounded-lg">
               <div className="flex items-center gap-2">
-                <Droplet className="w-5 h-5 text-blue-600" />
-                <div>
-                  <p className="text-sm text-blue-600 font-medium">Total Donations</p>
-                  <p className="text-2xl font-bold text-blue-900">{donations.length}</p>
+                <Droplet className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-blue-600 font-medium">Total</p>
+                  <p className="text-lg sm:text-2xl font-bold text-blue-900">{donations.length}</p>
                 </div>
               </div>
             </div>
-            <div className="bg-green-50 p-4 rounded-lg">
+            <div className="bg-green-50 p-3 sm:p-4 rounded-lg">
               <div className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-green-600" />
+                <Award className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 flex-shrink-0" />
                 <div>
                   <p className="text-sm text-green-600 font-medium">Total Points</p>
                   <p className="text-2xl font-bold text-green-900">
@@ -285,109 +299,194 @@ export function AdminBloodHistory({ token }: AdminBloodHistoryProps) {
             </div>
           </div>
 
-          {/* Donations Table */}
+          {/* Donations List */}
           {filteredDonations.length === 0 ? (
             <div className="text-center py-8">
               <Droplet className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-600">No donation history found</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Donor</TableHead>
-                    <TableHead>Blood Group</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Event / Source</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Points</TableHead>
-                    <TableHead>Certificate</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredDonations.map((donation) => (
-                    <TableRow key={donation._id}>
-                      <TableCell>
+            <>
+              {/* Mobile Card View */}
+              <div className="block lg:hidden space-y-4">
+                {filteredDonations.map((donation) => (
+                  <Card key={donation._id} className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-medium">{donation.userName}</p>
-                          <p className="text-sm text-gray-500">{donation.userEmail}</p>
-                          {donation.userPhone && (
-                            <p className="text-sm text-gray-500">{donation.userPhone}</p>
-                          )}
+                          <p className="font-semibold">{donation.userName}</p>
+                          <p className="text-sm text-muted-foreground">{donation.userEmail}</p>
                         </div>
-                      </TableCell>
-                      <TableCell>
                         <Badge variant="outline" className="font-bold">
                           {donation.bloodGroup}
                         </Badge>
-                      </TableCell>
-                      <TableCell>{donation.quantity} units</TableCell>
-                      <TableCell>
-                        {new Date(donation.donationDate).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={donation.donationType === "request" ? "default" : 
-                                  donation.donationType === "event" ? "secondary" : "outline"}
-                        >
-                          {donation.donationType === "request" ? "Request" : 
-                           donation.donationType === "event" ? "Event" : "Direct"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {donation.eventName ? (
-                          <span className="font-medium text-blue-700">{donation.eventName}</span>
-                        ) : donation.donationType === "request" ? (
-                          <span className="text-gray-600">Blood Request</span>
-                        ) : (
-                          <span className="text-gray-500">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={donation.status === "completed" ? "default" : 
-                                  donation.status === "pending" ? "secondary" : "destructive"}
-                        >
-                          {donation.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Award className="w-4 h-4 text-yellow-500" />
-                          {donation.pointsAwarded}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-muted-foreground block">Quantity:</span>
+                          <span className="font-medium">{donation.quantity} units</span>
                         </div>
-                      </TableCell>
-                      <TableCell>
+                        <div>
+                          <span className="text-muted-foreground block">Date:</span>
+                          <span className="font-medium">{new Date(donation.donationDate).toLocaleDateString()}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block">Type:</span>
+                          <Badge 
+                            variant={donation.donationType === "request" ? "default" : 
+                                    donation.donationType === "event" ? "secondary" : "outline"}
+                            className="mt-1"
+                          >
+                            {donation.donationType === "request" ? "Request" : 
+                             donation.donationType === "event" ? "Event" : "Direct"}
+                          </Badge>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block">Status:</span>
+                          <Badge 
+                            variant={donation.status === "completed" ? "default" : 
+                                    donation.status === "pending" ? "secondary" : "destructive"}
+                            className="mt-1"
+                          >
+                            {donation.status}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {donation.eventName && (
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Event: </span>
+                          <span className="font-medium text-blue-700">{donation.eventName}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <div className="flex items-center gap-1 text-sm font-medium">
+                          <Award className="w-4 h-4 text-yellow-500" />
+                          {donation.pointsAwarded} Points
+                        </div>
                         <Badge 
                           variant={donation.certificateIssued ? "default" : "outline"}
                           className={donation.certificateIssued ? "bg-green-100 text-green-800" : ""}
                         >
-                          {donation.certificateIssued ? "Issued" : "Pending"}
+                          {donation.certificateIssued ? "Cert. Issued" : "Cert. Pending"}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          {donation.status === "completed" && donation.donationType === "event" && donation.pointsAwarded < 10 && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleAwardPoints(donation._id, donation.userId)}
-                              className="text-blue-600 border-blue-300 hover:bg-blue-50"
-                            >
-                              Award {10 - donation.pointsAwarded} Points
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
+                      </div>
+
+                      {donation.status === "completed" && donation.donationType === "event" && donation.pointsAwarded < 10 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleAwardPoints(donation._id, donation.userId)}
+                          className="w-full mt-2 text-blue-600 border-blue-300 hover:bg-blue-50"
+                        >
+                          Award {10 - donation.pointsAwarded} Points
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden lg:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Donor</TableHead>
+                      <TableHead>Blood Group</TableHead>
+                      <TableHead>Quantity</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Event / Source</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Points</TableHead>
+                      <TableHead>Certificate</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredDonations.map((donation) => (
+                      <TableRow key={donation._id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{donation.userName}</p>
+                            <p className="text-sm text-gray-500">{donation.userEmail}</p>
+                            {donation.userPhone && (
+                              <p className="text-sm text-gray-500">{donation.userPhone}</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-bold">
+                            {donation.bloodGroup}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{donation.quantity} units</TableCell>
+                        <TableCell>
+                          {new Date(donation.donationDate).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={donation.donationType === "request" ? "default" : 
+                                    donation.donationType === "event" ? "secondary" : "outline"}
+                          >
+                            {donation.donationType === "request" ? "Request" : 
+                             donation.donationType === "event" ? "Event" : "Direct"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {donation.eventName ? (
+                            <span className="font-medium text-blue-700">{donation.eventName}</span>
+                          ) : donation.donationType === "request" ? (
+                            <span className="text-gray-600">Blood Request</span>
+                          ) : (
+                            <span className="text-gray-500">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={donation.status === "completed" ? "default" : 
+                                    donation.status === "pending" ? "secondary" : "destructive"}
+                          >
+                            {donation.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Award className="w-4 h-4 text-yellow-500" />
+                            {donation.pointsAwarded}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={donation.certificateIssued ? "default" : "outline"}
+                            className={donation.certificateIssued ? "bg-green-100 text-green-800" : ""}
+                          >
+                            {donation.certificateIssued ? "Issued" : "Pending"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {donation.status === "completed" && donation.donationType === "event" && donation.pointsAwarded < 10 && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleAwardPoints(donation._id, donation.userId)}
+                                className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                              >
+                                Award {10 - donation.pointsAwarded} Points
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

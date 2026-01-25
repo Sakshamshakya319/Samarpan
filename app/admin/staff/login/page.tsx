@@ -84,7 +84,7 @@ export default function AdminStaffLogin() {
           <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center mx-auto mb-4">
             <span className="text-primary-foreground font-bold text-xl">S</span>
           </div>
-          <h1 className="text-3xl font-bold">Admin Login</h1>
+          <h1 className="font-heading text-3xl font-bold">Admin Login</h1>
           <p className="text-muted-foreground mt-2">Samarpan Administration Panel</p>
         </div>
 

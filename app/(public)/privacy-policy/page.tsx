@@ -6,7 +6,7 @@ export default function PrivacyPolicy() {
       {/* Hero */}
       <section className="py-20 md:py-32 bg-gradient-to-br from-background via-secondary/20 to-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6">Privacy Policy</h1>
+          <h1 className="font-heading text-5xl md:text-6xl font-bold mb-6">Privacy Policy</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Your privacy is important to us. Learn how we collect, use, and protect your personal information.
           </p>
@@ -18,20 +18,20 @@ export default function PrivacyPolicy() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="prose prose-lg max-w-none">
             <Card className="p-8 mb-8">
-              <h2 className="text-3xl font-bold mb-6">1. Information We Collect</h2>
+              <h2 className="font-heading text-3xl font-bold mb-6">1. Information We Collect</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
                   We collect information you provide directly to us, such as when you create an account, donate blood,
                   request blood, or contact us for support.
                 </p>
-                <h3 className="text-xl font-semibold text-foreground mt-6 mb-3">Personal Information</h3>
+                <h3 className="font-heading text-xl font-semibold text-foreground mt-6 mb-3">Personal Information</h3>
                 <ul className="list-disc pl-6 space-y-2">
                   <li>Name, email address, and phone number</li>
                   <li>Blood type and medical history (for donors)</li>
                   <li>Location information for matching donors and recipients</li>
                   <li>Communication preferences</li>
                 </ul>
-                <h3 className="text-xl font-semibold text-foreground mt-6 mb-3">Usage Information</h3>
+                <h3 className="font-heading text-xl font-semibold text-foreground mt-6 mb-3">Usage Information</h3>
                 <ul className="list-disc pl-6 space-y-2">
                   <li>Device information and browser type</li>
                   <li>IP address and location data</li>
@@ -42,7 +42,7 @@ export default function PrivacyPolicy() {
             </Card>
 
             <Card className="p-8 mb-8">
-              <h2 className="text-3xl font-bold mb-6">2. How We Use Your Information</h2>
+              <h2 className="font-heading text-3xl font-bold mb-6">2. How We Use Your Information</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>We use the information we collect to:</p>
                 <ul className="list-disc pl-6 space-y-2">
@@ -58,7 +58,7 @@ export default function PrivacyPolicy() {
             </Card>
 
             <Card className="p-8 mb-8">
-              <h2 className="text-3xl font-bold mb-6">3. Information Sharing and Disclosure</h2>
+              <h2 className="font-heading text-3xl font-bold mb-6">3. Information Sharing and Disclosure</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
                   We do not sell, trade, or rent your personal information to third parties. We may share your
@@ -75,7 +75,7 @@ export default function PrivacyPolicy() {
             </Card>
 
             <Card className="p-8 mb-8">
-              <h2 className="text-3xl font-bold mb-6">4. Data Security</h2>
+              <h2 className="font-heading text-3xl font-bold mb-6">4. Data Security</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
                   We implement appropriate technical and organizational measures to protect your personal information
@@ -92,7 +92,7 @@ export default function PrivacyPolicy() {
             </Card>
 
             <Card className="p-8 mb-8">
-              <h2 className="text-3xl font-bold mb-6">5. Your Rights and Choices</h2>
+              <h2 className="font-heading text-3xl font-bold mb-6">5. Your Rights and Choices</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>You have the following rights regarding your personal information:</p>
                 <ul className="list-disc pl-6 space-y-2">
@@ -110,7 +110,7 @@ export default function PrivacyPolicy() {
             </Card>
 
             <Card className="p-8 mb-8">
-              <h2 className="text-3xl font-bold mb-6">6. Cookies and Tracking Technologies</h2>
+              <h2 className="font-heading text-3xl font-bold mb-6">6. Cookies and Tracking Technologies</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
                   We use cookies and similar technologies to enhance your experience on our platform. For detailed
@@ -120,7 +120,7 @@ export default function PrivacyPolicy() {
             </Card>
 
             <Card className="p-8 mb-8">
-              <h2 className="text-3xl font-bold mb-6">7. Children's Privacy</h2>
+              <h2 className="font-heading text-3xl font-bold mb-6">7. Children's Privacy</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
                   Our platform is not intended for children under 18 years of age. We do not knowingly collect personal
@@ -131,7 +131,7 @@ export default function PrivacyPolicy() {
             </Card>
 
             <Card className="p-8 mb-8">
-              <h2 className="text-3xl font-bold mb-6">8. Changes to This Privacy Policy</h2>
+              <h2 className="font-heading text-3xl font-bold mb-6">8. Changes to This Privacy Policy</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
                   We may update this Privacy Policy from time to time to reflect changes in our practices or for other
@@ -142,7 +142,7 @@ export default function PrivacyPolicy() {
             </Card>
 
             <Card className="p-8">
-              <h2 className="text-3xl font-bold mb-6">9. Contact Us</h2>
+              <h2 className="font-heading text-3xl font-bold mb-6">9. Contact Us</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
                   If you have any questions about this Privacy Policy or our data practices, please contact us:

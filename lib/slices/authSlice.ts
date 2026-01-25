@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
 
 interface AuthState {
   token: string | null
+  user: any | null
   isLoading: boolean
   error: string | null
   isAuthenticated: boolean
@@ -9,6 +10,7 @@ interface AuthState {
 
 const initialState: AuthState = {
   token: null,
+  user: null,
   isLoading: false,
   error: null,
   isAuthenticated: false,
@@ -18,28 +20,28 @@ export const loginUser = createAsyncThunk(
   "auth/loginUser",
   async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
     try {
-      console.log("[v0] Sending login request...")
+      console.log("[Auth] Sending login request...")
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       })
 
-      console.log("[v0] Login response status:", response.status)
+      console.log("[Auth] Login response status:", response.status)
 
       if (!response.ok) {
         const error = await response.json()
-        console.log("[v0] Login error response:", error)
+        console.log("[Auth] Login error response:", error)
         return rejectWithValue(error.error || "Login failed")
       }
 
       const data = await response.json()
-      console.log("[v0] Login successful, storing token and user")
+      console.log("[Auth] Login successful, storing token and user")
       localStorage.setItem("token", data.token)
       localStorage.setItem("user", JSON.stringify(data.user))
       return { token: data.token, user: data.user }
     } catch (error) {
-      console.error("[v0] Login catch error:", error)
+      console.error("[Auth] Login catch error:", error)
       return rejectWithValue("An error occurred during login")
     }
   },
@@ -49,28 +51,28 @@ export const signupUser = createAsyncThunk(
   "auth/signupUser",
   async ({ email, password, name }: { email: string; password: string; name: string }, { rejectWithValue }) => {
     try {
-      console.log("[v0] Sending signup request...")
+      console.log("[Auth] Sending signup request...")
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, name }),
       })
 
-      console.log("[v0] Signup response status:", response.status)
+      console.log("[Auth] Signup response status:", response.status)
 
       if (!response.ok) {
         const error = await response.json()
-        console.log("[v0] Signup error response:", error)
+        console.log("[Auth] Signup error response:", error)
         return rejectWithValue(error.error || "Signup failed")
       }
 
       const data = await response.json()
-      console.log("[v0] Signup successful, storing token and user")
+      console.log("[Auth] Signup successful, storing token and user")
       localStorage.setItem("token", data.token)
       localStorage.setItem("user", JSON.stringify(data.user))
       return { token: data.token, user: data.user }
     } catch (error) {
-      console.error("[v0] Signup catch error:", error)
+      console.error("[Auth] Signup catch error:", error)
       return rejectWithValue("An error occurred during signup")
     }
   },
@@ -81,36 +83,67 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     logout: (state) => {
+      console.log("[Auth] Logging out, clearing state")
       state.token = null
+      state.user = null
       state.isAuthenticated = false
       state.error = null
-      localStorage.removeItem("token")
-      localStorage.removeItem("user")
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+        // Clear auth_user cookie immediately for UI update
+        document.cookie = "auth_user=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;"
+      }
       // Call logout API to clear cookies
       fetch("/api/auth/logout", { method: "POST" }).catch((err) =>
-        console.error("[v0] Logout API call failed:", err),
+        console.error("[Auth] Logout API call failed:", err),
       )
     },
-    initializeAuth: (state) => {
-      const token = localStorage.getItem("token")
-      if (token) {
-        state.token = token
-        state.isAuthenticated = true
-      }
-    },
     loginSuccess: (state, action) => {
+      console.log("[Auth] Login success, setting auth state for:", action.payload.user?.email)
       state.token = action.payload.token
+      state.user = action.payload.user
       state.isAuthenticated = true
       state.error = null
       state.isLoading = false
-      localStorage.setItem("token", action.payload.token)
-      localStorage.setItem("user", JSON.stringify(action.payload.user))
+      // Ensure localStorage is updated
+      if (typeof window !== 'undefined') {
+        localStorage.setItem("token", action.payload.token)
+        localStorage.setItem("user", JSON.stringify(action.payload.user))
+      }
     },
     loginFailure: (state, action) => {
+      console.log("[Auth] Login failure:", action.payload)
       state.token = null
+      state.user = null
       state.isAuthenticated = false
       state.error = action.payload as string
       state.isLoading = false
+    },
+    initializeAuth: (state) => {
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem("token")
+        const userStr = localStorage.getItem("user")
+        
+        console.log("[Auth] Initializing auth state:", { hasToken: !!token, hasUser: !!userStr })
+        
+        if (token && userStr) {
+          try {
+            const user = JSON.parse(userStr)
+            console.log("[Auth] Restoring auth state for:", user.email)
+            state.token = token
+            state.user = user
+            state.isAuthenticated = true
+            state.error = null
+          } catch (e) {
+            console.error("[Auth] Failed to parse user from localStorage:", e)
+            localStorage.removeItem("token")
+            localStorage.removeItem("user")
+          }
+        } else {
+          console.log("[Auth] No valid auth data found")
+        }
+      }
     },
   },
   extraReducers: (builder) => {
@@ -121,9 +154,9 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.isLoading = false
-        // Handle both old format (just token) and new format (token + user)
         const payload = action.payload as any
         state.token = typeof payload === 'string' ? payload : payload.token
+        state.user = typeof payload === 'string' ? null : payload.user
         state.isAuthenticated = true
         state.error = null
       })
@@ -138,9 +171,9 @@ const authSlice = createSlice({
       })
       .addCase(signupUser.fulfilled, (state, action) => {
         state.isLoading = false
-        // Handle both old format (just token) and new format (token + user)
         const payload = action.payload as any
         state.token = typeof payload === 'string' ? payload : payload.token
+        state.user = typeof payload === 'string' ? null : payload.user
         state.isAuthenticated = true
         state.error = null
       })

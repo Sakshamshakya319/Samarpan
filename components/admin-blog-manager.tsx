@@ -418,177 +418,193 @@ export function AdminBlogManager() {
         </div>
       )}
 
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center gap-3 xs:gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Blog Management</h2>
-          <p className="text-muted-foreground mt-1">Create, edit, and manage blog posts</p>
+          <h2 className="font-heading text-lg sm:text-xl lg:text-2xl font-bold">Blog Management</h2>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">Create, edit, and manage blog posts</p>
         </div>
-        <Button onClick={handleOpenDialog} className="gap-2">
+        <Button onClick={handleOpenDialog} className="gap-2 w-full xs:w-auto h-9 sm:h-10">
           <ImageIcon className="w-4 h-4" />
-          Create New Blog
+          <span className="hidden xs:inline">Create New Blog</span>
+          <span className="xs:hidden">New Blog</span>
         </Button>
       </div>
 
       {/* Create/Edit Blog Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingBlog ? "Edit Blog" : "Create New Blog"}</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="w-[95vw] max-w-4xl h-[95vh] max-h-[95vh] overflow-hidden flex flex-col p-3 sm:p-6">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="text-base sm:text-lg">{editingBlog ? "Edit Blog" : "Create New Blog"}</DialogTitle>
+            <DialogDescription className="text-sm">
               {editingBlog ? "Update blog details and images" : "Add a new blog post with images and content"}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Title */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Blog Title *</label>
-              <Input
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Enter blog title"
-              />
-            </div>
-
-            {/* Content */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Content *</label>
-              <TiptapEditor
-                value={formData.content}
-                onChange={(content) => setFormData({ ...formData, content })}
-                placeholder="Start typing your blog content..."
-              />
-            </div>
-
-            {/* Status */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as "draft" | "published" })}
-                className="w-full px-3 py-2 border rounded-md"
-              >
-                <option value="draft">Draft (Only visible to admins)</option>
-                <option value="published">Published (Visible to all users)</option>
-              </select>
-            </div>
-
-            {/* Image Upload */}
-            <div className="space-y-4">
+          <ScrollArea className="flex-1 overflow-y-auto">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 p-1">
+              {/* Title */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Upload Images * (Max 6 images)</label>
-                <p className="text-xs text-muted-foreground">
-                  Upload 5-6 images. One image will be set as thumbnail.
-                </p>
+                <label className="text-sm font-medium">Blog Title *</label>
                 <Input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  disabled={uploadedImages.length >= 6}
-                  className="cursor-pointer"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="Enter blog title"
+                  className="h-9 sm:h-10"
                 />
               </div>
 
-              {/* Image Gallery */}
-              {uploadedImages.length > 0 && (
-                <div className="space-y-3">
-                  <p className="text-sm font-medium">Uploaded Images ({uploadedImages.length})</p>
-                  <ScrollArea className="h-40 border rounded-lg p-4">
-                    <div className="flex gap-3">
-                      {uploadedImages.map((image, idx) => (
-                        <div key={idx} className="flex-shrink-0 relative group">
-                          <img
-                            src={image.url}
-                            alt={`Uploaded ${idx + 1}`}
-                            className={`h-32 w-32 object-cover rounded-lg border-2 ${
-                              image.isThumbnail ? "border-primary" : "border-border"
-                            }`}
-                          />
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition rounded-lg flex items-end p-2 gap-1">
-                            {!image.isThumbnail && (
+              {/* Content */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Content *</label>
+                <div className="min-h-[200px] sm:min-h-[250px]">
+                  <TiptapEditor
+                    value={formData.content}
+                    onChange={(content) => setFormData({ ...formData, content })}
+                    placeholder="Start typing your blog content..."
+                  />
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value as "draft" | "published" })}
+                  className="w-full px-3 py-2 border rounded-md h-9 sm:h-10 text-sm"
+                >
+                  <option value="draft">Draft (Only visible to admins)</option>
+                  <option value="published">Published (Visible to all users)</option>
+                </select>
+              </div>
+
+              {/* Image Upload */}
+              <div className="space-y-3 sm:space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Upload Images * (Max 6 images)</label>
+                  <p className="text-xs text-muted-foreground">
+                    Upload 5-6 images. One image will be set as thumbnail.
+                  </p>
+                  <Input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={uploadedImages.length >= 6}
+                    className="cursor-pointer h-9 sm:h-10 text-sm"
+                  />
+                </div>
+
+                {/* Image Gallery */}
+                {uploadedImages.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Uploaded Images ({uploadedImages.length})</p>
+                    <div className="border rounded-lg p-3 sm:p-4 max-h-48 sm:max-h-60 overflow-y-auto">
+                      <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
+                        {uploadedImages.map((image, idx) => (
+                          <div key={idx} className="relative group">
+                            <img
+                              src={image.url}
+                              alt={`Uploaded ${idx + 1}`}
+                              className={`w-full aspect-square object-cover rounded-lg border-2 ${
+                                image.isThumbnail ? "border-primary" : "border-border"
+                              }`}
+                            />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition rounded-lg flex flex-col items-center justify-center p-1 gap-1">
+                              {!image.isThumbnail && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => setThumbnail(idx)}
+                                  className="text-xs h-6 px-2 w-full"
+                                >
+                                  Set Thumb
+                                </Button>
+                              )}
+                              {image.isThumbnail && (
+                                <Badge className="text-xs px-1 py-0 h-5">Thumbnail</Badge>
+                              )}
                               <Button
                                 type="button"
                                 size="sm"
-                                variant="secondary"
-                                onClick={() => setThumbnail(idx)}
-                                className="flex-1 text-xs h-7"
+                                variant="destructive"
+                                onClick={() => removeImage(idx)}
+                                className="h-6 w-6 p-0"
                               >
-                                Set Thumbnail
+                                <Trash2 className="w-3 h-3" />
                               </Button>
-                            )}
-                            {image.isThumbnail && (
-                              <Badge className="flex-1 justify-center text-xs">Thumbnail</Badge>
-                            )}
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => removeImage(idx)}
-                              className="h-7 w-7 p-0"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </ScrollArea>
-                </div>
-              )}
-            </div>
-
-            {/* Form Actions */}
-            <div className="flex gap-3 justify-end">
-              <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>{editingBlog ? "Update Blog" : "Create Blog"}</>
+                  </div>
                 )}
-              </Button>
-            </div>
-          </form>
+              </div>
+            </form>
+          </ScrollArea>
+
+          {/* Form Actions */}
+          <div className="flex-shrink-0 flex gap-2 sm:gap-3 justify-end pt-3 sm:pt-4 border-t">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setShowDialog(false)}
+              className="h-8 px-3 text-xs sm:h-9 sm:px-4 sm:text-sm"
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isLoading}
+              onClick={handleSubmit}
+              className="h-8 px-3 text-xs sm:h-9 sm:px-4 sm:text-sm"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>{editingBlog ? "Update Blog" : "Create Blog"}</>
+              )}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Comments Dialog */}
       <Dialog open={showCommentsDialog} onOpenChange={setShowCommentsDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Blog Comments - {selectedBlogForComments?.title}</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="w-[95vw] max-w-2xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col p-3 sm:p-6">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="text-base sm:text-lg truncate">Blog Comments - {selectedBlogForComments?.title}</DialogTitle>
+            <DialogDescription className="text-sm">
               {selectedBlogForComments?.comments?.length || 0} comment(s)
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="h-96 border rounded-lg p-4 space-y-4">
+          <ScrollArea className="flex-1 border rounded-lg p-3 sm:p-4 space-y-4">
             {!selectedBlogForComments?.comments || selectedBlogForComments.comments.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No comments yet</p>
+              <p className="text-center text-muted-foreground py-8 text-sm">No comments yet</p>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {selectedBlogForComments.comments.map((comment) => (
                   <div key={comment._id} className="space-y-3 border-b pb-4">
                     {/* Main Comment */}
-                    <div className="bg-muted/30 p-3 rounded-lg">
+                    <div className="bg-muted/30 p-2 sm:p-3 rounded-lg">
                       <div className="flex justify-between items-start gap-2">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-sm">{comment.userName}</p>
-                            <p className="text-xs text-muted-foreground">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-sm truncate">{comment.userName}</p>
+                            <p className="text-xs text-muted-foreground flex-shrink-0">
                               {new Date(comment.createdAt).toLocaleDateString()}
                             </p>
                           </div>
-                          <p className="text-sm text-foreground whitespace-pre-wrap mt-1">{comment.text}</p>
+                          <p className="text-sm text-foreground whitespace-pre-wrap mt-1 break-words">{comment.text}</p>
 
                           {/* Comment Actions */}
-                          <div className="flex gap-2 pt-2 flex-wrap">
+                          <div className="flex gap-1 sm:gap-2 pt-2 flex-wrap">
                             <Button
                               size="sm"
                               variant="ghost"
@@ -610,7 +626,7 @@ export function AdminBlogManager() {
                               className="gap-1 h-6 text-xs px-2"
                             >
                               <MessageCircle className="w-3 h-3" />
-                              Reply
+                              <span className="hidden xs:inline">Reply</span>
                             </Button>
                           </div>
                         </div>
@@ -619,14 +635,14 @@ export function AdminBlogManager() {
 
                     {/* Reply Form */}
                     {replyingToCommentId === comment._id && (
-                      <div className="ml-4 border-l-2 border-l-accent bg-accent/5 p-3 rounded-lg">
+                      <div className="ml-2 sm:ml-4 border-l-2 border-l-accent bg-accent/5 p-2 sm:p-3 rounded-lg">
                         <div className="flex justify-between items-center mb-2">
-                          <p className="text-xs font-medium">Reply to {comment.userName}</p>
+                          <p className="text-xs font-medium truncate">Reply to {comment.userName}</p>
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => setReplyingToCommentId(null)}
-                            className="h-5 w-5 p-0"
+                            className="h-5 w-5 p-0 flex-shrink-0"
                           >
                             <X className="w-3 h-3" />
                           </Button>
@@ -643,7 +659,7 @@ export function AdminBlogManager() {
                             onChange={(e) => setReplyText(e.target.value)}
                             placeholder="Write a reply..."
                             rows={2}
-                            className="resize-none text-xs"
+                            className="resize-none text-xs sm:text-sm"
                           />
                           <Button
                             type="submit"
@@ -669,20 +685,20 @@ export function AdminBlogManager() {
 
                     {/* Nested Replies */}
                     {comment.replies && comment.replies.length > 0 && (
-                      <div className="ml-4 space-y-2 border-l-2 border-l-muted pl-3">
+                      <div className="ml-2 sm:ml-4 space-y-2 border-l-2 border-l-muted pl-2 sm:pl-3">
                         {comment.replies.map((reply) => (
                           <div key={reply._id} className="bg-muted/20 p-2 rounded-lg">
                             <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium text-xs">{reply.userName}</p>
-                                <p className="text-xs text-muted-foreground">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-medium text-xs truncate">{reply.userName}</p>
+                                <p className="text-xs text-muted-foreground flex-shrink-0">
                                   {new Date(reply.createdAt).toLocaleDateString()}
                                 </p>
                               </div>
-                              <p className="text-xs text-foreground whitespace-pre-wrap">{reply.text}</p>
+                              <p className="text-xs text-foreground whitespace-pre-wrap break-words">{reply.text}</p>
 
                               {/* Reply Action Buttons */}
-                              <div className="flex gap-2 pt-1 flex-wrap">
+                              <div className="flex gap-1 sm:gap-2 pt-1 flex-wrap">
                                 <Button
                                   size="sm"
                                   variant="ghost"
@@ -706,7 +722,7 @@ export function AdminBlogManager() {
                                   className="gap-1 h-5 text-xs px-1 text-destructive hover:text-destructive"
                                 >
                                   <Trash2 className="w-2 h-2" />
-                                  Delete
+                                  <span className="hidden xs:inline">Delete</span>
                                 </Button>
                               </div>
                             </div>
@@ -723,92 +739,94 @@ export function AdminBlogManager() {
       </Dialog>
 
       {/* Blogs List */}
-      <div className="grid gap-4">
+      <div className="grid gap-3 sm:gap-4">
         {isLoading && blogs.length === 0 ? (
           <Card>
-            <CardContent className="p-8 text-center">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-              <p>Loading blogs...</p>
+            <CardContent className="p-6 sm:p-8 text-center">
+              <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin mx-auto mb-2" />
+              <p className="text-sm sm:text-base">Loading blogs...</p>
             </CardContent>
           </Card>
         ) : blogs.length === 0 ? (
           <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              No blogs yet. Create one to get started!
+            <CardContent className="p-6 sm:p-8 text-center text-muted-foreground">
+              <p className="text-sm sm:text-base">No blogs yet. Create one to get started!</p>
             </CardContent>
           </Card>
         ) : (
           blogs.map((blog) => (
             <Card key={blog._id} className="overflow-hidden hover:border-primary/50 transition">
-              <div className="flex gap-4 p-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 p-3 sm:p-4">
                 {/* Thumbnail */}
                 {blog.images.find((img) => img.isThumbnail) && (
-                  <div className="flex-shrink-0">
+                  <div className="flex-shrink-0 w-full sm:w-auto">
                     <img
                       src={blog.images.find((img) => img.isThumbnail)?.url}
                       alt={blog.title}
-                      className="w-24 h-24 object-cover rounded-lg"
+                      className="w-full h-48 sm:w-24 sm:h-24 object-cover rounded-lg"
                     />
                   </div>
                 )}
 
                 {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg truncate">{blog.title}</h3>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{blog.content}</p>
-                      <div className="flex gap-2 mt-3 flex-wrap">
-                        <Badge variant={blog.status === "published" ? "default" : "secondary"}>
-                          {blog.status === "published" ? "Published" : "Draft"}
-                        </Badge>
-                        <Badge variant="outline" className="gap-1">
-                          <Eye className="w-3 h-3" />
-                          {blog.views}
-                        </Badge>
-                        <Badge variant="outline" className="gap-1">
-                          <MessageSquare className="w-3 h-3" />
-                          {blog.comments?.length || 0}
-                        </Badge>
-                      </div>
+                <div className="flex-1 min-w-0 space-y-3">
+                  <div className="space-y-2">
+                    <h3 className="font-heading font-semibold text-base sm:text-lg line-clamp-2">{blog.title}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2 sm:line-clamp-3">{blog.content}</p>
+                    
+                    <div className="flex gap-2 flex-wrap">
+                      <Badge variant={blog.status === "published" ? "default" : "secondary"} className="text-xs">
+                        {blog.status === "published" ? "Published" : "Draft"}
+                      </Badge>
+                      <Badge variant="outline" className="gap-1 text-xs">
+                        <Eye className="w-3 h-3" />
+                        {blog.views}
+                      </Badge>
+                      <Badge variant="outline" className="gap-1 text-xs">
+                        <MessageSquare className="w-3 h-3" />
+                        {blog.comments?.length || 0}
+                      </Badge>
                     </div>
+                  </div>
 
-                    {/* Actions */}
-                    <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
-                      {blog.comments && blog.comments.length > 0 && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleViewComments(blog)}
-                          className="gap-2"
-                          title={`View ${blog.comments.length} comments`}
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                          Comments ({blog.comments.length})
-                        </Button>
-                      )}
+                  {/* Actions */}
+                  <div className="flex flex-col xs:flex-row gap-2 xs:gap-2">
+                    {blog.comments && blog.comments.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleViewComments(blog)}
+                        className="gap-2 h-8 px-3 text-xs sm:h-9 sm:px-4 sm:text-sm justify-center xs:justify-start"
+                        title={`View ${blog.comments.length} comments`}
+                      >
+                        <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span className="hidden xs:inline">Comments ({blog.comments.length})</span>
+                        <span className="xs:hidden">Comments</span>
+                      </Button>
+                    )}
+                    <div className="flex gap-2">
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleEdit(blog)}
-                        className="gap-2"
+                        className="gap-2 h-8 px-3 text-xs sm:h-9 sm:px-4 sm:text-sm flex-1 xs:flex-none"
                       >
-                        <Edit2 className="w-4 h-4" />
-                        Edit
+                        <Edit2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span className="hidden xs:inline">Edit</span>
                       </Button>
                       <Button
                         size="sm"
                         variant="destructive"
                         onClick={() => handleDelete(blog._id)}
-                        className="gap-2"
+                        className="gap-2 h-8 px-3 text-xs sm:h-9 sm:px-4 sm:text-sm flex-1 xs:flex-none"
                       >
-                        <Trash2 className="w-4 h-4" />
-                        Delete
+                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span className="hidden xs:inline">Delete</span>
                       </Button>
                     </div>
                   </div>
 
-                  <p className="text-xs text-muted-foreground mt-3">
+                  <p className="text-xs text-muted-foreground">
                     By {blog.authorName} • {new Date(blog.createdAt).toLocaleDateString()}
                   </p>
                 </div>

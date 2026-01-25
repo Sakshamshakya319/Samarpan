@@ -3,16 +3,33 @@
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Menu, X, User, Bell, Droplet, AlertTriangle } from "lucide-react"
-import { useAppSelector } from "@/lib/hooks"
-import { useRouter } from "next/navigation"
+import { Menu, X, User, Bell, Droplet, AlertTriangle, LogOut } from "lucide-react"
+import { useAppSelector, useAppDispatch } from "@/lib/hooks"
+import { useRouter, usePathname } from "next/navigation"
+import { logout } from "@/lib/slices/authSlice"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false)
-  const { isAuthenticated } = useAppSelector((state) => state.auth)
+  const { isAuthenticated, user } = useAppSelector((state) => state.auth)
   const router = useRouter()
+  const pathname = usePathname()
+  const dispatch = useAppDispatch()
+
+  const handleLogout = () => {
+    dispatch(logout())
+    router.push("/")
+  }
 
   useEffect(() => {
     setIsMounted(true)
@@ -40,7 +57,21 @@ export function Navbar() {
     return () => clearInterval(interval)
   }, [])
 
+  // Don't render until mounted to avoid hydration issues
   if (!isMounted) return null
+
+  // Check authentication from multiple sources
+  const localToken = typeof window !== 'undefined' ? localStorage.getItem("token") : null
+  const cookieUser = typeof window !== 'undefined' ? document.cookie.includes('auth_user') : false
+  const isUserAuthenticated = isAuthenticated || !!localToken || cookieUser
+
+  console.log("[Navbar] Auth state:", { 
+    isAuthenticated, 
+    hasLocalToken: !!localToken, 
+    hasCookieUser: cookieUser,
+    finalAuth: isUserAuthenticated,
+    user: user?.email 
+  })
 
   return (
     <nav className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b border-border">
@@ -52,7 +83,7 @@ export function Navbar() {
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-lg">S</span>
               </div>
-              <span className="font-bold text-xl text-foreground hidden sm:inline">Samarpan</span>
+              <span className="font-heading font-bold text-xl text-foreground hidden sm:inline">Samarpan</span>
             </Link>
           </div>
 
@@ -85,7 +116,7 @@ export function Navbar() {
 
           {/* Auth Buttons / User Menu - Hide most during maintenance */}
           <div className="flex items-center gap-3">
-            {isAuthenticated ? (
+            {isUserAuthenticated ? (
               <>
                 {!isMaintenanceMode && (
                   <>
@@ -109,18 +140,49 @@ export function Navbar() {
                     </Link>
                   </>
                 )}
-                <Link href="/dashboard">
-                  <Button size="sm" className="gap-2">
-                    <User className="w-4 h-4" />
-                    <span className="hidden sm:inline">My Profile</span>
-                    <span className="sm:hidden">Profile</span>
-                  </Button>
-                </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={user?.avatar} alt={user?.name} />
+                        <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">{user?.name}</p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {user?.email}
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard" className="cursor-pointer">
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/notifications" className="cursor-pointer md:hidden">
+                        <Bell className="mr-2 h-4 w-4" />
+                        <span>Notifications</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
               <>
-                {/* Hide login/signup buttons during maintenance mode */}
-                {!isMaintenanceMode && (
+                {/* Hide login/signup buttons during maintenance mode or on NGO login page */}
+                {!isMaintenanceMode && pathname !== '/ngo/login' && (
                   <>
                     <Link href="/login" className="hidden sm:block">
                       <Button variant="outline" size="sm">
@@ -192,7 +254,7 @@ export function Navbar() {
             )}
             
             <div className="flex flex-col gap-2 pt-2">
-              {isAuthenticated ? (
+              {isUserAuthenticated ? (
                 <>
                   {!isMaintenanceMode && (
                     <>
@@ -222,11 +284,20 @@ export function Navbar() {
                       Profile
                     </Button>
                   </Link>
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    className="w-full gap-2" 
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </Button>
                 </>
               ) : (
                 <>
-                  {/* Hide login/signup buttons during maintenance mode */}
-                  {!isMaintenanceMode && (
+                  {/* Hide login/signup buttons during maintenance mode or on NGO login page */}
+                  {!isMaintenanceMode && pathname !== '/ngo/login' && (
                     <div className="flex gap-2">
                       <Link href="/login" className="flex-1">
                         <Button variant="outline" size="sm" className="w-full bg-transparent">

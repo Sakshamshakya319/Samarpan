@@ -37,8 +37,12 @@ export async function GET(request: NextRequest) {
     // Format events for frontend with registration count
     const formattedEvents = await Promise.all(
       events.map(async (event: any) => {
-        const registrationCount = await registrationsCollection.countDocuments({
+        const donorCount = await registrationsCollection.countDocuments({
           eventId: event._id,
+        })
+        
+        const volunteerCount = await db.collection("volunteer_registrations").countDocuments({
+          eventId: event._id
         })
 
         const eventDate = new Date(event.eventDate)
@@ -54,14 +58,20 @@ export async function GET(request: NextRequest) {
           location: event.location,
           expectedAttendees: event.expectedAttendees,
           volunteerSlotsNeeded: event.volunteerSlotsNeeded || 0,
-          registeredVolunteers: registrationCount,
-          eventType: event.eventType,
+          registeredVolunteers: volunteerCount, // Corrected to count volunteers
+          registeredDonors: donorCount,
+          eventTypes: Array.isArray(event.eventTypes) ? event.eventTypes : [event.eventTypes || "donation_camp"], // Ensure it's always an array
           imageUrl: event.imageUrl || "",
           allowRegistrations: event.allowRegistrations !== false && !isPastEvent,
+          isPast: isPastEvent,
           ngoName: event.ngoName || "", // NGO name
+          ngoId: event.ngoId,
           ngoLogo: event.ngoLogo || "", // NGO logo URL
           ngoWebsite: event.ngoWebsite || "", // NGO website
           organizedBy: event.organizedBy || "", // Organized by description
+          // Add participant categories and location type for dynamic registration
+          locationType: event.locationType || "",
+          participantCategories: event.participantCategories || [],
         }
       })
     )

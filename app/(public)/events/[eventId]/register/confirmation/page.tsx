@@ -143,7 +143,7 @@ export default function RegistrationConfirmationPage() {
           <CardContent className="pt-6 flex items-start gap-3">
             <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
             <div>
-              <h2 className="font-semibold text-green-900 mb-1">Registration Successful!</h2>
+              <h2 className="font-heading font-semibold text-green-900 mb-1">Registration Successful!</h2>
               <p className="text-sm text-green-800">
                 Your registration has been confirmed. Please save your alphanumeric token for event check-in.
               </p>

@@ -12,7 +12,7 @@ export function Footer() {
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <span className="text-primary-foreground font-bold">S</span>
               </div>
-              <span className="font-bold text-lg">Samarpan</span>
+              <span className="font-heading font-bold text-lg">Samarpan</span>
             </div>
             <p className="text-sm text-muted-foreground">
               Connecting donors and patients to save lives through blood and platelet donations.
@@ -21,7 +21,7 @@ export function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-semibold mb-4">Quick Links</h3>
+            <h3 className="font-heading font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2">
               <li>
                 <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition">
@@ -48,7 +48,7 @@ export function Footer() {
 
           {/* Resources */}
           <div>
-            <h3 className="font-semibold mb-4">Resources</h3>
+            <h3 className="font-heading font-semibold mb-4">Resources</h3>
             <ul className="space-y-2">
               <li>
                 <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground transition">
@@ -75,7 +75,7 @@ export function Footer() {
 
           {/* Contact */}
           <div>
-            <h3 className="font-semibold mb-4">Contact Us</h3>
+            <h3 className="font-heading font-semibold mb-4">Contact Us</h3>
             <ul className="space-y-3">
               <li className="flex items-start gap-2">
                 <Mail size={16} className="text-primary mt-0.5 flex-shrink-0" />

@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer"
+import Mailjet from "node-mailjet"
 import * as dotenv from "dotenv"
 import path from "path"
 
@@ -10,15 +10,17 @@ async function testEmailConfiguration() {
   console.log("=" + "=".repeat(60))
 
   // Check environment variables
-  console.log("\n1️⃣  Checking SMTP Configuration...")
+  console.log("\n1️⃣  Checking Mailjet Configuration...")
   console.log("-" + "-".repeat(60))
 
+  const apiKey = process.env.MAILJET_API_KEY || process.env.SMTP_USER
+  const apiSecret = process.env.MAILJET_SECRET_KEY || process.env.SMTP_PASS
+  const senderEmail = process.env.MAILJET_SENDER_EMAIL || process.env.SMTP_FROM
+
   const config = {
-    SMTP_HOST: process.env.SMTP_HOST,
-    SMTP_PORT: process.env.SMTP_PORT,
-    SMTP_USER: process.env.SMTP_USER,
-    SMTP_PASS: process.env.SMTP_PASS ? `${process.env.SMTP_PASS.substring(0, 10)}...` : undefined,
-    SMTP_FROM: process.env.SMTP_FROM,
+    MAILJET_API_KEY: apiKey ? `${apiKey.substring(0, 10)}...` : undefined,
+    MAILJET_SECRET_KEY: apiSecret ? `${apiSecret.substring(0, 10)}...` : undefined,
+    MAILJET_SENDER_EMAIL: senderEmail,
   }
 
   let allConfigured = true
@@ -32,113 +34,49 @@ async function testEmailConfiguration() {
     console.log(
       "\n⚠️  Some configuration values are missing. Please check your .env.local file.",
     )
+    console.log("   Required: MAILJET_API_KEY (or SMTP_USER) and MAILJET_SECRET_KEY (or SMTP_PASS) and MAILJET_SENDER_EMAIL (or SMTP_FROM)")
     process.exit(1)
   }
 
-  // Test SMTP connection
-  console.log("\n2️⃣  Testing SMTP Connection...")
+  // Test Mailjet connection
+  console.log("\n2️⃣  Testing Mailjet Connection...")
   console.log("-" + "-".repeat(60))
 
   try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || "587"),
-      secure: process.env.SMTP_PORT === "465",
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-    })
-
-    console.log("Verifying SMTP connection...")
-    await transporter.verify()
-    console.log("✅ SMTP connection successful!")
+    const mailjet = Mailjet.apiConnect(apiKey!, apiSecret!)
+    
+    // Try to get account details to verify credentials
+    const result = await mailjet.get("user").request()
+    
+    console.log("✅ Mailjet connection successful!")
+    console.log("   Account details:", (result.body as any).Data[0].Email)
+    
   } catch (error) {
-    console.error("❌ SMTP connection failed!")
+    console.error("❌ Mailjet connection failed!")
     if (error instanceof Error) {
       console.error(`Error: ${error.message}`)
-
-      if (error.message.includes("535")) {
-        console.error(
-          "\n🔑 Authentication Error: Your SendGrid API key is invalid or expired.",
-        )
-        console.error("   Steps to fix:")
-        console.error("   1. Go to https://app.sendgrid.com/settings/api_keys")
-        console.error("   2. Create a new API key (Full Access recommended for testing)")
-        console.error("   3. Update SMTP_PASS in .env.local with the new key")
-        console.error("   4. Make sure the API key is not restricted to specific IPs")
-      } else if (error.message.includes("ECONNREFUSED")) {
-        console.error("\n🌐 Connection Refused: Cannot reach the SMTP server.")
-        console.error("   Steps to fix:")
-        console.error("   1. Check that SMTP_HOST is correct: " + process.env.SMTP_HOST)
-        console.error("   2. Check that SMTP_PORT is correct: " + process.env.SMTP_PORT)
-        console.error("   3. Ensure your internet connection is working")
-      } else if (error.message.includes("ETIMEDOUT")) {
-        console.error("\n⏱️  Connection Timeout: SMTP server is not responding.")
-        console.error("   Steps to fix:")
-        console.error("   1. Check if the SMTP server is running")
-        console.error("   2. Try increasing the timeout in the transporter config")
-        console.error("   3. Check your firewall settings")
+      
+      if (error.message.includes("401") || error.message.includes("Unauthorized")) {
+         console.error("\n🔑 Authentication Error: Your Mailjet API Key or Secret Key is invalid.")
+         console.error("   Steps to fix:")
+         console.error("   1. Go to https://app.mailjet.com/account/api_keys")
+         console.error("   2. Check your API Key and Secret Key")
+         console.error("   3. Update .env.local")
       }
     }
-    process.exit(1)
+    // Don't exit here, continue to check other things
   }
 
   // Check sender email validation
   console.log("\n3️⃣  Checking Sender Email Configuration...")
   console.log("-" + "-".repeat(60))
 
-  const smtpFrom = process.env.SMTP_FROM || ""
-  const emailMatch = smtpFrom.match(/<(.+?)>|^(.+?)$/)
-  const senderEmail = emailMatch ? emailMatch[1] || emailMatch[2] : smtpFrom
+  const emailMatch = senderEmail!.match(/<(.+?)>|^(.+?)$/)
+  const emailAddress = emailMatch ? emailMatch[1] || emailMatch[2] : senderEmail
 
-  console.log(`Sender Email: ${senderEmail}`)
-
-  if (process.env.SMTP_USER === "apikey" && process.env.SMTP_HOST === "smtp.sendgrid.net") {
-    console.log("📧 SendGrid Configuration Detected")
-    console.log("")
-    console.log("⚠️  IMPORTANT: With SendGrid, the sender email must be verified!")
-    console.log("")
-    console.log("Steps to verify your sender email in SendGrid:")
-    console.log("1. Go to https://app.sendgrid.com/settings/sender_auth")
-    console.log("2. Click 'Create New Sender' or use an existing verified sender")
-    console.log("3. The email address you use in SMTP_FROM must match the verified sender")
-    console.log("4. Current sender: " + senderEmail)
-    console.log("")
-    console.log("Alternative: Use SendGrid Single Sender Verification")
-    console.log("- If you verify a single sender, use that email in SMTP_FROM")
-    console.log("- If you verify a domain, any email @that-domain will work")
-  }
-
-  console.log("\n4️⃣  SendGrid API Key Validation...")
-  console.log("-" + "-".repeat(60))
-
-  const apiKey = process.env.SMTP_PASS
-  if (apiKey) {
-    if (apiKey.startsWith("SG.")) {
-      console.log("✅ API Key format appears valid (starts with SG.)")
-      console.log(`   Key: ${apiKey.substring(0, 15)}...${apiKey.substring(apiKey.length - 10)}`)
-    } else {
-      console.error("❌ API Key format looks invalid!")
-      console.error("   SendGrid API keys should start with 'SG.'")
-      console.error("   Current key: " + apiKey.substring(0, 20) + "...")
-    }
-  }
-
-  console.log("\n5️⃣  Recommendations...")
-  console.log("-" + "-".repeat(60))
-
-  console.log("\n✅ Email should now be working if all checks passed!")
-  console.log("\nIf emails are still not being received:")
-  console.log("1. Check the user's spam/junk folder")
-  console.log("2. Verify the sender email is properly configured in SendGrid")
-  console.log("3. Check SendGrid activity log for bounce/suppression reasons:")
-  console.log("   https://app.sendgrid.com/email_activity")
-  console.log("4. Enable detailed logging in your application")
-  console.log("5. Review server logs for error messages")
+  console.log(`Sender Email: ${emailAddress}`)
+  console.log("ℹ️  Note: Ensure this email is verified in Mailjet Sender Addresses.")
+  console.log("   https://app.mailjet.com/account/sender")
 
   console.log("\n" + "=".repeat(62))
   console.log("✅ Diagnostic complete!")

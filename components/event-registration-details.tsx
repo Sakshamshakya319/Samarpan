@@ -100,7 +100,7 @@ export function EventRegistrationDetails({ registration }: EventRegistrationDeta
             {registration.event && (
               <>
                 <div>
-                  <h3 className="font-semibold mb-3 text-lg">{registration.event.title}</h3>
+                  <h3 className="font-heading font-semibold mb-3 text-lg">{registration.event.title}</h3>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm">
                       <MapPin className="w-4 h-4 text-gray-500" />
@@ -121,7 +121,7 @@ export function EventRegistrationDetails({ registration }: EventRegistrationDeta
 
             {/* Donor Information */}
             <div>
-              <h3 className="font-semibold mb-3">Your Information</h3>
+              <h3 className="font-heading font-semibold mb-3">Your Information</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 p-3 rounded-lg">
                   <p className="text-xs text-gray-600 mb-1">Full Name</p>
@@ -158,7 +158,7 @@ export function EventRegistrationDetails({ registration }: EventRegistrationDeta
 
             {/* Status Information */}
             <div>
-              <h3 className="font-semibold mb-3">Status</h3>
+              <h3 className="font-heading font-semibold mb-3">Status</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-gray-600 mb-2">Donation Status</p>
@@ -191,7 +191,7 @@ export function EventRegistrationDetails({ registration }: EventRegistrationDeta
             {registration.alphanumericToken && registration.event && (
               <>
                 <div>
-                  <h3 className="font-semibold mb-3">Your Event QR Code</h3>
+                  <h3 className="font-heading font-semibold mb-3">Your Event QR Code</h3>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <QRCodeGenerator
                       registrationId={registration._id}
@@ -219,7 +219,7 @@ export function EventRegistrationDetails({ registration }: EventRegistrationDeta
             {!registration.alphanumericToken && (
               <>
                 <div>
-                  <h3 className="font-semibold mb-3">Your Event QR Code</h3>
+                  <h3 className="font-heading font-semibold mb-3">Your Event QR Code</h3>
                   <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 flex items-center justify-between gap-4">
                     <div className="flex items-start gap-3 flex-1">
                       <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />

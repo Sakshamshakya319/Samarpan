@@ -34,7 +34,6 @@ export async function POST(request: NextRequest) {
 
     const notificationsCollection = db.collection("notifications")
     let recipientUsers: any[] = []
-    let recipientEmails: string[] = []
 
     if (sendToAll) {
       // Send to all users
@@ -66,8 +65,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No recipient specified" }, { status: 400 })
     }
 
+    let emailsSent = 0
+
     if (recipientUsers.length > 0) {
-      // Create database notifications
+      // Create database notifications for dashboard
       const notifications = recipientUsers.map((user) => ({
         userId: user._id,
         title,
@@ -80,26 +81,37 @@ export async function POST(request: NextRequest) {
 
       // Send emails if requested
       if (shouldSendEmail) {
-        recipientEmails = recipientUsers.map((u) => u.email).filter((email) => email)
+        console.log(`[Admin Notification] Sending emails to ${recipientUsers.length} users`)
 
-        if (recipientEmails.length > 0) {
-          console.log(`[Admin Notification] Sending emails to ${recipientEmails.length} users`)
+        // Send individual emails to each user for personalization
+        const emailPromises = recipientUsers
+          .filter(user => user.email) // Only users with email addresses
+          .map(async (user) => {
+            try {
+              const emailHTML = generateNotificationEmailHTML({
+                title,
+                message,
+                userName: user.name,
+              })
 
-          // Generate email HTML
-          const emailHTML = generateNotificationEmailHTML({
-            title,
-            message,
+              const emailSent = await sendEmail({
+                to: user.email,
+                subject: `Samarpan: ${title}`,
+                html: emailHTML,
+              })
+
+              if (emailSent) {
+                emailsSent++
+              }
+              return emailSent
+            } catch (err) {
+              console.error(`[Admin Notification] Failed to send email to ${user.email}:`, err)
+              return false
+            }
           })
 
-          // Send emails asynchronously
-          sendEmail({
-            to: recipientEmails,
-            subject: title,
-            html: emailHTML,
-          }).catch((err) => {
-            console.error("[Admin Notification] Error sending emails:", err)
-          })
-        }
+        // Wait for all emails to be sent
+        await Promise.all(emailPromises)
       }
 
       // Send WhatsApp to recipients who have phone numbers (best-effort)
@@ -121,7 +133,7 @@ export async function POST(request: NextRequest) {
       {
         message: "Notification sent successfully",
         recipientCount: recipientUsers.length,
-        emailsSent: recipientEmails.length,
+        emailsSent: emailsSent,
       },
       { status: 201 },
     )
