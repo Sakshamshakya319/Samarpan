@@ -226,6 +226,9 @@ export default function VolunteerRegistrationPage() {
   }
 
   const formatEventType = (type: string) => {
+    if (!type || typeof type !== 'string') {
+      return 'Event';
+    }
     return type
       .split("_")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))

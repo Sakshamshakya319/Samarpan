@@ -200,7 +200,7 @@ export function AdminEventsManager({ token }: AdminEventsManagerProps) {
     setFormData({
       title: event.title,
       description: event.description,
-      eventDate: event.eventDate.split("T")[0],
+      eventDate: event.eventDate ? event.eventDate.split("T")[0] : "",
       startTime: event.startTime,
       endTime: event.endTime,
       location: event.location,

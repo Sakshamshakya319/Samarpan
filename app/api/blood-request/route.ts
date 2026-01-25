@@ -5,10 +5,11 @@ import { sendEmail, generateBloodRequestEmailHTML } from "@/lib/email"
 import { sendWhatsAppBulk } from "@/lib/whatsapp"
 import { ObjectId } from "mongodb"
 import { verifyAdminPermission } from "@/lib/admin-utils-server"
+import { getTokenFromRequest } from "@/lib/auth-utils"
 
 export async function POST(request: NextRequest) {
   try {
-    const token = request.headers.get("authorization")?.split(" ")[1]
+    const token = getTokenFromRequest(request)
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
@@ -166,7 +167,7 @@ export async function GET(request: NextRequest) {
     
     if (!isAdmin) {
       // If not admin, verify as regular user token
-      const token = request.headers.get("authorization")?.split(" ")[1]
+      const token = getTokenFromRequest(request)
       if (!token) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
       }

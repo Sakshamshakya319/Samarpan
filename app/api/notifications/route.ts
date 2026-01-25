@@ -4,10 +4,11 @@ import { verifyToken } from "@/lib/auth"
 import { sendEmail, generateNotificationEmailHTML } from "@/lib/email"
 import { sendWhatsAppNotification } from "@/lib/whatsapp"
 import { ObjectId } from "mongodb"
+import { getTokenFromRequest } from "@/lib/auth-utils"
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.headers.get("authorization")?.split(" ")[1]
+    const token = getTokenFromRequest(request)
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = request.headers.get("authorization")?.split(" ")[1]
+    const token = getTokenFromRequest(request)
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }

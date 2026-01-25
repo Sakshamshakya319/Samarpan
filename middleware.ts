@@ -36,7 +36,8 @@ export async function middleware(request: NextRequest) {
       if (maintenanceSettings?.enabled) {
         const allowedIps = maintenanceSettings.allowedIps || [];
         const secretKey = maintenanceSettings.secretKey;
-        const userIp = request.ip || request.headers.get('x-forwarded-for')?.split(',')[0].trim();
+        const forwardedFor = request.headers.get('x-forwarded-for');
+        const userIp = request.ip || (forwardedFor ? forwardedFor.split(',')[0].trim() : null);
         const secretKeyFromQuery = request.nextUrl.searchParams.get('secret');
 
         const isAllowedIp = userIp && allowedIps.includes(userIp);

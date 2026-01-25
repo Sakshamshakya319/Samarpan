@@ -2,10 +2,11 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyToken } from "@/lib/auth"
 import { ObjectId } from "mongodb"
+import { getTokenFromRequest } from "@/lib/auth-utils"
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.headers.get("authorization")?.split(" ")[1]
+    const token = getTokenFromRequest(request)
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const token = request.headers.get("authorization")?.split(" ")[1]
+    const token = getTokenFromRequest(request)
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
@@ -118,7 +119,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const token = request.headers.get("authorization")?.split(" ")[1]
+    const token = getTokenFromRequest(request)
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
