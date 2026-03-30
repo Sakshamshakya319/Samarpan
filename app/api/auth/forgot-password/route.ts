@@ -103,13 +103,29 @@ export async function POST(request: NextRequest) {
     // Connect to database
     const db = await getDatabase()
     const usersCollection = db.collection("users")
+    const ngosCollection = db.collection("ngos")
 
-    // Check if user exists
-    const user = await usersCollection.findOne({ email: email.toLowerCase() })
+    // Check if user or NGO exists
+    let account: any = await usersCollection.findOne({ email: email.toLowerCase() })
+    let collection = usersCollection
+    let accountType = "user"
+    let userName = ""
 
-    if (!user) {
+    if (account) {
+      userName = account.name || email
+    } else {
+      // Check if NGO exists
+      account = await ngosCollection.findOne({ ngoEmail: email.toLowerCase() })
+      if (account) {
+        collection = ngosCollection
+        accountType = "ngo"
+        userName = account.ngoName || email
+      }
+    }
+
+    if (!account) {
       // Don't reveal if email exists (security best practice)
-      console.log(`[Password Reset] Email not found: ${email}`)
+      console.log(`[Password Reset] Email not found in users or ngos: ${email}`)
       return NextResponse.json(
         { message: "If an account with this email exists, a password reset link has been sent" },
         { status: 200 },
@@ -117,14 +133,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate password reset token using new auth utility
-    console.log(`[Password Reset] Generating reset token for user: ${user._id}`)
+    console.log(`[Password Reset] Generating reset token for ${accountType}: ${account._id}`)
     const { token: resetToken, hashedToken: resetTokenHash } = generateResetToken(email.toLowerCase())
     const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000) // 1 hour from now
 
     // Store reset token in database
-    console.log(`[Password Reset] Storing reset token for user: ${user._id}`)
-    await usersCollection.updateOne(
-      { _id: user._id },
+    console.log(`[Password Reset] Storing reset token for ${accountType}: ${account._id}`)
+    await collection.updateOne(
+      { _id: account._id },
       {
         $set: {
           passwordResetToken: resetTokenHash,
@@ -143,13 +159,14 @@ export async function POST(request: NextRequest) {
 
     // Send reset email
     const emailHTML = generatePasswordResetEmailHTML({
-      userName: user.name || email,
+      userName: userName,
       resetLink,
     })
 
     console.log(`[Password Reset] Attempting to send password reset email...`)
     console.log(`[Password Reset]    - Recipient: ${email}`)
-    console.log(`[Password Reset]    - User: ${user.name || "Unknown"}`)
+    console.log(`[Password Reset]    - Account Type: ${accountType}`)
+    console.log(`[Password Reset]    - Name: ${userName}`)
 
     const emailSent = await sendEmail({
       to: email,
@@ -162,7 +179,7 @@ export async function POST(request: NextRequest) {
       console.error(`[Password Reset] ❌ Failed to send password reset email to: ${email}`)
       console.error(`[Password Reset] The reset token has been stored but email delivery failed`)
       console.error(`[Password Reset] Token Hash: ${resetTokenHash.substring(0, 20)}...`)
-      console.error(`[Password Reset] User ID: ${user._id}`)
+      console.error(`[Password Reset] ${accountType} ID: ${account._id}`)
       // Don't reveal that email sending failed in production
       return NextResponse.json(
         { message: "If an account with this email exists, a password reset link has been sent" },
@@ -172,6 +189,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Password Reset] ✅ Password reset email sent successfully`)
     console.log(`[Password Reset]    - Email to: ${email}`)
+    console.log(`[Password Reset]    - Account Type: ${accountType}`)
     console.log(`[Password Reset]    - Token expires in 1 hour`)
     return NextResponse.json(
       { message: "If an account with this email exists, a password reset link has been sent" },

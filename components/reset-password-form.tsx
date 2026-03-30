@@ -21,6 +21,7 @@ export function ResetPasswordForm() {
   const [verifying, setVerifying] = useState(true)
   const [tokenValid, setTokenValid] = useState(false)
   const [userEmail, setUserEmail] = useState("")
+  const [accountType, setAccountType] = useState<"user" | "ngo">("user")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -41,6 +42,7 @@ export function ResetPasswordForm() {
         if (response.ok && data.valid) {
           setTokenValid(true)
           setUserEmail(data.email)
+          setAccountType(data.accountType || "user")
         } else {
           setTokenValid(false)
         }
@@ -120,7 +122,7 @@ export function ResetPasswordForm() {
         setSubmitted(true)
         toast.success("Password reset successfully! Redirecting to login...")
         setTimeout(() => {
-          router.push("/login")
+          router.push(accountType === "ngo" ? "/ngo/login" : "/login")
         }, 2000)
       } else {
         const errorMsg = data.error || "Failed to reset password. Please try again."

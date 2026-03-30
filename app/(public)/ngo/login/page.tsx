@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, Building, Mail, Lock, AlertCircle, CheckCircle } from "lucide-react"
 import Link from "next/link"
+import { ForgotPasswordDialog } from "@/components/forgot-password-dialog"
 
 export default function NGOLoginPage() {
   const router = useRouter()
@@ -17,6 +18,7 @@ export default function NGOLoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false)
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -178,9 +180,13 @@ export default function NGOLoginPage() {
               </p>
               
               <p className="text-sm text-gray-600">
-                <Link href="/forgot-password" className="text-blue-600 hover:text-blue-700 font-medium">
+                <button 
+                  type="button"
+                  onClick={() => setForgotPasswordOpen(true)}
+                  className="text-blue-600 hover:text-blue-700 font-medium"
+                >
                   Forgot your password?
-                </Link>
+                </button>
               </p>
               
               <div className="border-t pt-4">
@@ -194,6 +200,12 @@ export default function NGOLoginPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Forgot Password Dialog */}
+        <ForgotPasswordDialog 
+          open={forgotPasswordOpen} 
+          onOpenChange={setForgotPasswordOpen} 
+        />
 
         {/* Application Status Notice */}
         <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">

@@ -84,33 +84,50 @@ export async function POST(request: NextRequest) {
     // Connect to database
     const db = await getDatabase()
     const usersCollection = db.collection("users")
+    const ngosCollection = db.collection("ngos")
 
-    // Find user with matching reset token
-    const user = await usersCollection.findOne({
+    // Find user or NGO with matching reset token
+    let account: any = await usersCollection.findOne({
       email: tokenData.email,
       passwordResetToken: tokenData.tokenHash,
       passwordResetExpiry: { $gt: new Date() }, // Double-check expiry
     })
+    let collection = usersCollection
+    let accountType = "user"
 
-    if (!user) {
-      console.warn("[Password Reset] ❌ User not found or token mismatch")
+    if (!account) {
+      // Check in ngos collection
+      account = await ngosCollection.findOne({
+        ngoEmail: tokenData.email,
+        passwordResetToken: tokenData.tokenHash,
+        passwordResetExpiry: { $gt: new Date() },
+      })
+      if (account) {
+        collection = ngosCollection
+        accountType = "ngo"
+      }
+    }
+
+    if (!account) {
+      console.warn("[Password Reset] ❌ Account not found or token mismatch")
       return NextResponse.json(
         { error: "Invalid or expired password reset token. Please request a new one." },
         { status: 400 },
       )
     }
 
-    console.log(`[Password Reset] ✅ Token verified for user: ${user.email}`)
-    console.log(`[Password Reset] Token expiry: ${user.passwordResetExpiry?.toISOString()}`)
+    const accountEmail = accountType === "user" ? account.email : account.ngoEmail
+    console.log(`[Password Reset] ✅ Token verified for ${accountType}: ${accountEmail}`)
+    console.log(`[Password Reset] Token expiry: ${account.passwordResetExpiry?.toISOString()}`)
 
     // Hash new password
     console.log("[Password Reset] Hashing new password...")
     const hashedPassword = await hashPassword(password)
 
-    // Update user password and clear reset token
-    console.log(`[Password Reset] Updating password for user: ${user._id}`)
-    const updateResult = await usersCollection.updateOne(
-      { _id: user._id },
+    // Update account password and clear reset token
+    console.log(`[Password Reset] Updating password for ${accountType}: ${account._id}`)
+    const updateResult = await collection.updateOne(
+      { _id: account._id },
       {
         $set: {
           password: hashedPassword,
@@ -130,8 +147,8 @@ export async function POST(request: NextRequest) {
     console.log(`[Password Reset]    - Modified documents: ${updateResult.modifiedCount}`)
 
     if (updateResult.modifiedCount === 0) {
-      console.error("[Password Reset] ❌ Failed to update user password in database")
-      console.error(`[Password Reset] User ID: ${user._id}`)
+      console.error(`[Password Reset] ❌ Failed to update ${accountType} password in database`)
+      console.error(`[Password Reset] ${accountType} ID: ${account._id}`)
       return NextResponse.json(
         { error: "Failed to reset password. Please try again." },
         { status: 500 },
@@ -139,8 +156,8 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`[Password Reset] ✅ Password successfully reset`)
-    console.log(`[Password Reset]    - Email: ${user.email}`)
-    console.log(`[Password Reset]    - User ID: ${user._id}`)
+    console.log(`[Password Reset]    - Email: ${accountEmail}`)
+    console.log(`[Password Reset]    - Account Type: ${accountType}`)
     console.log(`[Password Reset]    - Completed at: ${new Date().toISOString()}`)
 
     return NextResponse.json(
@@ -189,27 +206,42 @@ export async function GET(request: NextRequest) {
     // Connect to database
     const db = await getDatabase()
     const usersCollection = db.collection("users")
+    const ngosCollection = db.collection("ngos")
 
     // Check if token exists in database and is not expired
-    const user = await usersCollection.findOne({
+    let account = await usersCollection.findOne({
       email: tokenData.email,
       passwordResetToken: tokenData.tokenHash,
       passwordResetExpiry: { $gt: new Date() },
     })
 
-    if (!user) {
-      console.warn("[Password Reset] ❌ Token not found in database or expired")
+    if (!account) {
+      account = await ngosCollection.findOne({
+        ngoEmail: tokenData.email,
+        passwordResetToken: tokenData.tokenHash,
+        passwordResetExpiry: { $gt: new Date() },
+      })
+    }
+
+    if (!account) {
+      console.warn("[Password Reset] ❌ Token not found in database for user or ngo")
       return NextResponse.json(
         { valid: false, error: "Invalid or expired password reset token" },
         { status: 400 },
       )
     }
 
+    const accountEmail = account.email || account.ngoEmail
     console.log(`[Password Reset] ✅ Token verified successfully`)
-    console.log(`[Password Reset]    - Email: ${user.email}`)
-    console.log(`[Password Reset]    - Token expires: ${user.passwordResetExpiry?.toISOString()}`)
+    console.log(`[Password Reset]    - Email: ${accountEmail}`)
+    console.log(`[Password Reset]    - Account Type: ${account.ngoEmail ? "ngo" : "user"}`)
+    console.log(`[Password Reset]    - Token expires: ${account.passwordResetExpiry?.toISOString()}`)
 
-    return NextResponse.json({ valid: true, email: user.email }, { status: 200 })
+    return NextResponse.json({ 
+      valid: true, 
+      email: accountEmail,
+      accountType: account.ngoEmail ? "ngo" : "user"
+    }, { status: 200 })
   } catch (error) {
     console.error("[Password Reset] ❌ Verification error:", error)
     if (error instanceof Error) {
