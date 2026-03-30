@@ -86,11 +86,11 @@ export async function POST(request: NextRequest) {
     const usersCollection = db.collection("users")
     const ngosCollection = db.collection("ngos")
 
-    // Find user or NGO with matching reset token
+    // Find user or NGO with matching reset token (using case-insensitive email search)
     let account: any = await usersCollection.findOne({
-      email: tokenData.email,
+      email: { $regex: new RegExp(`^${tokenData.email}$`, "i") },
       passwordResetToken: tokenData.tokenHash,
-      passwordResetExpiry: { $gt: new Date() }, // Double-check expiry
+      passwordResetExpiry: { $gt: new Date() },
     })
     let collection = usersCollection
     let accountType = "user"
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     if (!account) {
       // Check in ngos collection
       account = await ngosCollection.findOne({
-        ngoEmail: tokenData.email,
+        ngoEmail: { $regex: new RegExp(`^${tokenData.email}$`, "i") },
         passwordResetToken: tokenData.tokenHash,
         passwordResetExpiry: { $gt: new Date() },
       })

@@ -52,6 +52,9 @@ export function AdminNGOApplicationsManager({ token }: AdminNGOApplicationsManag
   const [currentPdfTitle, setCurrentPdfTitle] = useState('')
   const [pdfLoadError, setPdfLoadError] = useState(false)
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
+  const [showPasswordChange, setShowPasswordChange] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
 
   useEffect(() => {
     fetchApplications()
@@ -125,6 +128,48 @@ export function AdminNGOApplicationsManager({ token }: AdminNGOApplicationsManag
       setError(`Error ${action}ing NGO`)
     } finally {
       setActionLoading(null)
+    }
+  }
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedApp || !newPassword) return
+
+    if (newPassword.length < 8) {
+      setError('Password must be at least 8 characters long')
+      return
+    }
+
+    setIsChangingPassword(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const response = await fetch('/api/admin/ngos/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ngoId: selectedApp._id,
+          newPassword
+        })
+      })
+
+      if (response.ok) {
+        setSuccess('Password changed successfully')
+        setNewPassword('')
+        setShowPasswordChange(false)
+        setSelectedApp(null)
+      } else {
+        const data = await response.json()
+        setError(data.error || 'Failed to change password')
+      }
+    } catch (err) {
+      setError('Error changing password')
+    } finally {
+      setIsChangingPassword(false)
     }
   }
 
@@ -465,18 +510,33 @@ export function AdminNGOApplicationsManager({ token }: AdminNGOApplicationsManag
                               <span>Resume</span>
                             </Button>
                           ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedApp(app)
-                              }}
-                              disabled={actionLoading === app._id}
-                              className="gap-1 xs:gap-2 bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200 flex-1 xs:flex-none h-8 px-2 text-xs xs:h-9 xs:px-3 xs:text-sm"
-                            >
-                              <Pause className="w-3 h-3 xs:w-4 xs:h-4" />
-                              <span>Pause</span>
-                            </Button>
+                            <div className="flex gap-2 flex-1 xs:flex-none">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedApp(app)
+                                  setShowPasswordChange(true)
+                                }}
+                                className="gap-1 xs:gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 flex-1 h-8 px-2 text-xs xs:h-9 xs:px-3 xs:text-sm"
+                                title="Change Password"
+                              >
+                                <Lock className="w-3 h-3 xs:w-4 xs:h-4" />
+                                <span>Password</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedApp(app)
+                                }}
+                                disabled={actionLoading === app._id}
+                                className="gap-1 xs:gap-2 bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200 flex-1 h-8 px-2 text-xs xs:h-9 xs:px-3 xs:text-sm"
+                              >
+                                <Pause className="w-3 h-3 xs:w-4 xs:h-4" />
+                                <span>Pause</span>
+                              </Button>
+                            </div>
                           )}
                         </div>
                       )}
@@ -1004,6 +1064,74 @@ export function AdminNGOApplicationsManager({ token }: AdminNGOApplicationsManag
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Password Dialog */}
+      <Dialog open={showPasswordChange} onOpenChange={(open) => {
+        setShowPasswordChange(open)
+        if (!open) {
+          setNewPassword('')
+          setError('')
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5 text-blue-600" />
+              Change NGO Password
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handlePasswordChange} className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">New Password for {selectedApp?.ngoName}</label>
+              <Input
+                type="password"
+                placeholder="Enter at least 8 characters"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                autoFocus
+                className="h-11"
+              />
+              <p className="text-xs text-gray-500">
+                Tip: Use a strong password with letters, numbers and symbols.
+              </p>
+            </div>
+            
+            {error && (
+              <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm border border-red-100 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowPasswordChange(false)}
+                disabled={isChangingPassword}
+                className="h-11"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isChangingPassword || !newPassword}
+                className="bg-blue-600 hover:bg-blue-700 h-11 px-6"
+              >
+                {isChangingPassword ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Changing...
+                  </>
+                ) : (
+                  'Update Password'
+                )}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

@@ -14,7 +14,6 @@ import { Separator } from "@/components/ui/separator"
 import { useAppDispatch, useAppSelector } from "@/lib/hooks"
 import { loginUser } from "@/lib/slices/authSlice"
 import { GoogleLoginButton } from "@/components/google-login-button"
-import { ForgotPasswordDialog } from "@/components/forgot-password-dialog"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -22,7 +21,6 @@ export default function LoginPage() {
   const { isLoading, error, isAuthenticated, token } = useAppSelector((state) => state.auth)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false)
 
   // Redirect if user is already authenticated
   useEffect(() => {
@@ -70,13 +68,12 @@ export default function LoginPage() {
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="block text-sm font-medium">Password</label>
-                <button
-                  type="button"
-                  onClick={() => setForgotPasswordOpen(true)}
+                <Link
+                  href="/forgot-password"
                   className="text-sm text-red-600 hover:text-red-700 hover:underline font-medium transition-colors"
                 >
                   Forgot Password?
-                </button>
+                </Link>
               </div>
               <Input
                 type="password"
@@ -99,8 +96,6 @@ export default function LoginPage() {
           </p>
         </CardContent>
       </Card>
-
-      <ForgotPasswordDialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen} />
     </div>
   )
 }

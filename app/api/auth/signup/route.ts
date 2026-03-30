@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     // Create user
     console.log("[v0] Creating user...")
     const result = await usersCollection.insertOne({
-      email,
+      email: email.toLowerCase(),
       password: hashedPassword,
       name,
       bloodGroup: bloodGroup || "",

@@ -105,8 +105,10 @@ export async function POST(request: NextRequest) {
     const usersCollection = db.collection("users")
     const ngosCollection = db.collection("ngos")
 
-    // Check if user or NGO exists
-    let account: any = await usersCollection.findOne({ email: email.toLowerCase() })
+    // Check if user or NGO exists (using case-insensitive search for robustness)
+    let account: any = await usersCollection.findOne({ 
+      email: { $regex: new RegExp(`^${email.trim()}$`, "i") } 
+    })
     let collection = usersCollection
     let accountType = "user"
     let userName = ""
@@ -115,7 +117,9 @@ export async function POST(request: NextRequest) {
       userName = account.name || email
     } else {
       // Check if NGO exists
-      account = await ngosCollection.findOne({ ngoEmail: email.toLowerCase() })
+      account = await ngosCollection.findOne({ 
+        ngoEmail: { $regex: new RegExp(`^${email.trim()}$`, "i") } 
+      })
       if (account) {
         collection = ngosCollection
         accountType = "ngo"

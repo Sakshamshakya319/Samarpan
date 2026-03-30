@@ -14,8 +14,10 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase()
     const ngosCollection = db.collection("ngos")
 
-    // Find NGO by email
-    const ngo = await ngosCollection.findOne({ ngoEmail: email })
+    // Find NGO by email (case-insensitive)
+    const ngo = await ngosCollection.findOne({ 
+      ngoEmail: { $regex: new RegExp(`^${email.trim()}$`, "i") } 
+    })
 
     if (!ngo) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
