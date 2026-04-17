@@ -205,7 +205,7 @@ export default function SuperAdminPage() {
               >
                 <Shield className="w-3 h-3 xs:w-4 xs:h-4" />
                 <span className="hidden xs:inline">Admin Management</span>
-                <span className="xs:hidden">Admins</span>
+                
               </button>
               <button
                 onClick={() => setActiveTab("ngo-applications")}
@@ -217,7 +217,7 @@ export default function SuperAdminPage() {
               >
                 <Building className="w-3 h-3 xs:w-4 xs:h-4" />
                 <span className="hidden xs:inline">NGO Applications</span>
-                <span className="xs:hidden">NGOs</span>
+                
               </button>
               <button
                 onClick={() => setActiveTab("ngo-events")}
@@ -229,7 +229,7 @@ export default function SuperAdminPage() {
               >
                 <Calendar className="w-3 h-3 xs:w-4 xs:h-4" />
                 <span className="hidden xs:inline">NGO Events</span>
-                <span className="xs:hidden">Events</span>
+                
               </button>
               <button
                 onClick={() => setActiveTab("users")}
@@ -240,7 +240,7 @@ export default function SuperAdminPage() {
                 }`}
               >
                 <span className="hidden xs:inline">Users Management</span>
-                <span className="xs:hidden">Users</span>
+                
               </button>
               <button
                 onClick={() => setActiveTab("notifications")}
@@ -251,7 +251,7 @@ export default function SuperAdminPage() {
                 }`}
               >
                 <span className="hidden xs:inline">Send Notifications</span>
-                <span className="xs:hidden">Notify</span>
+                
               </button>
               <button
                 onClick={() => setActiveTab("certificates")}
@@ -262,7 +262,7 @@ export default function SuperAdminPage() {
                 }`}
               >
                 <span className="hidden xs:inline">Generate Certificates</span>
-                <span className="xs:hidden">Certs</span>
+                
               </button>
               <button
                 onClick={() => setActiveTab("funds")}
@@ -274,7 +274,7 @@ export default function SuperAdminPage() {
               >
                 <IndianRupee className="w-3 h-3 xs:w-4 xs:h-4" />
                 <span className="hidden xs:inline">Funds Collected</span>
-                <span className="xs:hidden">Funds</span>
+                
               </button>
               <button
                 onClick={() => setActiveTab("donations")}
@@ -285,7 +285,7 @@ export default function SuperAdminPage() {
                 }`}
               >
                 <span className="hidden xs:inline">Manage Donations</span>
-                <span className="xs:hidden">Donations</span>
+                
               </button>
               <button
                 onClick={() => setActiveTab("images")}
@@ -296,7 +296,7 @@ export default function SuperAdminPage() {
                 }`}
               >
                 <span className="hidden xs:inline">Donation Images</span>
-                <span className="xs:hidden">Images</span>
+                
               </button>
               <button
                 onClick={() => setActiveTab("blood-requests")}
@@ -307,7 +307,7 @@ export default function SuperAdminPage() {
                 }`}
               >
                 <span className="hidden xs:inline">Blood Requests</span>
-                <span className="xs:hidden">Requests</span>
+                
               </button>
               <button
                 onClick={() => setActiveTab("blood-history")}
@@ -319,7 +319,7 @@ export default function SuperAdminPage() {
               >
                 <History className="w-3 h-3 xs:w-4 xs:h-4" />
                 <span className="hidden xs:inline">Blood History</span>
-                <span className="xs:hidden">History</span>
+                
               </button>
               <button
                 onClick={() => setActiveTab("events")}
@@ -342,7 +342,7 @@ export default function SuperAdminPage() {
               >
                 <Truck className="w-3 h-3 xs:w-4 xs:h-4" />
                 <span className="hidden xs:inline">Transportation</span>
-                <span className="xs:hidden">Transport</span>
+                
               </button>
               <button
                 onClick={() => setActiveTab("contacts")}
@@ -354,7 +354,7 @@ export default function SuperAdminPage() {
               >
                 <Mail className="w-3 h-3 xs:w-4 xs:h-4" />
                 <span className="hidden xs:inline">Contact Submissions</span>
-                <span className="xs:hidden">Contacts</span>
+                
               </button>
               <button
                 onClick={() => setActiveTab("qr-checker")}
@@ -366,7 +366,7 @@ export default function SuperAdminPage() {
               >
                 <QrCode className="w-3 h-3 xs:w-4 xs:h-4" />
                 <span className="hidden xs:inline">QR Checker</span>
-                <span className="xs:hidden">QR</span>
+                
               </button>
               <button
                 onClick={() => setActiveTab("event-donors")}
@@ -378,7 +378,7 @@ export default function SuperAdminPage() {
               >
                 <Users className="w-3 h-3 xs:w-4 xs:h-4" />
                 <span className="hidden xs:inline">Event Donors</span>
-                <span className="xs:hidden">Donors</span>
+                
               </button>
               <button
                 onClick={() => setActiveTab("blogs")}
@@ -390,7 +390,7 @@ export default function SuperAdminPage() {
               >
                 <BookOpen className="w-3 h-3 xs:w-4 xs:h-4" />
                 <span className="hidden xs:inline">Blog Management</span>
-                <span className="xs:hidden">Blogs</span>
+                
               </button>
               <button
                 onClick={() => setActiveTab("action-history")}
@@ -402,7 +402,7 @@ export default function SuperAdminPage() {
               >
                 <History className="w-3 h-3 xs:w-4 xs:h-4" />
                 <span className="hidden xs:inline">Action History</span>
-                <span className="xs:hidden">Actions</span>
+                
               </button>
               <button
                 onClick={() => setActiveTab("maintenance")}
@@ -414,7 +414,7 @@ export default function SuperAdminPage() {
               >
                 <Lock className="w-3 h-3 xs:w-4 xs:h-4" />
                 <span className="hidden xs:inline">Maintenance</span>
-                <span className="xs:hidden">Maint</span>
+                
               </button>
             </div>
           </div>
