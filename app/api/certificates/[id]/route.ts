@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { verifyToken } from "@/lib/auth"
+import { getDatabase } from "@/lib/db/mongodb"
+import { verifyToken } from "@/lib/auth/auth"
 import { ObjectId } from "mongodb"
-import { generateCertificateDesign } from "@/lib/certificate-generator"
+import { generateCertificateDesign } from "@/lib/generators/certificate-generator"
 
 export async function GET(
   request: NextRequest,

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { useAppSelector } from "@/lib/hooks"
+import { useAppSelector } from "@/lib/store/hooks"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, AlertCircle, CheckCircle2, ArrowLeft, Calendar, MapPin, Users, Building, ExternalLink, Heart } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-import { EventRegistrationStatus } from "@/components/event-registration-status"
+import { EventRegistrationStatus } from "@/components/features/event-registration-status"
 
 interface Event {
   _id: string

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { AdminFundingDonations } from "@/components/admin-funding-donations"
+import { AdminFundingDonations } from "@/components/admin/admin-funding-donations"
 
 export default function AdminFundingPage() {
   const router = useRouter()

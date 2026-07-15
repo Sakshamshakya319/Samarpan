@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { verifyAdminToken } from "@/lib/auth"
+import { getDatabase } from "@/lib/db/mongodb"
+import { verifyAdminToken } from "@/lib/auth/auth"
 import { ObjectId } from "mongodb"
-import { sendEmail } from "@/lib/email"
+import { sendEmail } from "@/lib/services/email"
 
 // GET - List all NGO registrations for admin review
 export async function GET(request: NextRequest) {

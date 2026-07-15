@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
+import { getDatabase } from "@/lib/db/mongodb"
 import bcrypt from "bcryptjs"
 import { ObjectId } from "mongodb"
-import { verifyAdminToken } from "@/lib/auth"
+import { verifyAdminToken } from "@/lib/auth/auth"
 
 export async function POST(request: NextRequest) {
   try {

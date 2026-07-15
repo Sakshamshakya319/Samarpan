@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { AdaptiveImage } from "@/components/adaptive-image"
-import { ImageLightbox } from "@/components/image-lightbox"
+import { AdaptiveImage } from "@/components/shared/adaptive-image"
+import { ImageLightbox } from "@/components/shared/image-lightbox"
 import { Loader2, Eye, MessageSquare, Calendar, User, Trash2, AlertCircle, ArrowLeft, Heart, MessageCircle, X, Share2, Mail, Facebook, Instagram } from "lucide-react"
-import { useAppSelector } from "@/lib/hooks"
+import { useAppSelector } from "@/lib/store/hooks"
 
 interface Reply {
   _id: string

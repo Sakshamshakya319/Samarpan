@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { verifyAdminPermission } from "@/lib/admin-utils"
+import { getDatabase } from "@/lib/db/mongodb"
+import { verifyAdminPermission } from "@/lib/admin/admin-utils"
 import { ADMIN_PERMISSIONS } from "@/lib/constants/admin-permissions"
 
 export async function GET(request: NextRequest) {

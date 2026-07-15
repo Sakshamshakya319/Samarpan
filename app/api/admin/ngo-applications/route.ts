@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { verifyAdminToken } from "@/lib/auth"
-import { sendEmail, generateNGOApprovalEmailHTML, generateNGORejectionEmailHTML } from "@/lib/email"
+import { getDatabase } from "@/lib/db/mongodb"
+import { verifyAdminToken } from "@/lib/auth/auth"
+import { sendEmail, generateNGOApprovalEmailHTML, generateNGORejectionEmailHTML } from "@/lib/services/email"
 import { ObjectId } from "mongodb"
 
 // GET - Fetch all NGO applications

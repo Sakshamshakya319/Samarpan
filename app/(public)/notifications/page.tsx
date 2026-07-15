@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Bell, ArrowLeft, Phone, Truck, Clock } from "lucide-react"
-import { useAppSelector } from "@/lib/hooks"
+import { useAppSelector } from "@/lib/store/hooks"
 
 interface DriverDetails {
   name: string

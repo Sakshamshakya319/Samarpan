@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useAppDispatch } from "@/lib/hooks"
+import { useAppDispatch } from "@/lib/store/hooks"
 import { loginSuccess, loginFailure } from "@/lib/slices/authSlice"
 import { setUser } from "@/lib/slices/userSlice"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

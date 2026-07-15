@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { verifyAdminToken } from "@/lib/auth"
-import { connectToDatabase } from "@/lib/mongodb"
+import { verifyAdminToken } from "@/lib/auth/auth"
+import { connectToDatabase } from "@/lib/db/mongodb"
 import { ObjectId } from "mongodb"
-import { sendEmail } from "@/lib/email"
+import { sendEmail } from "@/lib/services/email"
 
 export async function PUT(request: NextRequest) {
   try {

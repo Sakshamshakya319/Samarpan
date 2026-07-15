@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { hashPassword, verifyPassword, verifyToken, verifyAdminToken } from "@/lib/auth"
+import { getDatabase } from "@/lib/db/mongodb"
+import { hashPassword, verifyPassword, verifyToken, verifyAdminToken } from "@/lib/auth/auth"
 import { ObjectId } from "mongodb"
 
 interface ChangePasswordRequest {

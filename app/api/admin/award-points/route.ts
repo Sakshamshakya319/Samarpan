@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
+import { getDatabase } from "@/lib/db/mongodb"
 import { ObjectId } from "mongodb"
-import { verifyAdminPermission } from "@/lib/admin-utils-server"
-import { sendWhatsAppNotification } from "@/lib/whatsapp"
+import { verifyAdminPermission } from "@/lib/admin/admin-utils-server"
+import { sendWhatsAppNotification } from "@/lib/services/whatsapp"
 
 export async function POST(request: NextRequest) {
   try {

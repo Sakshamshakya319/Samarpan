@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { verifyToken } from "@/lib/auth"
+import { getDatabase } from "@/lib/db/mongodb"
+import { verifyToken } from "@/lib/auth/auth"
 import { ObjectId } from "mongodb"
 
 const DONATION_INTERVAL_DAYS = 90 // 3 months
@@ -126,23 +126,29 @@ export async function POST(request: NextRequest) {
       // Send email notifications to users who have email addresses
       const usersWithEmail = allUsers.filter(u => u.email)
       if (usersWithEmail.length > 0) {
-        const { sendEmailNotification } = await import("@/lib/email")
+        const { sendEmailNotification } = await import("@/lib/services/email")
         await Promise.allSettled(
           usersWithEmail.map(user => 
             sendEmailNotification({
-              to: user.email,
-              subject: "Blood Request Accepted",
-              text: `A blood request for ${bloodRequest.bloodGroup} blood has been accepted. Thank you for your interest in helping save lives!`,
-              html: `<p>A blood request for <strong>${bloodRequest.bloodGroup}</strong> blood has been accepted by a donor.</p><p>Thank you for your interest in helping save lives!</p>`
+              to: user.email!,
+              subject: "Your Blood Request was Accepted",
+              text: `Your blood request has been accepted by a donor. Please check your dashboard.`,
+              html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                  <h2>Blood Request Accepted</h2>
+                  <p>Your blood request has been accepted by a donor.</p>
+                  <p>Please log in to your dashboard to view donor details.</p>
+                </div>
+              `
             })
           )
         )
       }
 
-      // Send WhatsApp notifications to users who have phone numbers
+      // 5b. Notify via WhatsApp
       const usersWithPhone = allUsers.filter(u => u.phone)
       if (usersWithPhone.length > 0) {
-        const { sendWhatsAppNotification } = await import("@/lib/whatsapp")
+        const { sendWhatsAppNotification } = await import("@/lib/services/whatsapp")
         await Promise.allSettled(
           usersWithPhone.map(user => 
             sendWhatsAppNotification({

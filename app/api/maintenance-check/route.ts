@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getMaintenanceSettings, updateMaintenanceSettings } from "@/lib/maintenance-cache";
+import { getMaintenanceSettings, updateMaintenanceSettings } from "@/lib/db/maintenance-cache";
 
 export async function GET() {
   try {

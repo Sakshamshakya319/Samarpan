@@ -1,4 +1,4 @@
-import { BloodRequestForm } from "@/components/blood-request-form"
+import { BloodRequestForm } from "@/components/features/blood-request-form"
 
 export const metadata = {
   title: "Request Blood Donation | Samarpan",

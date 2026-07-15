@@ -5,21 +5,22 @@ export const dynamic = "force-dynamic"
 
 import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Bell, LogOut, User, Calendar, Trash2, Lock } from "lucide-react"
-import { useAppDispatch, useAppSelector } from "@/lib/hooks"
+import { Bell, LogOut, User, Calendar, Trash2, Lock, Zap, Heart, MapPin } from "lucide-react"
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks"
 import { fetchUserProfile, updateUserProfile } from "@/lib/slices/userSlice"
 import { logout, loginSuccess } from "@/lib/slices/authSlice"
-import { SamarpanFullscreenLoader } from "@/components/samarpan-loader"
-import { BloodDonationRequests } from "@/components/blood-donation-requests"
-import { DonationImageUpload } from "@/components/donation-image-upload"
-import { DriverDetailsDisplay } from "@/components/driver-details-display"
-import { UserCertificatesDisplay } from "@/components/user-certificates-display"
-import { UserEventRegistrations } from "@/components/user-event-registrations"
-import { UserChangePasswordDialog } from "@/components/user-change-password-dialog"
+import { SamarpanFullscreenLoader } from "@/components/shared/samarpan-loader"
+import { BloodDonationRequests } from "@/components/features/blood-donation-requests"
+import { DonationImageUpload } from "@/components/features/donation-image-upload"
+import { DriverDetailsDisplay } from "@/components/features/driver-details-display"
+import { UserCertificatesDisplay } from "@/components/user/user-certificates-display"
+import { UserEventRegistrations } from "@/components/user/user-event-registrations"
+import { UserChangePasswordDialog } from "@/components/user/user-change-password-dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
 interface Notification {
@@ -252,6 +253,31 @@ function DashboardContent() {
               Logout
             </Button>
           </div>
+        </div>
+
+        {/* v2 Quick Access Bar */}
+        <div className="mb-4 md:mb-6 grid grid-cols-3 gap-3">
+          <Link href="/sos">
+            <div className="p-3 rounded-xl bg-red-600 text-white text-center cursor-pointer hover:bg-red-700 transition-all shadow-md">
+              <Zap className="w-5 h-5 mx-auto mb-1" />
+              <p className="text-xs font-semibold">SOS Request</p>
+              <p className="text-xs opacity-80">No login needed</p>
+            </div>
+          </Link>
+          <Link href="/care-circle">
+            <div className="p-3 rounded-xl bg-pink-50 border border-pink-200 text-center cursor-pointer hover:bg-pink-100 transition-all">
+              <Heart className="w-5 h-5 mx-auto mb-1 text-pink-600" />
+              <p className="text-xs font-semibold text-pink-900">Care Circle</p>
+              <p className="text-xs text-pink-600">Recurring patients</p>
+            </div>
+          </Link>
+          <Link href="/city-dashboard">
+            <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-center cursor-pointer hover:bg-blue-100 transition-all">
+              <MapPin className="w-5 h-5 mx-auto mb-1 text-blue-600" />
+              <p className="text-xs font-semibold text-blue-900">City Map</p>
+              <p className="text-xs text-blue-600">Live requests</p>
+            </div>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">

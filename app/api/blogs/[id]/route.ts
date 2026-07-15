@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { ObjectId } from "mongodb"
-import { getDatabase } from "@/lib/mongodb"
-import { verifyAdminPermission } from "@/lib/admin-utils"
+import { getDatabase } from "@/lib/db/mongodb"
+import { verifyAdminPermission } from "@/lib/admin/admin-utils"
 import { ADMIN_PERMISSIONS } from "@/lib/constants/admin-permissions"
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

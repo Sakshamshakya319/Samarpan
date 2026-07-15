@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { sendEmail, generateNGORegistrationEmailHTML } from "@/lib/email"
+import { getDatabase } from "@/lib/db/mongodb"
+import { sendEmail, generateNGORegistrationEmailHTML } from "@/lib/services/email"
 import bcrypt from "bcryptjs"
 import { writeFile, mkdir } from "fs/promises"
 import { join } from "path"

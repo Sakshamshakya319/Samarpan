@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
+import { getDatabase } from "@/lib/db/mongodb"
 import { ObjectId } from "mongodb"
-import { verifyToken } from "@/lib/auth"
-import { sendWhatsAppNotification } from "@/lib/whatsapp"
+import { verifyToken } from "@/lib/auth/auth"
+import { sendWhatsAppNotification } from "@/lib/services/whatsapp"
 
 export async function PATCH(request: NextRequest) {
   try {

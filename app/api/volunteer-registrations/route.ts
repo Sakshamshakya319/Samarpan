@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { verifyToken } from "@/lib/auth"
-import { connectToDatabase } from "@/lib/mongodb"
+import { verifyToken } from "@/lib/auth/auth"
+import { connectToDatabase } from "@/lib/db/mongodb"
 import { ObjectId } from "mongodb"
-import { sendEmail } from "@/lib/email"
+import { sendEmail } from "@/lib/services/email"
 
 // Generate a unique 6-digit alphanumeric token
 function generateAlphanumericToken(): string {

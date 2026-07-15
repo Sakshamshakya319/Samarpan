@@ -1,5 +1,5 @@
 import { Metadata } from "next"
-import { BloodRequestsList } from "@/components/blood-requests-list"
+import { BloodRequestsList } from "@/components/features/blood-requests-list"
 
 export const metadata: Metadata = {
   title: "Donate Blood - Samarpan",

@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { hashPassword, generateToken } from "@/lib/auth"
-import { sendEmail, generateWelcomeEmailHTML } from "@/lib/email"
+import { getDatabase } from "@/lib/db/mongodb"
+import { hashPassword, generateToken } from "@/lib/auth/auth"
+import { sendEmail, generateWelcomeEmailHTML } from "@/lib/services/email"
 
 export async function POST(request: NextRequest) {
   try {

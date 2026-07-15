@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import { Analytics } from "@vercel/analytics/next"
 import { Inter, Playfair_Display } from "next/font/google"
 import "./globals.css"
-import { ReduxProvider } from "@/components/redux-provider"
+import { ReduxProvider } from "@/components/shared/redux-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { Toaster as ToastToaster } from "@/components/ui/toaster"
 

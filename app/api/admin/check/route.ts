@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { verifyAdminPermission } from "@/lib/admin-utils-server"
+import { verifyAdminPermission } from "@/lib/admin/admin-utils-server"
 
 export async function GET(request: NextRequest) {
   try {

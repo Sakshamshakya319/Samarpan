@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { hashPassword, verifyResetToken } from "@/lib/auth"
+import { getDatabase } from "@/lib/db/mongodb"
+import { hashPassword, verifyResetToken } from "@/lib/auth/auth"
 
 interface ResetPasswordRequest {
   token: string

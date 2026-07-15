@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { verifyAdminToken } from "@/lib/auth"
+import { verifyAdminToken } from "@/lib/auth/auth"
 import { readFile } from "fs/promises"
 import { join } from "path"
 import { existsSync } from "fs"

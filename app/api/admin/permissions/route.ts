@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { verifyAdminPermission } from "@/lib/admin-utils"
+import { verifyAdminPermission } from "@/lib/admin/admin-utils"
 import {
   ADMIN_PERMISSIONS,
   PERMISSION_GROUPS,

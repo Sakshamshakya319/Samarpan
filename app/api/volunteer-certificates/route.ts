@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { verifyToken, verifyAdminToken } from "@/lib/auth"
-import { connectToDatabase } from "@/lib/mongodb"
+import { verifyToken, verifyAdminToken } from "@/lib/auth/auth"
+import { connectToDatabase } from "@/lib/db/mongodb"
 import { ObjectId } from "mongodb"
-import { generateVolunteerCertificate } from "@/lib/volunteer-certificate-generator"
-import { sendEmail } from "@/lib/email"
+import { generateVolunteerCertificate } from "@/lib/generators/volunteer-certificate-generator"
+import { sendEmail } from "@/lib/services/email"
 
 export async function POST(request: NextRequest) {
   try {

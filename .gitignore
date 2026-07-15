@@ -32,3 +32,21 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Secrets and keys
+*.key
+*.pem
+*.keystore
+*.pkcs12
+*.p12
+*.pfx
+*.jks
+*.cer
+*.crt
+*.der
+secret.json
+secrets.json
+*.rsa
+*.dsa
+*.ecdsa
+*.ed25519

@@ -1,11 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { verifyToken } from "@/lib/auth"
-import { sendEmail, generateBloodRequestEmailHTML } from "@/lib/email"
-import { sendWhatsAppBulk } from "@/lib/whatsapp"
+import { getDatabase } from "@/lib/db/mongodb"
+import { verifyToken } from "@/lib/auth/auth"
+import { sendEmail, generateBloodRequestEmailHTML } from "@/lib/services/email"
+import { sendWhatsAppBulk } from "@/lib/services/whatsapp"
 import { ObjectId } from "mongodb"
-import { verifyAdminPermission } from "@/lib/admin-utils-server"
-import { getTokenFromRequest } from "@/lib/auth-utils"
+import { verifyAdminPermission } from "@/lib/admin/admin-utils-server"
+import { getTokenFromRequest } from "@/lib/auth/auth-utils"
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,6 +42,11 @@ export async function POST(request: NextRequest) {
       patientPhone,
       hospitalDocumentImage,
       hospitalDocumentFileName,
+      bloodComponent = "whole-blood",
+      city,
+      pincode,
+      lat: userLat,
+      lng: userLng,
     } = await request.json()
 
     if (!bloodGroup || !quantity || !hospitalLocation) {
@@ -58,6 +63,39 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Geocode hospital location via Nominatim proxy
+    let geocodedLat: number | null = userLat || null
+    let geocodedLng: number | null = userLng || null
+    let geocodedCity: string = city || ""
+
+    if (!geocodedLat && hospitalLocation) {
+      try {
+        const geoResp = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(hospitalLocation + (city ? ", " + city : "") + ", India")}&format=json&limit=1`,
+          {
+            headers: { "User-Agent": "Samarpan-BloodDonation-App/1.0" },
+            signal: AbortSignal.timeout(4000),
+          }
+        )
+        if (geoResp.ok) {
+          const geoData = await geoResp.json()
+          if (geoData.length > 0) {
+            geocodedLat = parseFloat(geoData[0].lat)
+            geocodedLng = parseFloat(geoData[0].lon)
+          }
+        }
+      } catch {
+        // Geocoding is best-effort — don't fail the request
+        console.warn("[Blood Request] Geocoding failed for:", hospitalLocation)
+      }
+    }
+
+    // Determine verification level:
+    // 1 = document uploaded + admin verified
+    // 2 = hospital verified, document pending  
+    // 3 = user-submitted, awaiting verification
+    const verificationLevel = hospitalDocumentImage ? 2 : 3
+
     const bloodRequestsCollection = db.collection("bloodRequests")
     const result = await bloodRequestsCollection.insertOne({
       userId: new ObjectId(decoded.userId),
@@ -68,14 +106,21 @@ export async function POST(request: NextRequest) {
       patientName: requestType === "others" ? patientName : null,
       patientPhone: requestType === "others" ? patientPhone : null,
       bloodGroup,
+      bloodComponent: bloodComponent || "whole-blood",
       quantity,
-      urgency: urgency || "normal", // low, normal, high, critical
+      urgency: urgency || "normal",
       reason: reason || "",
       hospitalLocation,
       hospitalDocumentImage,
       hospitalDocumentFileName,
-      status: "active", // active, fulfilled, cancelled
-      verified: false, // document needs to be verified by admin
+      lat: geocodedLat,
+      lng: geocodedLng,
+      city: geocodedCity,
+      pincode: pincode || "",
+      verificationLevel,
+      status: "active",
+      verified: false,
+      isSOS: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     })
@@ -165,8 +210,12 @@ export async function GET(request: NextRequest) {
     
     let userId: string | null = null
     
-    if (!isAdmin) {
-      // If not admin, verify as regular user token
+    // Check if user wants to get own requests or all active requests
+    const url = new URL(request.url)
+    const getAllRequests = url.searchParams.get("all") === "true"
+
+    if (!isAdmin && !getAllRequests) {
+      // If not admin AND not public request, verify as regular user token
       const token = getTokenFromRequest(request)
       if (!token) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -178,10 +227,6 @@ export async function GET(request: NextRequest) {
       }
       userId = decoded.userId
     }
-
-    // Check if user wants to get own requests or all active requests
-    const url = new URL(request.url)
-    const getAllRequests = url.searchParams.get("all") === "true"
 
     const db = await getDatabase()
     const bloodRequestsCollection = db.collection("bloodRequests")

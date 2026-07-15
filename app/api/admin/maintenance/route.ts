@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { verifyAdminPermission } from "@/lib/admin-utils";
-import { getMaintenanceSettings, updateMaintenanceSettings } from "@/lib/maintenance-cache";
+import { verifyAdminPermission } from "@/lib/admin/admin-utils";
+import { getMaintenanceSettings, updateMaintenanceSettings } from "@/lib/db/maintenance-cache";
 
 const INTERNAL_TOKEN = process.env.MAINTENANCE_INTERNAL_TOKEN ?? "INTERNAL_MAINTENANCE_CHECK_TOKEN";
 

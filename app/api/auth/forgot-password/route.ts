@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { sendEmail, generatePasswordResetEmailHTML } from "@/lib/email"
-import { generateResetToken } from "@/lib/auth"
+import { getDatabase } from "@/lib/db/mongodb"
+import { sendEmail, generatePasswordResetEmailHTML } from "@/lib/services/email"
+import { generateResetToken } from "@/lib/auth/auth"
 
 interface ForgotPasswordRequest {
   email: string

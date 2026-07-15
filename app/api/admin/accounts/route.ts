@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { ObjectId } from "mongodb"
-import { getDatabase } from "@/lib/mongodb"
-import { verifyAdminPermission } from "@/lib/admin-utils"
-import { hashPassword } from "@/lib/auth"
+import { getDatabase } from "@/lib/db/mongodb"
+import { verifyAdminPermission } from "@/lib/admin/admin-utils"
+import { hashPassword } from "@/lib/auth/auth"
 import { ADMIN_PERMISSIONS } from "@/lib/constants/admin-permissions"
 
 /**

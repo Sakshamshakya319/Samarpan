@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { useAppSelector } from "@/lib/hooks"
+import { useAppSelector } from "@/lib/store/hooks"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, AlertCircle, CheckCircle2, ArrowLeft, Calendar, MapPin, Users, Clock, Building, ExternalLink } from "lucide-react"
-import { EventRegistrationForm } from "@/components/event-registration-form"
-import { EventRegistrationStatus } from "@/components/event-registration-status"
+import { EventRegistrationForm } from "@/components/features/event-registration-form"
+import { EventRegistrationStatus } from "@/components/features/event-registration-status"
 
 interface Event {
   _id: string

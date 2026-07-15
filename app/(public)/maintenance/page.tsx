@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Clock, RefreshCw, Calendar, Timer, Wifi, WifiOff } from 'lucide-react'
-import { SamarpanLoader } from '@/components/samarpan-loader'
+import { SamarpanLoader } from "@/components/shared/samarpan-loader"
 
 interface MaintenanceSettings {
   enabled: boolean

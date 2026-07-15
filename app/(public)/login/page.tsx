@@ -11,9 +11,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { useAppDispatch, useAppSelector } from "@/lib/hooks"
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks"
 import { loginUser } from "@/lib/slices/authSlice"
-import { GoogleLoginButton } from "@/components/google-login-button"
+import { GoogleLoginButton } from "@/components/auth/google-login-button"
 
 export default function LoginPage() {
   const router = useRouter()

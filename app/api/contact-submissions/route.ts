@@ -1,6 +1,6 @@
-import { getDatabase } from "@/lib/mongodb"
+import { getDatabase } from "@/lib/db/mongodb"
 import { ObjectId } from "mongodb"
-import { sendEmail } from "@/lib/email"
+import { sendEmail } from "@/lib/services/email"
 
 export async function POST(request: Request) {
   try {

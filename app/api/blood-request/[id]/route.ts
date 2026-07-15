@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { verifyAdminPermission } from "@/lib/admin-utils-server"
+import { getDatabase } from "@/lib/db/mongodb"
+import { verifyAdminPermission } from "@/lib/admin/admin-utils-server"
 import { ObjectId } from "mongodb"
-import { sendWhatsAppNotification } from "@/lib/whatsapp"
-import { sendEmail } from "@/lib/email"
+import { sendWhatsAppNotification } from "@/lib/services/whatsapp"
+import { sendEmail } from "@/lib/services/email"
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -47,7 +47,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ error: adminVerification.error }, { status: adminVerification.status || 401 })
     }
 
-    const { status, verified } = await request.json()
+    const { status, verified, verificationLevel } = await request.json()
 
     const updateData: Record<string, any> = {}
 
@@ -63,6 +63,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         return NextResponse.json({ error: "Invalid verified flag" }, { status: 400 })
       }
       updateData.verified = verified
+    }
+
+    if (typeof verificationLevel !== "undefined") {
+      if (typeof verificationLevel !== "number" || ![1, 2, 3].includes(verificationLevel)) {
+        return NextResponse.json({ error: "Invalid verification level" }, { status: 400 })
+      }
+      updateData.verificationLevel = verificationLevel
     }
 
     if (Object.keys(updateData).length === 0) {

@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import { ResetPasswordForm } from "@/components/reset-password-form"
+import { ResetPasswordForm } from "@/components/auth/reset-password-form"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export const metadata = {

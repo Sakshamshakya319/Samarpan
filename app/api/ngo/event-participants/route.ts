@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { verifyToken } from "@/lib/auth"
-import { connectToDatabase } from "@/lib/mongodb"
+import { verifyToken } from "@/lib/auth/auth"
+import { connectToDatabase } from "@/lib/db/mongodb"
 import { ObjectId } from "mongodb"
 
 export async function GET(request: NextRequest) {

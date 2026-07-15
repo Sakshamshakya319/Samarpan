@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { verifyAdminToken } from "@/lib/auth"
+import { getDatabase } from "@/lib/db/mongodb"
+import { verifyAdminToken } from "@/lib/auth/auth"
 import { ObjectId } from "mongodb"
-import { sendWhatsAppNotification } from "@/lib/whatsapp"
-import { sendEmail } from "@/lib/email"
-import { generateCertificateDesign } from "@/lib/certificate-generator"
+import { sendWhatsAppNotification } from "@/lib/services/whatsapp"
+import { sendEmail } from "@/lib/services/email"
+import { generateCertificateDesign } from "@/lib/generators/certificate-generator"
 import crypto from "crypto"
 
 function generateVerificationToken(): string {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { ObjectId } from "mongodb"
 import jwt from "jsonwebtoken"
-import { getDatabase } from "@/lib/mongodb"
+import { getDatabase } from "@/lib/db/mongodb"
 
 const jwtSecret = process.env.JWT_SECRET || "your-secret-key-change-in-production"
 

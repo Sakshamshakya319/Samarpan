@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { generateToken } from "@/lib/auth"
+import { getDatabase } from "@/lib/db/mongodb"
+import { generateToken } from "@/lib/auth/auth"
 
 export async function GET(request: NextRequest) {
   const origin = request.nextUrl.origin

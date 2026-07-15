@@ -1,4 +1,4 @@
-import { CertificateVerifier } from "@/components/certificate-verifier"
+import { CertificateVerifier } from "@/components/features/certificate-verifier"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {

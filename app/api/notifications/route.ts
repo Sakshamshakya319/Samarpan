@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { verifyToken } from "@/lib/auth"
-import { sendEmail, generateNotificationEmailHTML } from "@/lib/email"
-import { sendWhatsAppNotification } from "@/lib/whatsapp"
+import { getDatabase } from "@/lib/db/mongodb"
+import { verifyToken } from "@/lib/auth/auth"
+import { sendEmail, generateNotificationEmailHTML } from "@/lib/services/email"
+import { sendWhatsAppNotification } from "@/lib/services/whatsapp"
 import { ObjectId } from "mongodb"
-import { getTokenFromRequest } from "@/lib/auth-utils"
+import { getTokenFromRequest } from "@/lib/auth/auth-utils"
 
 export async function GET(request: NextRequest) {
   try {

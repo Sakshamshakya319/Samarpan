@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useAppDispatch } from "@/lib/hooks"
+import { useAppDispatch } from "@/lib/store/hooks"
 import { loginSuccess } from "@/lib/slices/authSlice"
 import { setUser } from "@/lib/slices/userSlice"
 

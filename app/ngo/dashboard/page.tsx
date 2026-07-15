@@ -6,10 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Building, Users, Calendar, Heart, Settings, LogOut, ExternalLink, CheckCircle, QrCode } from "lucide-react"
-import { NGORestrictedDashboard } from "@/components/ngo-restricted-dashboard"
-import { NGOEventsManager } from "@/components/ngo-events-manager"
-import { NGOVolunteerManager } from "@/components/ngo-volunteer-manager"
-import { NgoQRChecker } from "@/components/ngo-qr-checker"
+import { NGORestrictedDashboard } from "@/components/ngo/ngo-restricted-dashboard"
+import { NGOEventsManager } from "@/components/ngo/ngo-events-manager"
+import { NGOVolunteerManager } from "@/components/ngo/ngo-volunteer-manager"
+import { NgoQRChecker } from "@/components/ngo/ngo-qr-checker"
 
 // Simple JWT decoder for client-side use
 function decodeJWT(token: string) {

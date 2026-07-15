@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, Users, Loader2, Building, CheckCircle, ExternalLink } from "lucide-react"
-import { useAppSelector } from "@/lib/hooks"
+import { useAppSelector } from "@/lib/store/hooks"
 import { useRouter } from "next/navigation"
 
 interface Event {

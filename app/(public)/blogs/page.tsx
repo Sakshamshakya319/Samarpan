@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { AdaptiveImage } from "@/components/adaptive-image"
+import { AdaptiveImage } from "@/components/shared/adaptive-image"
 import { Loader2, Search, Eye, MessageSquare, Calendar } from "lucide-react"
 
 interface Blog {

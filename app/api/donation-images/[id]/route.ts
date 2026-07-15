@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { verifyAdminToken } from "@/lib/auth"
-import { verifyAdminPermission } from "@/lib/admin-utils-server"
+import { getDatabase } from "@/lib/db/mongodb"
+import { verifyAdminToken } from "@/lib/auth/auth"
+import { verifyAdminPermission } from "@/lib/admin/admin-utils-server"
 import { ObjectId } from "mongodb"
-import { sendWhatsAppNotification } from "@/lib/whatsapp"
+import { sendWhatsAppNotification } from "@/lib/services/whatsapp"
 import { ADMIN_PERMISSIONS } from "@/lib/constants/admin-permissions"
 
 export async function PATCH(

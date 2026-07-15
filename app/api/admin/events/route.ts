@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { verifyAdminToken } from "@/lib/auth"
+import { getDatabase } from "@/lib/db/mongodb"
+import { verifyAdminToken } from "@/lib/auth/auth"
 import { ObjectId } from "mongodb"
-import { logAdminAction } from "@/lib/admin-actions"
+import { logAdminAction } from "@/lib/admin/admin-actions"
 
 /**
  * Admin Events Management
