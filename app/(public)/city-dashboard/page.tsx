@@ -120,15 +120,13 @@ export default function CityDashboardPage() {
 
   const { isAuthenticated } = useAppSelector((state) => state.auth)
   const router = useRouter()
-  const [authModalOpen, setAuthModalOpen] = useState(false)
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null)
 
   const handleRequestClick = (reqId: string) => {
     if (!isAuthenticated) {
-      setSelectedRequestId(reqId)
-      setAuthModalOpen(true)
+      router.push(`/login?redirect=/city-dashboard`)
     } else {
-      router.push(`/user-dashboard/blood-requests/${reqId}`)
+      router.push(`/dashboard`)
     }
   }
 
@@ -421,30 +419,6 @@ export default function CityDashboardPage() {
         </div>
       </div>
 
-      <Dialog open={authModalOpen} onOpenChange={setAuthModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Authentication Required</DialogTitle>
-            <DialogDescription>
-              You must be logged in to accept an SOS request or view full patient details. Your quick response can save a life!
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex gap-2 sm:justify-start">
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/login?redirect=/city-dashboard`)}
-            >
-              Login
-            </Button>
-            <Button
-              className="bg-red-600 hover:bg-red-700"
-              onClick={() => router.push(`/signup`)}
-            >
-              Create Account
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </main>
   )
 }
