@@ -81,9 +81,7 @@ export default function AdminStaffLogin() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/20 to-background px-4">
       <Card className="w-full max-w-md p-8">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center mx-auto mb-4">
-            <span className="text-primary-foreground font-bold text-xl">S</span>
-          </div>
+          <img src="/samarpan.png" alt="Samarpan Logo" className="w-12 h-12 rounded-lg mx-auto mb-4" />
           <h1 className="font-heading text-3xl font-bold">Admin Login</h1>
           <p className="text-muted-foreground mt-2">Samarpan Administration Panel</p>
         </div>

@@ -37,6 +37,18 @@ interface DonationRequest {
   userName: string
   userEmail: string
   userPhone?: string
+  requesterName?: string
+  requesterPhone?: string
+  isSOS?: boolean
+  hospital?: {
+    name: string
+    address: string
+    city: string
+    lat: number
+    lon: number
+    googleUrl?: string
+    osmUrl?: string
+  }
 }
 
 interface ValidationWarning {
@@ -84,6 +96,8 @@ export function BloodDonationRequests() {
   const [selectedRequestForAccept, setSelectedRequestForAccept] = useState<DonationRequest | null>(null)
   const [needsTransportation, setNeedsTransportation] = useState(false)
   const [cancelingRequestId, setCancelingRequestId] = useState<string | null>(null)
+  const [showNavigationDialog, setShowNavigationDialog] = useState(false)
+  const [acceptedRequestDetails, setAcceptedRequestDetails] = useState<DonationRequest | null>(null)
   const { token } = useAppSelector((state) => state.auth)
 
   useEffect(() => {
@@ -96,7 +110,7 @@ export function BloodDonationRequests() {
 
   // Re-filter requests when user profile is loaded
   useEffect(() => {
-    if (userProfile && userProfile.bloodGroup && requests.length > 0) {
+    if (userProfile && userProfile.bloodGroup) {
       const matched = requests.filter(
         (req: DonationRequest) => req.bloodGroup === userProfile.bloodGroup && req.status === "active"
       )
@@ -199,6 +213,12 @@ export function BloodDonationRequests() {
         setAcceptingRequestId(null)
         fetchRequests()
         fetchAcceptedDonations()
+        
+        if (selectedRequestForAccept.isSOS && selectedRequestForAccept.hospital) {
+          setAcceptedRequestDetails(selectedRequestForAccept)
+          setShowNavigationDialog(true)
+        }
+        
         setTimeout(() => setSuccessMessage(""), 3000)
       } else if (response.status === 400 && data.canDonate === false) {
         // Show 3-month validation warning
@@ -358,11 +378,11 @@ export function BloodDonationRequests() {
 
                 <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-200">
                   <p className="text-sm text-gray-700">
-                    <span className="font-medium">Requester:</span> {request.userName}
+                    <span className="font-medium">Requester:</span> {request.userName || request.requesterName}
                   </p>
                   <p className="text-xs text-gray-600">{request.userEmail}</p>
-                  {request.userPhone && (
-                    <p className="text-xs text-gray-600">Phone: {request.userPhone}</p>
+                  {(request.userPhone || request.requesterPhone) && (
+                    <p className="text-xs text-gray-600">Phone: {request.userPhone || request.requesterPhone}</p>
                   )}
                 </div>
 
@@ -429,10 +449,10 @@ export function BloodDonationRequests() {
                 <div className="text-sm text-gray-600">({selectedRequestForAccept?.quantity} units)</div>
               </div>
               <p className="text-sm text-gray-700">
-                <span className="font-medium">Requester:</span> {selectedRequestForAccept?.userName}
+                <span className="font-medium">Requester:</span> {selectedRequestForAccept?.userName || selectedRequestForAccept?.requesterName}
               </p>
               <p className="text-sm text-gray-700">
-                <span className="font-medium">Contact:</span> {selectedRequestForAccept?.userEmail}
+                <span className="font-medium">Contact:</span> {selectedRequestForAccept?.userPhone || selectedRequestForAccept?.requesterPhone || selectedRequestForAccept?.userEmail}
               </p>
             </div>
 
@@ -522,6 +542,53 @@ export function BloodDonationRequests() {
           </div>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Navigation Dialog after acceptance */}
+      <Dialog open={showNavigationDialog} onOpenChange={setShowNavigationDialog}>
+        <DialogContent className="bg-white max-w-sm text-center">
+          <DialogHeader>
+            <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2">
+              <CheckCircle2 className="w-6 h-6 text-green-600" />
+            </div>
+            <DialogTitle className="text-center text-xl">Request Accepted!</DialogTitle>
+            <DialogDescription className="text-center">
+              Thank you for saving a life. Please navigate to the hospital.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <p className="text-sm font-medium text-gray-900">
+              {acceptedRequestDetails?.hospital?.name}
+            </p>
+            <p className="text-sm text-gray-500">
+              {acceptedRequestDetails?.hospital?.address}, {acceptedRequestDetails?.hospital?.city}
+            </p>
+
+            <div className="flex flex-col gap-2 mt-4">
+              {acceptedRequestDetails?.hospital?.googleUrl && (
+                <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
+                  <a href={acceptedRequestDetails.hospital.googleUrl} target="_blank" rel="noreferrer">
+                    Navigate via Google Maps
+                  </a>
+                </Button>
+              )}
+              {acceptedRequestDetails?.hospital?.osmUrl && (
+                <Button asChild variant="outline" className="w-full">
+                  <a href={acceptedRequestDetails.hospital.osmUrl} target="_blank" rel="noreferrer">
+                    Navigate via OpenStreetMap
+                  </a>
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-center mt-2">
+            <Button variant="ghost" onClick={() => setShowNavigationDialog(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

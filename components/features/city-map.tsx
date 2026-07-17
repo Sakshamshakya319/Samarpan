@@ -6,7 +6,14 @@ import { Loader2 } from "lucide-react"
 interface BloodRequest {
   _id: string
   bloodGroup: string
-  hospitalLocation: string
+  hospitalLocation?: string
+  hospital?: {
+    name: string
+    address?: string
+    city?: string
+    latitude?: number
+    longitude?: number
+  }
   lat?: number
   lng?: number
   city?: string
@@ -15,6 +22,7 @@ interface BloodRequest {
   createdAt: string
   verificationLevel?: 1 | 2 | 3
   isSOS?: boolean
+  bloodComponent?: string
 }
 
 interface CityMapProps {
@@ -179,7 +187,7 @@ export function CityMap({
                 🩸 ${req.bloodGroup} Needed
               </div>
               <div style="font-size: 12px; color: #374151; space-y: 4px;">
-                <div>🏥 ${req.hospitalLocation}</div>
+                <div>🏥 ${req.hospital?.name || req.hospitalLocation || 'Hospital'}</div>
                 <div>🚨 Urgency: <strong style="color:${color}">${urgencyLabel}</strong></div>
                 <div>${verifyEmoji} Trust: Level ${req.verificationLevel || 3}</div>
                 <div style="color: #6b7280; font-size: 11px; margin-top: 4px;">

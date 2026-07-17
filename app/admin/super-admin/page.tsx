@@ -39,6 +39,14 @@ import {
   History,
   IndianRupee,
   Building,
+  Menu,
+  X,
+  Droplet,
+  Image as ImageIcon,
+  Activity,
+  Heart,
+  Award,
+  Bell
 } from "lucide-react"
 
 interface Admin {
@@ -62,6 +70,53 @@ interface User {
   diseaseDescription?: string
 }
 
+const SIDEBAR_CATEGORIES = [
+  {
+    title: "SYSTEM",
+    items: [
+      { id: "admin-accounts", label: "Admin Management", icon: Shield },
+      { id: "users", label: "Users Management", icon: Users },
+      { id: "maintenance", label: "Maintenance", icon: Lock },
+    ]
+  },
+  {
+    title: "DONATIONS",
+    items: [
+      { id: "blood-requests", label: "Blood Requests", icon: Activity },
+      { id: "donations", label: "Manage Donations", icon: Heart },
+      { id: "blood-history", label: "Blood History", icon: History },
+      { id: "funds", label: "Funds Collected", icon: IndianRupee },
+      { id: "images", label: "Donation Images", icon: ImageIcon },
+    ]
+  },
+  {
+    title: "NGO",
+    items: [
+      { id: "ngo-applications", label: "NGO Applications", icon: Building },
+      { id: "ngo-events", label: "NGO Events", icon: Calendar },
+    ]
+  },
+  {
+    title: "EVENTS & CAMPS",
+    items: [
+      { id: "events", label: "Events", icon: Calendar },
+      { id: "event-donors", label: "Event Donors", icon: Users },
+      { id: "transportation", label: "Transportation", icon: Truck },
+    ]
+  },
+  {
+    title: "CONTENT & TOOLS",
+    items: [
+      { id: "blogs", label: "Blog Management", icon: BookOpen },
+      { id: "certificates", label: "Generate Certificates", icon: Award },
+      { id: "notifications", label: "Send Notifications", icon: Bell },
+      { id: "qr-checker", label: "QR Checker", icon: QrCode },
+      { id: "contacts", label: "Contact Submissions", icon: Mail },
+      { id: "action-history", label: "Action History", icon: History },
+    ]
+  }
+];
+
 export default function SuperAdminPage() {
   const router = useRouter()
   const [admin, setAdmin] = useState<Admin | null>(null)
@@ -70,11 +125,12 @@ export default function SuperAdminPage() {
   const [token, setToken] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("superAdminActiveTab") || "admins";
+      return localStorage.getItem("superAdminActiveTab") || "admin-accounts";
     }
-    return "admins";
+    return "admin-accounts";
   });
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -92,7 +148,6 @@ export default function SuperAdminPage() {
       return
     }
 
-    // Check if admin is superadmin
     if (adminRole !== "superadmin") {
       router.push("/admin/dashboard")
       return
@@ -138,6 +193,15 @@ export default function SuperAdminPage() {
     }
   }
 
+  // Get active tab label for header
+  const getActiveTabLabel = () => {
+    for (const category of SIDEBAR_CATEGORIES) {
+      const found = category.items.find(item => item.id === activeTab)
+      if (found) return found.label
+    }
+    return "Dashboard"
+  }
+
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
@@ -147,391 +211,139 @@ export default function SuperAdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background">
-      {/* Admin Navigation */}
-      <nav className="bg-card border-b border-border sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-4">
-          <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3 xs:gap-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary rounded-lg flex items-center justify-center">
-                <LayoutDashboard className="w-4 h-4 sm:w-6 sm:h-6 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="font-heading text-lg sm:text-xl lg:text-2xl font-bold text-primary">Samarpan Super Admin</h1>
-                <p className="text-xs text-muted-foreground hidden xs:block">Full System Control</p>
-              </div>
-            </div>
-            <div className="flex flex-col xs:flex-row items-start xs:items-center gap-2 xs:gap-3 sm:gap-4">
-              <div className="text-left xs:text-right">
-                <p className="text-xs sm:text-sm font-medium truncate max-w-[200px]">{admin.email}</p>
-                <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
-                  Super Admin
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowPasswordDialog(true)} 
-                  className="gap-1 xs:gap-2 bg-transparent h-8 px-2 xs:h-9 xs:px-3"
-                  title="Change Password"
-                >
-                  <Lock className="w-3 h-3 xs:w-4 xs:h-4" />
-                  <span className="hidden sm:inline text-xs xs:text-sm">Change Password</span>
-                  <span className="sm:hidden text-xs">Password</span>
-                </Button>
-                <Button variant="outline" onClick={handleLogout} className="gap-1 xs:gap-2 bg-transparent h-8 px-2 xs:h-9 xs:px-3">
-                  <LogOut className="w-3 h-3 xs:w-4 xs:h-4" />
-                  <span className="hidden xs:inline text-xs xs:text-sm">Logout</span>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-slate-50 flex">
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
 
-      {/* Admin Content */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
-        {/* Tab Navigation */}
-        <div className="mb-4 sm:mb-6 lg:mb-8">
-          <div className="overflow-x-auto scrollbar-hide">
-            <div className="flex gap-2 sm:gap-3 lg:gap-4 pb-2 border-b border-border min-w-max">
-              <button
-                onClick={() => setActiveTab("admin-accounts")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
-                  activeTab === "admin-accounts"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Shield className="w-3 h-3 xs:w-4 xs:h-4" />
-                <span className="hidden xs:inline">Admin Management</span>
-                
-              </button>
-              <button
-                onClick={() => setActiveTab("ngo-applications")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
-                  activeTab === "ngo-applications"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Building className="w-3 h-3 xs:w-4 xs:h-4" />
-                <span className="hidden xs:inline">NGO Applications</span>
-                
-              </button>
-              <button
-                onClick={() => setActiveTab("ngo-events")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
-                  activeTab === "ngo-events"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Calendar className="w-3 h-3 xs:w-4 xs:h-4" />
-                <span className="hidden xs:inline">NGO Events</span>
-                
-              </button>
-              <button
-                onClick={() => setActiveTab("users")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap text-xs xs:text-sm ${
-                  activeTab === "users"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <span className="hidden xs:inline">Users Management</span>
-                
-              </button>
-              <button
-                onClick={() => setActiveTab("notifications")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap text-xs xs:text-sm ${
-                  activeTab === "notifications"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <span className="hidden xs:inline">Send Notifications</span>
-                
-              </button>
-              <button
-                onClick={() => setActiveTab("certificates")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap text-xs xs:text-sm ${
-                  activeTab === "certificates"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <span className="hidden xs:inline">Generate Certificates</span>
-                
-              </button>
-              <button
-                onClick={() => setActiveTab("funds")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
-                  activeTab === "funds"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <IndianRupee className="w-3 h-3 xs:w-4 xs:h-4" />
-                <span className="hidden xs:inline">Funds Collected</span>
-                
-              </button>
-              <button
-                onClick={() => setActiveTab("donations")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap text-xs xs:text-sm ${
-                  activeTab === "donations"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <span className="hidden xs:inline">Manage Donations</span>
-                
-              </button>
-              <button
-                onClick={() => setActiveTab("images")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap text-xs xs:text-sm ${
-                  activeTab === "images"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <span className="hidden xs:inline">Donation Images</span>
-                
-              </button>
-              <button
-                onClick={() => setActiveTab("blood-requests")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap text-xs xs:text-sm ${
-                  activeTab === "blood-requests"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <span className="hidden xs:inline">Blood Requests</span>
-                
-              </button>
-              <button
-                onClick={() => setActiveTab("blood-history")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
-                  activeTab === "blood-history"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <History className="w-3 h-3 xs:w-4 xs:h-4" />
-                <span className="hidden xs:inline">Blood History</span>
-                
-              </button>
-              <button
-                onClick={() => setActiveTab("events")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
-                  activeTab === "events"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Calendar className="w-3 h-3 xs:w-4 xs:h-4" />
-                <span>Events</span>
-              </button>
-              <button
-                onClick={() => setActiveTab("transportation")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
-                  activeTab === "transportation"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Truck className="w-3 h-3 xs:w-4 xs:h-4" />
-                <span className="hidden xs:inline">Transportation</span>
-                
-              </button>
-              <button
-                onClick={() => setActiveTab("contacts")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
-                  activeTab === "contacts"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Mail className="w-3 h-3 xs:w-4 xs:h-4" />
-                <span className="hidden xs:inline">Contact Submissions</span>
-                
-              </button>
-              <button
-                onClick={() => setActiveTab("qr-checker")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
-                  activeTab === "qr-checker"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <QrCode className="w-3 h-3 xs:w-4 xs:h-4" />
-                <span className="hidden xs:inline">QR Checker</span>
-                
-              </button>
-              <button
-                onClick={() => setActiveTab("event-donors")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
-                  activeTab === "event-donors"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Users className="w-3 h-3 xs:w-4 xs:h-4" />
-                <span className="hidden xs:inline">Event Donors</span>
-                
-              </button>
-              <button
-                onClick={() => setActiveTab("blogs")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
-                  activeTab === "blogs"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <BookOpen className="w-3 h-3 xs:w-4 xs:h-4" />
-                <span className="hidden xs:inline">Blog Management</span>
-                
-              </button>
-              <button
-                onClick={() => setActiveTab("action-history")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
-                  activeTab === "action-history"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <History className="w-3 h-3 xs:w-4 xs:h-4" />
-                <span className="hidden xs:inline">Action History</span>
-                
-              </button>
-              <button
-                onClick={() => setActiveTab("maintenance")}
-                className={`px-2 xs:px-3 sm:px-4 py-2 font-medium transition whitespace-nowrap flex items-center gap-1 xs:gap-2 text-xs xs:text-sm ${
-                  activeTab === "maintenance"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Lock className="w-3 h-3 xs:w-4 xs:h-4" />
-                <span className="hidden xs:inline">Maintenance</span>
-                
-              </button>
-            </div>
+      {/* Sidebar */}
+      <aside className={`
+        fixed lg:static inset-y-0 left-0 z-50
+        w-64 bg-white border-r border-slate-200 flex flex-col h-screen
+        transform transition-transform duration-200 ease-in-out
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        <div className="h-16 flex items-center px-6 border-b border-slate-200 flex-shrink-0">
+          <div className="w-8 h-8 bg-red-600 rounded flex items-center justify-center mr-3">
+            <LayoutDashboard className="w-5 h-5 text-white" />
           </div>
+          <span className="font-bold text-slate-900 text-lg tracking-tight">Super Admin</span>
+          <button className="ml-auto lg:hidden" onClick={() => setIsSidebarOpen(false)}>
+            <X className="w-5 h-5 text-slate-500" />
+          </button>
         </div>
 
-        {/* Tab Content */}
-        {activeTab === "admin-accounts" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminAdminManager token={token} />}
-          </div>
-        )}
+        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6 scrollbar-thin">
+          {SIDEBAR_CATEGORIES.map((category, idx) => (
+            <div key={idx}>
+              <h3 className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                {category.title}
+              </h3>
+              <div className="space-y-1">
+                {category.items.map((item) => {
+                  const isActive = activeTab === item.id
+                  const Icon = item.icon
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActiveTab(item.id)
+                        setIsSidebarOpen(false)
+                      }}
+                      className={`
+                        w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors
+                        ${isActive 
+                          ? 'bg-red-50 text-red-600' 
+                          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        }
+                      `}
+                    >
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-red-600' : 'text-slate-400'}`} />
+                      {item.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </aside>
 
-        {activeTab === "ngo-applications" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminNGOApplicationsManager token={token} />}
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+        {/* Top Header */}
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 flex-shrink-0">
+          <div className="flex items-center gap-4">
+            <button 
+              className="lg:hidden text-slate-500 hover:text-slate-900"
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <h1 className="text-xl font-semibold text-slate-900 hidden sm:block">
+              {getActiveTabLabel()}
+            </h1>
           </div>
-        )}
 
-        {activeTab === "ngo-events" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminNGOEventsManager token={token} />}
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full">
+              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+              <span className="text-sm font-medium text-slate-700">{admin.email}</span>
+            </div>
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowPasswordDialog(true)} 
+              className="hidden sm:flex border-slate-200 text-slate-600"
+            >
+              <Lock className="w-4 h-4 mr-2" />
+              Password
+            </Button>
+            
+            <Button 
+              variant="default" 
+              size="sm"
+              onClick={handleLogout} 
+              className="bg-slate-900 hover:bg-slate-800 text-white"
+            >
+              <LogOut className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Logout</span>
+            </Button>
           </div>
-        )}
+        </header>
 
-        {activeTab === "users" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminUsersTable token={token} />}
+        {/* Content Render Area */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-1 sm:p-6 min-h-[calc(100vh-8rem)]">
+              {/* Tab Rendering */}
+              {activeTab === "admin-accounts" && token && <AdminAdminManager token={token} />}
+              {activeTab === "ngo-applications" && token && <AdminNGOApplicationsManager token={token} />}
+              {activeTab === "ngo-events" && token && <AdminNGOEventsManager token={token} />}
+              {activeTab === "users" && token && <AdminUsersTable token={token} />}
+              {activeTab === "notifications" && token && <div className="w-full"><AdminSendNotification users={users} token={token} /></div>}
+              {activeTab === "certificates" && token && <div className="w-full"><AdminCertificateGenerator users={users} token={token} /></div>}
+              {activeTab === "funds" && token && <AdminFundingDonations token={token} />}
+              {activeTab === "donations" && token && <AdminDonationsManagerEnhanced token={token} />}
+              {activeTab === "images" && token && <AdminDonationImagesViewer token={token} />}
+              {activeTab === "blood-requests" && token && <AdminBloodRequestsManager token={token} />}
+              {activeTab === "blood-history" && token && <AdminBloodHistory token={token} />}
+              {activeTab === "events" && token && <AdminEventsManager token={token} />}
+              {activeTab === "transportation" && token && <AdminTransportationManager token={token} />}
+              {activeTab === "contacts" && token && <AdminContactSubmissionsManager token={token} />}
+              {activeTab === "qr-checker" && token && <AdminQRChecker token={token} />}
+              {activeTab === "event-donors" && token && <AdminEventDonors token={token} />}
+              {activeTab === "blogs" && <AdminBlogManager />}
+              {activeTab === "action-history" && token && <AdminActionHistory token={token} />}
+              {activeTab === "maintenance" && <MaintenanceModeManager />}
+            </div>
           </div>
-        )}
-
-        {activeTab === "notifications" && (
-          <div className="w-full">
-            {token && <AdminSendNotification users={users} token={token} />}
-          </div>
-        )}
-
-        {activeTab === "certificates" && (
-          <div className="w-full">
-            {token && <AdminCertificateGenerator users={users} token={token} />}
-          </div>
-        )}
-
-        {activeTab === "funds" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminFundingDonations token={token} />}
-          </div>
-        )}
-
-        {activeTab === "donations" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminDonationsManagerEnhanced token={token} />}
-          </div>
-        )}
-
-        {activeTab === "images" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminDonationImagesViewer token={token} />}
-          </div>
-        )}
-
-        {activeTab === "blood-requests" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminBloodRequestsManager token={token} />}
-          </div>
-        )}
-
-        {activeTab === "blood-history" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminBloodHistory token={token} />}
-          </div>
-        )}
-
-        {activeTab === "events" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminEventsManager token={token} />}
-          </div>
-        )}
-
-        {activeTab === "transportation" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminTransportationManager token={token} />}
-          </div>
-        )}
-
-        {activeTab === "contacts" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminContactSubmissionsManager token={token} />}
-          </div>
-        )}
-
-        {activeTab === "qr-checker" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminQRChecker token={token} />}
-          </div>
-        )}
-
-        {activeTab === "event-donors" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminEventDonors token={token} />}
-          </div>
-        )}
-
-        {activeTab === "blogs" && (
-          <div className="grid grid-cols-1 gap-6">
-            <AdminBlogManager />
-          </div>
-        )}
-        {activeTab === "action-history" && (
-          <div className="grid grid-cols-1 gap-6">
-            {token && <AdminActionHistory token={token} />}
-          </div>
-        )}
-        {activeTab === "maintenance" && (
-          <div className="grid grid-cols-1 gap-6">
-            <MaintenanceModeManager />
-          </div>
-        )}
+        </main>
       </div>
 
       {/* Password Change Dialog */}
@@ -543,6 +355,6 @@ export default function SuperAdminPage() {
           token={token}
         />
       )}
-    </main>
+    </div>
   )
 }

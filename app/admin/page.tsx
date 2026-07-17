@@ -4,6 +4,7 @@
 export const dynamic = "force-dynamic"
 
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { AdminUsersTable } from "@/components/admin/admin-users-table"
@@ -239,15 +240,13 @@ export default function AdminPage() {
       {/* Admin Navigation */}
       <nav className="bg-card border-b border-border sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <LayoutDashboard className="w-6 h-6 text-primary-foreground" />
-            </div>
+          <Link href="/" className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity">
+            <img src="/samarpan.png" alt="Samarpan Logo" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg" />
             <div>
-              <h1 className="font-heading text-2xl font-bold text-primary">Samarpan Admin</h1>
-              <p className="text-xs text-muted-foreground">Administration Panel</p>
+              <h1 className="font-heading text-lg sm:text-xl md:text-2xl font-bold text-primary">Samarpan Admin</h1>
+              <p className="text-xs text-muted-foreground hidden xs:block">Administration Panel</p>
             </div>
-          </div>
+          </Link>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium">{admin.email}</p>

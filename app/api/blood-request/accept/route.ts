@@ -106,12 +106,12 @@ export async function POST(request: NextRequest) {
     })
 
     // Send notifications to all users about the blood request acceptance
+    const notificationsCollection = db.collection("notifications")
     try {
       const allUsers = await usersCollection.find({}).toArray()
-      const notificationsCollection = db.collection("notifications")
       
       // Create in-app notifications for all users
-      const notifications = allUsers.map(user => ({
+      const notifications = allUsers.map((user: any) => ({
         userId: user._id,
         title: "Blood Request Accepted",
         message: `A blood request for ${bloodRequest.bloodGroup} blood has been accepted by ${user.name || 'a donor'}. Thank you for your interest in helping!`,
@@ -124,12 +124,12 @@ export async function POST(request: NextRequest) {
       await notificationsCollection.insertMany(notifications)
 
       // Send email notifications to users who have email addresses
-      const usersWithEmail = allUsers.filter(u => u.email)
+      const usersWithEmail = allUsers.filter((u: any) => u.email)
       if (usersWithEmail.length > 0) {
-        const { sendEmailNotification } = await import("@/lib/services/email")
+        const { sendEmail } = await import("@/lib/services/email")
         await Promise.allSettled(
-          usersWithEmail.map(user => 
-            sendEmailNotification({
+          usersWithEmail.map((user: any) => 
+            sendEmail({
               to: user.email!,
               subject: "Your Blood Request was Accepted",
               text: `Your blood request has been accepted by a donor. Please check your dashboard.`,
@@ -146,11 +146,11 @@ export async function POST(request: NextRequest) {
       }
 
       // 5b. Notify via WhatsApp
-      const usersWithPhone = allUsers.filter(u => u.phone)
+      const usersWithPhone = allUsers.filter((u: any) => u.phone)
       if (usersWithPhone.length > 0) {
         const { sendWhatsAppNotification } = await import("@/lib/services/whatsapp")
         await Promise.allSettled(
-          usersWithPhone.map(user => 
+          usersWithPhone.map((user: any) => 
             sendWhatsAppNotification({
               phone: user.phone,
               title: "Blood Request Accepted",
@@ -164,21 +164,38 @@ export async function POST(request: NextRequest) {
       // Don't fail the main request if notifications fail
     }
 
-    // Update blood request status if needed (optional - can be marked as fulfilled)
-    // For now, we'll leave it as active so multiple donors can accept if needed
+    // For SOS requests, immediately mark as accepted to remove from active feeds
+    if (bloodRequest.isSOS) {
+      console.log(`[Accept API] Request ${bloodRequestId} is an SOS request. Updating status to 'accepted'.`)
+      const updateRes = await bloodRequestsCollection.updateOne(
+        { _id: new ObjectId(bloodRequestId) },
+        { $set: { status: "accepted", updatedAt: new Date() } }
+      )
+      console.log(`[Accept API] Update result: matched=${updateRes.matchedCount}, modified=${updateRes.modifiedCount}`)
+    } else {
+      console.log(`[Accept API] Request ${bloodRequestId} is NOT an SOS request. Leaving active.`)
+    }
 
     // If user requested transportation, automatically create a transportation request
     if (needsTransportation) {
       try {
         const transportationCollection = db.collection("transportationRequests")
         
+        const hospitalLocationStr = bloodRequest.isSOS && bloodRequest.hospital 
+          ? `${bloodRequest.hospital.name}, ${bloodRequest.hospital.address || ''}, ${bloodRequest.hospital.city || ''}`
+          : bloodRequest.hospitalLocation;
+          
+        const hospitalNameStr = bloodRequest.isSOS && bloodRequest.hospital
+          ? bloodRequest.hospital.name
+          : (bloodRequest.hospitalName || "");
+
         await transportationCollection.insertOne({
           userId: new ObjectId(decoded.userId),
           bloodRequestId: new ObjectId(bloodRequestId),
           pickupLocation: "To be provided by donor", // User will update this later
-          dropLocation: bloodRequest.hospitalLocation,
-          hospitalLocation: bloodRequest.hospitalLocation,
-          hospitalName: bloodRequest.hospitalName || "",
+          dropLocation: hospitalLocationStr,
+          hospitalLocation: hospitalLocationStr,
+          hospitalName: hospitalNameStr,
           status: "pending",
           createdAt: new Date(),
           updatedAt: new Date(),

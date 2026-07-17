@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
-import { AlertCircle, Droplet, CheckCircle2, Truck } from "lucide-react"
+import { AlertCircle, Droplet, CheckCircle2, Truck, Loader2 } from "lucide-react"
 import { useAppSelector } from "@/lib/store/hooks"
 import {
   AlertDialog,
@@ -23,7 +23,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 
 interface BloodRequest {
@@ -39,6 +38,18 @@ interface BloodRequest {
   userEmail: string
   userPhone: string
   userId: string
+  requesterName?: string
+  requesterPhone?: string
+  isSOS?: boolean
+  hospital?: {
+    name: string
+    address: string
+    city: string
+    lat: number
+    lon: number
+    googleUrl?: string
+    osmUrl?: string
+  }
 }
 
 interface ValidationWarning {
@@ -60,10 +71,10 @@ interface AcceptedDonation {
 }
 
 const URGENCY_COLORS = {
-  low: "bg-blue-100 text-blue-800",
-  normal: "bg-green-100 text-green-800",
-  high: "bg-orange-100 text-orange-800",
-  critical: "bg-red-100 text-red-800",
+  low: "bg-blue-50 text-blue-700 border border-blue-200",
+  normal: "bg-green-50 text-green-700 border border-green-200",
+  high: "bg-orange-50 text-orange-700 border border-orange-200",
+  critical: "bg-red-50 text-red-700 border border-red-200",
 }
 
 export function BloodRequestsList() {
@@ -102,9 +113,8 @@ export function BloodRequestsList() {
     }
   }, [token])
 
-  // Re-filter requests when user profile is loaded
   useEffect(() => {
-    if (userProfile && userProfile.bloodGroup && requests.length > 0) {
+    if (userProfile && userProfile.bloodGroup) {
       const matched = requests.filter(
         (req: BloodRequest) => req.bloodGroup === userProfile.bloodGroup && req.status === "active"
       )
@@ -146,7 +156,6 @@ export function BloodRequestsList() {
       }
     } catch (err) {
       setError("Error fetching requests")
-      console.error(err)
     } finally {
       setIsLoading(false)
     }
@@ -170,8 +179,6 @@ export function BloodRequestsList() {
 
   const handleAcceptRequest = async (requestId: string, request: BloodRequest) => {
     if (!token) return
-
-    // Show accept dialog with transportation checkbox
     setSelectedRequestForAccept(request)
     setShowAcceptDialog(true)
   }
@@ -204,18 +211,21 @@ export function BloodRequestsList() {
         fetchRequests()
         fetchAcceptedDonations()
         
-        // Show transport dialog only if user didn't request transportation
         if (!needsTransportation) {
           setSelectedRequestForTransport(selectedRequestForAccept)
           setPickupLocation("")
-          setDropLocation(selectedRequestForAccept.hospitalLocation) // Set drop location to hospital location (fixed)
-          setHospitalName("")
+          
+          const dropLoc = selectedRequestForAccept.isSOS && selectedRequestForAccept.hospital 
+            ? `${selectedRequestForAccept.hospital.name}, ${selectedRequestForAccept.hospital.address}, ${selectedRequestForAccept.hospital.city}`
+            : selectedRequestForAccept.hospitalLocation;
+            
+          setDropLocation(dropLoc)
+          setHospitalName(selectedRequestForAccept.isSOS && selectedRequestForAccept.hospital ? selectedRequestForAccept.hospital.name : "")
           setShowTransportDialog(true)
         }
         
-        setTimeout(() => setSuccessMessage(""), 3000)
+        setTimeout(() => setSuccessMessage(""), 4000)
       } else if (response.status === 400 && data.canDonate === false) {
-        // Show 3-month validation warning
         setValidationWarning({
           show: true,
           error: data.error,
@@ -231,7 +241,6 @@ export function BloodRequestsList() {
     } catch (err) {
       setError("Error accepting request")
       setAcceptingRequestId(null)
-      console.error(err)
     }
   }
 
@@ -252,7 +261,7 @@ export function BloodRequestsList() {
         body: JSON.stringify({
           bloodRequestId: selectedRequestForTransport._id,
           pickupLocation,
-          dropLocation, // Hospital location (fixed)
+          dropLocation,
           hospitalName: hospitalName || "",
         }),
       })
@@ -262,7 +271,7 @@ export function BloodRequestsList() {
         setShowTransportDialog(false)
         setSelectedRequestForTransport(null)
         setIsSubmittingTransport(false)
-        setTimeout(() => setSuccessMessage(""), 3000)
+        setTimeout(() => setSuccessMessage(""), 4000)
       } else {
         const data = await response.json()
         setError(data.error || "Failed to create transportation request")
@@ -271,7 +280,6 @@ export function BloodRequestsList() {
     } catch (err) {
       setError("Error creating transportation request")
       setIsSubmittingTransport(false)
-      console.error(err)
     }
   }
 
@@ -292,7 +300,7 @@ export function BloodRequestsList() {
       const data = await response.json()
 
       if (response.ok) {
-        setSuccessMessage("Blood donation cancelled successfully")
+        setSuccessMessage("Blood donation cancelled.")
         setCancelingRequestId(null)
         fetchAcceptedDonations()
         setTimeout(() => setSuccessMessage(""), 3000)
@@ -303,29 +311,37 @@ export function BloodRequestsList() {
     } catch (err) {
       setError("Error cancelling donation")
       setCancelingRequestId(null)
-      console.error(err)
     }
   }
 
   if (isLoading) {
-    return <div className="text-center text-gray-500">Loading blood requests...</div>
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white rounded-xl border border-slate-200">
+        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+        <span className="text-slate-500 font-medium">Loading blood requests...</span>
+      </div>
+    )
   }
 
   if (!userProfile || !userProfile.bloodGroup) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Droplet className="w-5 h-5 text-green-600" />
-            Blood Donation Opportunities
+      <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden">
+        <CardHeader className="bg-slate-50 border-b border-slate-100 pb-6">
+          <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <Droplet className="w-5 h-5 text-red-500" />
+            Donation Opportunities
           </CardTitle>
-          <CardDescription>Help save lives by donating blood</CardDescription>
+          <CardDescription className="text-slate-500">Help save lives by donating blood</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <AlertCircle className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
-            <p className="text-gray-600 font-medium">Please set your blood type in your profile first</p>
-            <p className="text-sm text-gray-500 mt-2">Visit your profile to add your blood group information.</p>
+        <CardContent className="pt-10 pb-10">
+          <div className="text-center max-w-sm mx-auto">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-8 h-8 text-slate-400" />
+            </div>
+            <p className="text-slate-900 font-semibold mb-2">Profile Incomplete</p>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Please set your blood type in your profile to view matching donation opportunities in your area.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -334,19 +350,23 @@ export function BloodRequestsList() {
 
   if (filteredRequests.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Droplet className="w-5 h-5 text-green-600" />
-            Blood Donation Opportunities
+      <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden">
+        <CardHeader className="bg-slate-50 border-b border-slate-100 pb-6">
+          <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <Droplet className="w-5 h-5 text-red-500" />
+            Donation Opportunities
           </CardTitle>
-          <CardDescription>Requests matching your blood type ({userProfile.bloodGroup})</CardDescription>
+          <CardDescription className="text-slate-500">Requests matching your blood type ({userProfile.bloodGroup})</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <Droplet className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-600">No blood requests for your blood type at this moment.</p>
-            <p className="text-sm text-gray-500 mt-2">Check back later to help save lives!</p>
+        <CardContent className="pt-12 pb-12">
+          <div className="text-center max-w-sm mx-auto">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Droplet className="w-8 h-8 text-slate-300" />
+            </div>
+            <p className="text-slate-900 font-semibold mb-2">No active requests found</p>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              There are currently no open blood requests for your specific blood type. Check back later to help save lives!
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -355,111 +375,120 @@ export function BloodRequestsList() {
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Droplet className="w-5 h-5 text-green-600" />
-            Blood Donation Opportunities
-          </CardTitle>
-          <CardDescription>
-            {filteredRequests.length} request{filteredRequests.length !== 1 ? "s" : ""} for your blood type (
-            {userProfile.bloodGroup})
-          </CardDescription>
+      <Card className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden">
+        <CardHeader className="bg-slate-50 border-b border-slate-100 pb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2 mb-1.5">
+                <Droplet className="w-5 h-5 text-red-500" />
+                Donation Opportunities
+              </CardTitle>
+              <CardDescription className="text-slate-500">
+                {filteredRequests.length} request{filteredRequests.length !== 1 ? "s" : ""} matching <strong className="text-slate-700">{userProfile.bloodGroup}</strong>
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {error && (
-            <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm mb-4">{error}</div>
+            <div className="p-4 bg-red-50 text-red-700 rounded-lg text-sm mb-6 flex items-start gap-3 border border-red-100">
+              <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+              <div className="font-medium">{error}</div>
+            </div>
           )}
           {successMessage && (
-            <div className="p-3 bg-green-100 text-green-800 rounded-md text-sm mb-4 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4" />
-              {successMessage}
+            <div className="p-4 bg-green-50 text-green-800 rounded-lg text-sm mb-6 flex items-start gap-3 border border-green-100">
+              <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0" />
+              <div className="font-medium">{successMessage}</div>
             </div>
           )}
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             {filteredRequests.map((request) => (
               <div
                 key={request._id}
-                className="p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50/50 transition"
+                className="p-5 md:p-6 border border-slate-200 bg-white rounded-xl shadow-sm hover:border-slate-300 transition-all"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <div className="text-2xl font-bold text-green-600">{request.bloodGroup}</div>
-                      <div>
-                        <p className="font-semibold text-gray-900">Blood Type Requested</p>
-                        <p className="text-sm text-gray-600">{request.quantity} unit(s) needed</p>
-                      </div>
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-5">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-red-50 border border-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <span className="text-xl font-black text-red-600">{request.bloodGroup}</span>
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900 text-lg leading-tight">Blood Required</p>
+                      <p className="text-sm text-slate-500 mt-0.5">{request.quantity} unit(s) needed</p>
                     </div>
                   </div>
                   <Badge
-                    className={`${
-                      URGENCY_COLORS[request.urgency as keyof typeof URGENCY_COLORS] || "bg-gray-100 text-gray-800"
-                    } capitalize`}
+                    className={`px-3 py-1 font-semibold rounded-full uppercase tracking-wider text-[10px] ${
+                      URGENCY_COLORS[request.urgency as keyof typeof URGENCY_COLORS] || "bg-slate-100 text-slate-800 border-slate-200"
+                    }`}
                   >
                     {request.urgency}
                   </Badge>
                 </div>
 
-                {request.reason && (
-                  <div className="mb-3 p-2 bg-gray-50 rounded">
-                    <p className="text-sm text-gray-700">
-                      <span className="font-medium">Reason:</span> {request.reason}
+                <div className="grid sm:grid-cols-2 gap-3 mb-6">
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Hospital Location</p>
+                    <p className="text-sm font-medium text-slate-900 leading-snug">
+                      {request.isSOS && request.hospital ? `${request.hospital.name}, ${request.hospital.address}, ${request.hospital.city}` : request.hospitalLocation}
                     </p>
                   </div>
-                )}
-
-                <div className="mb-3 p-2 bg-purple-50 rounded border border-purple-200">
-                  <p className="text-sm text-purple-900">
-                    <span className="font-medium">Hospital Location:</span> {request.hospitalLocation}
-                  </p>
-                </div>
-
-                <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-200">
-                  <p className="text-sm text-blue-900">
-                    <span className="font-medium">Requested by:</span> {request.userName} ({request.userEmail})
-                  </p>
-                  {request.userPhone && (
-                    <p className="text-sm text-blue-900">
-                      <span className="font-medium">Contact:</span> {request.userPhone}
+                  
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Requested By</p>
+                    <p className="text-sm font-medium text-slate-900 leading-snug mb-0.5">
+                      {request.userName || request.requesterName}
                     </p>
+                    <p className="text-xs text-slate-500 truncate">{request.userEmail}</p>
+                    {(request.userPhone || request.requesterPhone) && (
+                      <p className="text-xs font-medium text-slate-700 mt-1">{request.userPhone || request.requesterPhone}</p>
+                    )}
+                  </div>
+                  
+                  {request.reason && (
+                    <div className="sm:col-span-2 p-4 bg-slate-50 rounded-lg border border-slate-100">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Reason</p>
+                      <p className="text-sm text-slate-700">{request.reason}</p>
+                    </div>
                   )}
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-gray-500">
-                    Posted {new Date(request.createdAt).toLocaleDateString()}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-100">
+                  <p className="text-xs font-medium text-slate-400">
+                    Posted on {new Date(request.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                   </p>
                   <div className="flex gap-2">
                     {acceptedDonations.some((ad) => ad.bloodRequestId === request._id) ? (
                       <>
                         <Button
                           disabled
-                          size="sm"
-                          className="bg-green-100 text-green-800 hover:bg-green-100 gap-2"
+                          className="bg-green-50 text-green-700 hover:bg-green-50 border border-green-200 gap-2 font-semibold h-10 px-4"
                         >
                           <CheckCircle2 className="w-4 h-4" />
-                          Blood Donation Accepted
+                          Accepted
                         </Button>
                         <Button
                           onClick={() => handleCancelDonation(request._id)}
                           disabled={cancelingRequestId === request._id}
-                          size="sm"
                           variant="outline"
-                          className="text-red-600 border-red-300 hover:bg-red-50 gap-2"
+                          className="text-slate-600 border-slate-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200 gap-2 font-semibold h-10 px-4 transition-colors"
                         >
-                          {cancelingRequestId === request._id ? "Cancelling..." : "Cancel Donation"}
+                          {cancelingRequestId === request._id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Cancel"}
                         </Button>
                       </>
                     ) : (
                       <Button
                         onClick={() => handleAcceptRequest(request._id, request)}
                         disabled={acceptingRequestId === request._id}
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-700 gap-2"
+                        className="bg-slate-900 hover:bg-slate-800 text-white gap-2 font-semibold h-10 px-6 transition-colors"
                       >
-                        {acceptingRequestId === request._id ? "Accepting..." : "Accept & Donate"}
+                        {acceptingRequestId === request._id ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> Accepting...</>
+                        ) : (
+                          "Accept & Donate"
+                        )}
                       </Button>
                     )}
                   </div>
@@ -472,171 +501,202 @@ export function BloodRequestsList() {
 
       {/* 3-Month Validation Warning Dialog */}
       <AlertDialog open={validationWarning.show} onOpenChange={(open) => !open && setValidationWarning({ ...validationWarning, show: false })}>
-        <AlertDialogContent className="border-orange-300 bg-white">
+        <AlertDialogContent className="border border-slate-200 bg-white shadow-lg rounded-xl max-w-md">
           <AlertDialogHeader>
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0">
-                <AlertCircle className="w-6 h-6 text-orange-600 mt-1" />
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-orange-50 border border-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-5 h-5 text-orange-600" />
               </div>
-              <div>
-                <AlertDialogTitle className="text-orange-900">Cannot Donate Yet</AlertDialogTitle>
-              </div>
+              <AlertDialogTitle className="text-xl font-bold text-slate-900">Donation Eligibility</AlertDialogTitle>
             </div>
           </AlertDialogHeader>
           <AlertDialogDescription asChild>
-            <div className="space-y-3 text-gray-700">
-              <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                <p className="font-semibold text-orange-900 mb-2">{validationWarning.error}</p>
-                <p className="text-sm text-orange-800 mb-3">{validationWarning.warning}</p>
+            <div className="space-y-4 mt-2">
+              <div className="p-4 bg-orange-50 border border-orange-100 rounded-lg">
+                <p className="font-bold text-orange-900 mb-1">{validationWarning.error}</p>
+                <p className="text-sm text-orange-800 mb-4">{validationWarning.warning}</p>
 
-                <div className="bg-white p-2 rounded border border-orange-100">
-                  <p className="text-xs text-gray-600 mb-1">Last Donation Date:</p>
-                  <p className="font-mono text-sm text-gray-900">
-                    {new Date(validationWarning.lastDonationDate).toLocaleDateString()}
-                  </p>
+                <div className="bg-white p-3 rounded-md border border-orange-200/60 flex justify-between items-center">
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Last Donation</span>
+                  <span className="font-mono text-sm font-bold text-slate-900">
+                    {new Date(validationWarning.lastDonationDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  </span>
                 </div>
               </div>
 
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-900">
-                  <strong>Why 3 months?</strong> Medical guidelines require at least 3 months between blood donations to
-                  ensure your health and safety. This allows your body to fully recover and replenish your blood volume.
+              <div className="p-4 bg-slate-50 border border-slate-100 rounded-lg">
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  <strong className="text-slate-900 font-bold block mb-1">Why 3 months?</strong>
+                  Medical guidelines mandate a 3-month gap between donations to ensure donor health. This period allows your body to fully replenish blood volume and iron levels safely.
                 </p>
               </div>
             </div>
           </AlertDialogDescription>
-          <div className="flex gap-2 justify-end mt-4">
-            <AlertDialogCancel>Close</AlertDialogCancel>
+          <div className="flex gap-2 justify-end mt-6">
+            <AlertDialogCancel className="bg-white border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold h-10 px-6">Close</AlertDialogCancel>
           </div>
         </AlertDialogContent>
       </AlertDialog>
 
       {/* Accept Blood Request Dialog */}
       <Dialog open={showAcceptDialog} onOpenChange={setShowAcceptDialog}>
-        <DialogContent className="bg-white max-w-md">
+        <DialogContent className="bg-white border border-slate-200 shadow-lg rounded-xl max-w-md">
           <DialogHeader>
-            <div className="flex items-center gap-2">
-              <Droplet className="w-5 h-5 text-red-600" />
-              <DialogTitle>Accept Blood Donation Request</DialogTitle>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-red-50 border border-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <Droplet className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold text-slate-900 text-left">Confirm Donation</DialogTitle>
+                <DialogDescription className="text-left mt-1">
+                  You are committing to donate blood for this request.
+                </DialogDescription>
+              </div>
             </div>
-            <DialogDescription>
-              Confirm your willingness to donate blood for this request
-            </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="text-2xl font-bold text-red-600">{selectedRequestForAccept?.bloodGroup}</div>
-                <div className="text-sm text-gray-600">({selectedRequestForAccept?.quantity} units)</div>
+          <div className="space-y-4 py-2">
+            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+              <div className="flex items-center gap-3 mb-3 pb-3 border-b border-slate-200">
+                <div className="text-2xl font-black text-red-600">{selectedRequestForAccept?.bloodGroup}</div>
+                <div className="text-sm font-medium text-slate-500">{selectedRequestForAccept?.quantity} unit(s) requested</div>
               </div>
-              <p className="text-sm text-gray-700">
-                <span className="font-medium">Hospital:</span> {selectedRequestForAccept?.hospitalLocation}
-              </p>
-              <p className="text-sm text-gray-700">
-                <span className="font-medium">Requested by:</span> {selectedRequestForAccept?.userName}
-              </p>
+              <div className="space-y-2">
+                <div>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Hospital</span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {selectedRequestForAccept?.isSOS && selectedRequestForAccept?.hospital ? `${selectedRequestForAccept.hospital.name}, ${selectedRequestForAccept.hospital.city}` : selectedRequestForAccept?.hospitalLocation}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Patient Contact</span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {selectedRequestForAccept?.userName || selectedRequestForAccept?.requesterName} • {selectedRequestForAccept?.userPhone || selectedRequestForAccept?.requesterPhone || selectedRequestForAccept?.userEmail}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <label className="flex items-start gap-3 p-4 bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
               <Checkbox
                 id="needsTransportation"
                 checked={needsTransportation}
                 onCheckedChange={(checked) => setNeedsTransportation(checked as boolean)}
+                className="mt-1 data-[state=checked]:bg-slate-900 data-[state=checked]:border-slate-900"
               />
-              <div className="grid gap-1.5 leading-none">
-                <label
-                  htmlFor="needsTransportation"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  I need transportation to the hospital
-                </label>
-                <p className="text-sm text-muted-foreground">
-                  Check this box if you need transportation assistance to reach the hospital for your donation.
-                </p>
+              <div>
+                <span className="text-sm font-bold text-slate-900 block mb-1">I need transportation assistance</span>
+                <span className="text-xs text-slate-500 leading-relaxed block">
+                  Check this box if you require an NGO volunteer to arrange transport to the hospital for your donation.
+                </span>
               </div>
-            </div>
-
-            <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-yellow-600" />
-                <p className="text-sm font-medium text-yellow-800">Important Information</p>
-              </div>
-              <p className="text-sm text-yellow-700 mt-1">
-                By accepting this request, you commit to donating blood. Please ensure you meet all eligibility criteria and can reach the hospital on time.
-              </p>
-            </div>
+            </label>
           </div>
 
-          <div className="flex gap-2 justify-end mt-6">
+          <div className="flex gap-3 justify-end mt-4">
             <Button
               onClick={() => setShowAcceptDialog(false)}
               variant="outline"
+              className="h-11 px-6 font-semibold border-slate-200 text-slate-700 hover:bg-slate-50"
             >
               Cancel
             </Button>
             <Button
               onClick={confirmAcceptRequest}
               disabled={acceptingRequestId === selectedRequestForAccept?._id}
-              className="bg-red-600 hover:bg-red-700 gap-2"
+              className="h-11 px-6 font-semibold bg-red-600 hover:bg-red-700 text-white gap-2 transition-colors"
             >
-              {acceptingRequestId === selectedRequestForAccept?._id ? "Accepting..." : "Accept Blood Donation"}
+              {acceptingRequestId === selectedRequestForAccept?._id ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Confirming...</>
+              ) : (
+                "Confirm & Accept"
+              )}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
       <Dialog open={showTransportDialog} onOpenChange={setShowTransportDialog}>
-        <DialogContent className="bg-white max-w-md">
+        <DialogContent className="bg-white border border-slate-200 shadow-lg rounded-xl max-w-md">
           <DialogHeader>
-            <div className="flex items-center gap-2">
-              <Truck className="w-5 h-5 text-blue-600" />
-              <DialogTitle>Arrange Transportation</DialogTitle>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <Truck className="w-5 h-5 text-slate-900" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold text-slate-900 text-left">Arrange Transport</DialogTitle>
+                <DialogDescription className="text-left mt-1">
+                  We can help you get to the hospital safely.
+                </DialogDescription>
+              </div>
             </div>
-            <DialogDescription>
-              Provide your pickup location for transportation to the hospital
-            </DialogDescription>
           </DialogHeader>
 
-          {error && <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm">{error}</div>}
+          {error && <div className="p-3 bg-red-50 text-red-700 border border-red-100 rounded-lg text-sm font-medium mb-4">{error}</div>}
 
-          <div className="space-y-4">
+          <div className="space-y-5 py-2">
             <div>
-              <label className="block text-sm font-medium mb-2">Pickup Location *</label>
+              <label className="block text-sm font-bold text-slate-900 mb-1.5">Pickup Location <span className="text-red-500">*</span></label>
               <Input
-                placeholder="Enter your pickup address"
+                placeholder="Enter your exact pickup address"
                 value={pickupLocation}
                 onChange={(e) => setPickupLocation(e.target.value)}
+                className="h-11 bg-white border-slate-200 focus-visible:ring-slate-900"
               />
-              <p className="text-xs text-gray-500 mt-1">Where we should pick you up from</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Drop Location (Hospital) - Fixed</label>
+              <label className="block text-sm font-bold text-slate-900 mb-1.5">Drop Location (Hospital)</label>
               <Input
-                placeholder="Hospital location"
                 value={dropLocation}
                 readOnly
                 disabled
-                className="bg-gray-100 cursor-not-allowed"
+                className="h-11 bg-slate-50 border-slate-200 text-slate-600 font-medium cursor-not-allowed opacity-100"
               />
-              <p className="text-xs text-gray-500 mt-1">Hospital location from the blood request (auto-filled, cannot be changed)</p>
             </div>
+            
+            {selectedRequestForTransport?.isSOS && selectedRequestForTransport?.hospital && (
+              <div className="pt-4 border-t border-slate-100">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">View Directions</p>
+                <div className="flex gap-3">
+                  {selectedRequestForTransport.hospital.googleUrl && (
+                    <Button asChild variant="outline" className="flex-1 h-10 text-sm font-semibold border-slate-200 hover:bg-slate-50">
+                      <a href={selectedRequestForTransport.hospital.googleUrl} target="_blank" rel="noreferrer">
+                        Google Maps
+                      </a>
+                    </Button>
+                  )}
+                  {selectedRequestForTransport.hospital.osmUrl && (
+                    <Button asChild variant="outline" className="flex-1 h-10 text-sm font-semibold border-slate-200 hover:bg-slate-50">
+                      <a href={selectedRequestForTransport.hospital.osmUrl} target="_blank" rel="noreferrer">
+                        OpenStreetMap
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="flex gap-2 justify-end mt-6">
+          <div className="flex flex-col-reverse sm:flex-row gap-3 justify-end mt-6">
             <Button
               onClick={() => setShowTransportDialog(false)}
               variant="outline"
               disabled={isSubmittingTransport}
+              className="h-11 px-6 font-semibold border-slate-200 text-slate-700 hover:bg-slate-50"
             >
-              Skip
+              Skip Transport
             </Button>
             <Button
               onClick={handleCreateTransport}
               disabled={isSubmittingTransport || !pickupLocation}
-              className="bg-blue-600 hover:bg-blue-700 gap-2"
+              className="h-11 px-6 font-semibold bg-slate-900 hover:bg-slate-800 text-white gap-2"
             >
-              {isSubmittingTransport ? "Creating..." : "Create Transportation Request"}
+              {isSubmittingTransport ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Requesting...</>
+              ) : (
+                "Request Transport"
+              )}
             </Button>
           </div>
         </DialogContent>

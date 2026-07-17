@@ -34,15 +34,13 @@ export default function Events() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
   const [userRegistrations, setUserRegistrations] = useState<Record<string, { isRegistered: boolean, type?: 'donor' | 'volunteer' }>>({})
-  const { token } = useAppSelector((state) => state.auth)
-  const { isAuthenticated } = useAppSelector((state) => state.auth)
+  const { token, isAuthenticated } = useAppSelector((state) => state.auth)
   const router = useRouter()
 
   useEffect(() => {
     fetchEvents()
   }, [])
 
-  // Check registration status for each event if user is authenticated
   useEffect(() => {
     if (isAuthenticated && token && events.length > 0) {
       checkUserRegistrations()
@@ -55,7 +53,6 @@ export default function Events() {
       
       await Promise.all(events.map(async (event) => {
         try {
-          // Check both donor and volunteer registrations in parallel
           const [donorRes, volunteerRes] = await Promise.all([
             fetch(`/api/event-registrations?eventId=${event._id}&checkUser=true`, {
               headers: { Authorization: `Bearer ${token}` },
@@ -109,55 +106,49 @@ export default function Events() {
       }
     } catch (err) {
       setError("Error loading events")
-      console.error(err)
     } finally {
       setIsLoading(false)
     }
   }
 
   const formatEventType = (type: string) => {
-    if (!type || typeof type !== 'string') {
-      return 'Event';
-    }
-    return type
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ")
+    if (!type || typeof type !== 'string') return 'Event';
+    return type.split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")
   }
 
   return (
-    <main className="min-h-screen">
-      {/* Hero */}
-      <section className="py-20 md:py-32 bg-gradient-to-br from-background via-secondary/20 to-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="font-heading text-5xl md:text-6xl font-bold mb-6">Upcoming Events</h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-4">
-            Join us at our upcoming blood donation camps and community events.
+    <main className="min-h-screen bg-slate-50">
+      {/* Hero Section */}
+      <section className="py-16 md:py-24 bg-white border-b border-slate-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6 tracking-tight">Upcoming Events</h1>
+          <p className="text-lg text-slate-500 max-w-2xl mx-auto mb-8">
+            Join us at our upcoming blood donation camps and community events. Step forward and make a tangible impact.
           </p>
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <CheckCircle className="w-4 h-4 text-green-600" />
-            <span>Events organized by verified NGOs and trusted partners</span>
+          <div className="inline-flex items-center gap-2 text-sm font-medium text-green-700 bg-green-50 px-4 py-2 rounded-full border border-green-200">
+            <CheckCircle className="w-4 h-4" />
+            <span>Organized by verified NGOs and trusted partners</span>
           </div>
         </div>
       </section>
 
       {/* Events List */}
-      <section className="py-20 md:py-32">
+      <section className="py-16 md:py-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12 gap-2">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Loading events...</span>
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <Loader2 className="w-8 h-8 animate-spin text-red-600" />
+              <span className="text-slate-500 font-medium">Loading events...</span>
             </div>
           ) : error ? (
-            <div className="p-4 bg-destructive/10 text-destructive rounded-md text-center">{error}</div>
+            <div className="p-6 bg-red-50 border border-red-200 text-red-700 rounded-xl text-center font-medium">{error}</div>
           ) : events.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground text-lg">No upcoming events at this moment.</p>
-              <p className="text-muted-foreground text-sm mt-2">Check back soon for new events!</p>
+            <div className="text-center py-20 bg-white rounded-xl border border-slate-200 shadow-sm">
+              <p className="text-slate-900 font-semibold text-lg">No upcoming events right now.</p>
+              <p className="text-slate-500 mt-2">Please check back soon for new opportunities to help.</p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-8">
               {events.map((event) => {
                 const availableSlots = event.volunteerSlotsNeeded - event.registeredVolunteers
                 const isFull = availableSlots <= 0
@@ -166,7 +157,13 @@ export default function Events() {
                 const isRegistered = registrationInfo?.isRegistered || false
                 const registrationType = registrationInfo?.type
                 const buttonDisabled = !registrationsOpen || isFull || isRegistered
-                const buttonClass = isRegistered || !registrationsOpen ? "bg-gray-400" : isFull ? "" : "bg-green-600 hover:bg-green-700"
+                
+                const buttonClass = isRegistered || !registrationsOpen 
+                  ? "bg-slate-200 text-slate-500 cursor-not-allowed hover:bg-slate-200" 
+                  : isFull 
+                    ? "bg-orange-100 text-orange-700 hover:bg-orange-100" 
+                    : "bg-red-600 hover:bg-red-700 text-white"
+                
                 const buttonLabel = isRegistered
                   ? (registrationType === 'volunteer' ? "Registered as Volunteer" : "Registered as Donor")
                   : !registrationsOpen
@@ -175,223 +172,169 @@ export default function Events() {
                       ? "Event Full"
                       : "Register as Donor"
                 
-                // Check if this is an NGO event
                 const isNGOEvent = event.ngoName && event.ngoName.trim() !== ""
                 
                 return (
-                  <Card key={event._id} className="overflow-hidden hover:shadow-lg transition-all duration-200 border-l-4 border-l-primary">
+                  <Card key={event._id} className="overflow-hidden bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow duration-200 rounded-xl">
                     <div className="p-6 sm:p-8">
-                      {/* Event Header with NGO Badge */}
-                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
+                      {/* Event Header */}
+                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
                         <div className="flex-1">
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
-                            <h3 className="font-heading text-2xl font-bold text-gray-900">{event.title}</h3>
-                            <div className="flex flex-wrap gap-2">
-                              <Badge variant="secondary" className="bg-primary/10 text-primary">
+                          <div className="flex flex-wrap items-center gap-3 mb-4">
+                            <h3 className="text-2xl font-bold text-slate-900">{event.title}</h3>
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-100">
                                 {formatEventType(event.eventType)}
-                              </Badge>
+                              </span>
                               {isNGOEvent && (
-                                <Badge className="bg-green-100 text-green-800 border-green-200 font-medium">
-                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                  Verified NGO
-                                </Badge>
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-100">
+                                  <CheckCircle className="w-3 h-3 mr-1" /> Verified NGO
+                                </span>
                               )}
                             </div>
                           </div>
                           
-                          {/* NGO Information - Prominent Display */}
+                          {/* NGO Block */}
                           {isNGOEvent && (
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                  <Building className="w-5 h-5 text-blue-600" />
+                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6 flex items-start gap-4">
+                              {event.ngoLogo ? (
+                                <img
+                                  src={event.ngoLogo}
+                                  alt={event.ngoName}
+                                  className="h-12 w-12 rounded-lg object-cover border border-slate-200 bg-white flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="h-12 w-12 rounded-lg border border-slate-200 bg-white flex items-center justify-center flex-shrink-0">
+                                  <Building className="w-6 h-6 text-slate-400" />
                                 </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="text-sm font-medium text-blue-900">Organized by</span>
-                                    <CheckCircle className="w-4 h-4 text-green-600" />
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {event.ngoWebsite ? (
-                                      <a
-                                        href={event.ngoWebsite}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="font-semibold text-blue-700 hover:text-blue-800 hover:underline flex items-center gap-1"
-                                      >
-                                        {event.ngoName}
-                                        <ExternalLink className="w-3 h-3" />
-                                      </a>
-                                    ) : (
-                                      <span className="font-semibold text-blue-700">{event.ngoName}</span>
-                                    )}
-                                  </div>
-                                  {event.organizedBy && (
-                                    <p className="text-sm text-blue-600 mt-1">{event.organizedBy}</p>
-                                  )}
-                                </div>
-                                {event.ngoLogo && (
-                                  <div className="flex-shrink-0">
-                                    <img
-                                      src={event.ngoLogo}
-                                      alt={event.ngoName}
-                                      className="h-12 w-12 rounded-lg object-cover border border-blue-200"
-                                      onError={(e) => {
-                                        (e.target as HTMLImageElement).style.display = "none"
-                                      }}
-                                    />
-                                  </div>
+                              )}
+                              <div>
+                                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Organized By</div>
+                                {event.ngoWebsite ? (
+                                  <a
+                                    href={event.ngoWebsite}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-bold text-slate-900 hover:text-red-600 transition-colors flex items-center gap-1.5"
+                                  >
+                                    {event.ngoName}
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                  </a>
+                                ) : (
+                                  <div className="font-bold text-slate-900">{event.ngoName}</div>
+                                )}
+                                {event.organizedBy && (
+                                  <div className="text-sm text-slate-600 mt-0.5">{event.organizedBy}</div>
                                 )}
                               </div>
                             </div>
                           )}
                           
-                          <p className="text-gray-600 mb-4 leading-relaxed">{event.description}</p>
+                          <p className="text-slate-600 leading-relaxed text-sm sm:text-base">{event.description}</p>
                         </div>
 
-                        {/* Registration Status and Buttons */}
+                        {/* Registration Block */}
                         {event.volunteerSlotsNeeded > 0 && (
-                          <div className="flex flex-col gap-3 sm:min-w-[200px]">
-                            {/* Registration Status Indicators */}
-                            <div className="space-y-2">
+                          <div className="flex flex-col gap-3 md:min-w-[220px] md:flex-shrink-0 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                            {/* Status Indicators */}
+                            <div className="space-y-2 mb-2">
                               {!registrationsOpen && (
-                                <div className="flex items-center gap-2 text-sm font-medium text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                                  Registrations Closed
+                                <div className="text-xs font-bold text-red-600 uppercase tracking-wide flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 bg-red-600 rounded-full"></div> Closed
                                 </div>
                               )}
                               {registrationsOpen && isFull && (
-                                <div className="flex items-center gap-2 text-sm font-medium text-orange-600 bg-orange-50 px-3 py-2 rounded-lg">
-                                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                  Event is Full
+                                <div className="text-xs font-bold text-orange-600 uppercase tracking-wide flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 bg-orange-600 rounded-full"></div> Event Full
                                 </div>
                               )}
                               {isRegistered && (
-                                <div className={`flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg ${registrationType === 'volunteer' ? "text-blue-700 bg-blue-50" : "text-green-600 bg-green-50"}`}>
-                                  <CheckCircle className="w-4 h-4" />
-                                  {registrationType === 'volunteer' ? "Registered as Volunteer" : "Registered as Donor"}
+                                <div className="text-xs font-bold text-green-700 uppercase tracking-wide flex items-center gap-2">
+                                  <CheckCircle className="w-3.5 h-3.5" /> Registered
                                 </div>
                               )}
                               {registrationsOpen && !isFull && !isRegistered && (
-                                <div className="flex items-center gap-2 text-sm font-medium text-green-600 bg-green-50 px-3 py-2 rounded-lg">
-                                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                  Registration Open
+                                <div className="text-xs font-bold text-green-600 uppercase tracking-wide flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div> Open Now
                                 </div>
                               )}
                             </div>
                             
-                            {/* Registration Buttons */}
-                            <div className="space-y-2">
+                            <Button
+                              onClick={() => {
+                                if (!registrationsOpen || isFull || isRegistered) return
+                                if (!isAuthenticated) router.push("/login")
+                                else router.push(`/events/${event._id}/register`)
+                              }}
+                              disabled={buttonDisabled}
+                              className={`w-full font-semibold ${buttonClass}`}
+                            >
+                              {buttonLabel}
+                            </Button>
+                            
+                            {isNGOEvent && registrationsOpen && !isFull && !isRegistered && (
                               <Button
                                 onClick={() => {
-                                  if (!registrationsOpen || isFull || isRegistered) {
-                                    return
-                                  }
-                                  if (!isAuthenticated) {
-                                    router.push("/login")
-                                  } else {
-                                    router.push(`/events/${event._id}/register`)
-                                  }
+                                  if (!isAuthenticated) router.push("/login")
+                                  else router.push(`/events/${event._id}/volunteer-register`)
                                 }}
-                                disabled={buttonDisabled}
-                                size="lg"
-                                className={`w-full ${buttonClass}`}
+                                variant="outline"
+                                className="w-full font-semibold border-slate-300 text-slate-700 hover:bg-slate-100"
                               >
-                                {buttonLabel}
+                                Register as Volunteer
                               </Button>
-                              
-                              {/* Volunteer Registration Button for NGO Events */}
-                              {isNGOEvent && registrationsOpen && !isFull && !isRegistered && (
-                                <Button
-                                  onClick={() => {
-                                    if (!isAuthenticated) {
-                                      router.push("/login")
-                                    } else {
-                                      router.push(`/events/${event._id}/volunteer-register`)
-                                    }
-                                  }}
-                                  variant="outline"
-                                  size="lg"
-                                  className="w-full border-blue-300 text-blue-700 hover:bg-blue-50"
-                                >
-                                  Register as Volunteer
-                                </Button>
-                              )}
-                            </div>
+                            )}
                           </div>
                         )}
                       </div>
 
-                      {/* Event Details Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <Calendar className="w-5 h-5 text-gray-500" />
-                          <div>
-                            <p className="text-xs text-gray-500 uppercase tracking-wide">Date</p>
-                            <p className="font-medium text-gray-900">
-                              {new Date(event.eventDate).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              })}
-                            </p>
-                            {event.startTime && (
-                              <p className="text-sm text-gray-600">{event.startTime}</p>
-                            )}
+                      {/* Details Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-6 border-t border-slate-100">
+                        <div>
+                          <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                            <Calendar className="w-4 h-4" /> Date & Time
                           </div>
+                          <p className="font-semibold text-slate-900">
+                            {new Date(event.eventDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </p>
+                          {event.startTime && (
+                            <p className="text-sm text-slate-600 font-medium">{event.startTime}</p>
+                          )}
                         </div>
                         
-                        <div className="flex items-center gap-3">
-                          <MapPin className="w-5 h-5 text-gray-500" />
-                          <div>
-                            <p className="text-xs text-gray-500 uppercase tracking-wide">Location</p>
-                            <p className="font-medium text-gray-900 text-sm">{event.location}</p>
+                        <div>
+                          <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                            <MapPin className="w-4 h-4" /> Location
                           </div>
+                          <p className="font-semibold text-slate-900 text-sm leading-tight">{event.location}</p>
                         </div>
                         
                         {event.expectedAttendees > 0 && (
-                          <div className="flex items-center gap-3">
-                            <Users className="w-5 h-5 text-gray-500" />
-                            <div>
-                              <p className="text-xs text-gray-500 uppercase tracking-wide">Expected</p>
-                              <p className="font-medium text-gray-900">{event.expectedAttendees} attendees</p>
+                          <div>
+                            <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                              <Users className="w-4 h-4" /> Expected
                             </div>
+                            <p className="font-semibold text-slate-900">{event.expectedAttendees} Attendees</p>
                           </div>
                         )}
                         
                         {event.volunteerSlotsNeeded > 0 && (
-                          <div className="flex items-center gap-3">
-                            <Users className="w-5 h-5 text-gray-500" />
-                            <div>
-                              <p className="text-xs text-gray-500 uppercase tracking-wide">Volunteers</p>
-                              <p className="font-medium text-gray-900">
-                                {event.registeredVolunteers} / {event.volunteerSlotsNeeded}
-                              </p>
-                              <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                                <div 
-                                  className="bg-primary h-1.5 rounded-full transition-all duration-300" 
-                                  style={{ 
-                                    width: `${Math.min((event.registeredVolunteers / event.volunteerSlotsNeeded) * 100, 100)}%` 
-                                  }}
-                                ></div>
-                              </div>
+                          <div>
+                            <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                              <Users className="w-4 h-4" /> Volunteers
+                            </div>
+                            <p className="font-semibold text-slate-900 mb-1.5">
+                              {event.registeredVolunteers} / {event.volunteerSlotsNeeded} Filled
+                            </p>
+                            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                              <div 
+                                className="bg-slate-900 h-full rounded-full transition-all duration-500" 
+                                style={{ width: `${Math.min((event.registeredVolunteers / event.volunteerSlotsNeeded) * 100, 100)}%` }}
+                              ></div>
                             </div>
                           </div>
                         )}
                       </div>
-
-                      {/* Trust Indicators for NGO Events */}
-                      {isNGOEvent && (
-                        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                          <div className="flex items-center gap-2 text-sm text-green-800">
-                            <CheckCircle className="w-4 h-4 text-green-600" />
-                            <span className="font-medium">Verified NGO Event</span>
-                          </div>
-                          <p className="text-xs text-green-700 mt-1">
-                            This event is organized by a verified NGO and has been approved by our admin team for quality and safety.
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </Card>
                 )

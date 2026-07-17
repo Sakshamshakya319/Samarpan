@@ -2,13 +2,10 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import Image from "next/image"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { AdaptiveImage } from "@/components/shared/adaptive-image"
-import { Loader2, Search, Eye, MessageSquare, Calendar } from "lucide-react"
+import { Loader2, Search, Eye, MessageSquare, Calendar, ArrowRight } from "lucide-react"
 
 interface Blog {
   _id: string
@@ -61,27 +58,27 @@ export default function BlogsPage() {
   }
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-slate-50">
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-primary/10 via-secondary/5 to-background py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h1 className="font-heading text-4xl md:text-5xl font-bold mb-4">Blog & Resources</h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Learn about blood donation, health tips, and inspiring donor stories from our community.
-            </p>
-          </div>
+      <section className="bg-white py-16 md:py-24 border-b border-slate-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight mb-4">
+            Blog & Resources
+          </h1>
+          <p className="text-lg text-slate-500 mb-10 max-w-2xl mx-auto">
+            Explore our latest articles, medical resources, and inspiring stories from the Samarpan donor community.
+          </p>
 
           {/* Search Bar */}
-          <div className="max-w-2xl mx-auto">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
+          <div className="max-w-lg mx-auto">
+            <div className="relative flex items-center">
+              <Search className="absolute left-4 w-5 h-5 text-slate-400" />
               <Input
                 type="text"
-                placeholder="Search blogs..."
+                placeholder="Search articles and resources..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 py-2 h-auto"
+                className="pl-12 py-6 text-base bg-white border-slate-200 focus-visible:ring-1 focus-visible:ring-red-500 rounded-full shadow-sm"
               />
             </div>
           </div>
@@ -89,74 +86,78 @@ export default function BlogsPage() {
       </section>
 
       {/* Blogs Grid */}
-      <section className="py-16">
+      <section className="py-16 md:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {isLoading ? (
-            <div className="text-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-              <p>Loading blogs...</p>
+            <div className="text-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-red-600 mx-auto mb-4" />
+              <p className="text-slate-500 font-medium">Loading resources...</p>
             </div>
           ) : filteredBlogs.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">
-                {blogs.length === 0 ? "No blogs published yet." : "No blogs match your search."}
+            <div className="text-center py-20 bg-white rounded-xl border border-slate-100 max-w-2xl mx-auto">
+              <p className="text-slate-500 font-medium">
+                {blogs.length === 0 ? "No articles have been published yet." : "No articles match your search criteria."}
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredBlogs.map((blog) => {
                 const thumbnail = getThumbnail(blog.images)
                 return (
-                  <Link key={blog._id} href={`/blogs/${blog._id}`}>
-                    <Card className="overflow-hidden hover:border-primary/50 transition h-full hover:shadow-lg transform hover:scale-105 transition-transform duration-300 cursor-pointer">
+                  <Link key={blog._id} href={`/blogs/${blog._id}`} className="group flex flex-col h-full">
+                    <Card className="flex flex-col h-full bg-white border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200 rounded-xl overflow-hidden">
                       {/* Thumbnail */}
-                      {thumbnail && (
-                        <AdaptiveImage
-                          src={thumbnail}
-                          alt={blog.title}
-                          maxHeight={300}
-                          className="rounded-t-lg"
-                        />
+                      {thumbnail ? (
+                        <div className="w-full h-56 relative overflow-hidden bg-slate-100 border-b border-slate-100">
+                          <AdaptiveImage
+                            src={thumbnail}
+                            alt={blog.title}
+                            maxHeight={250}
+                            className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-full h-56 bg-slate-100 border-b border-slate-100 flex items-center justify-center">
+                          <span className="text-slate-400 font-medium">No Image Available</span>
+                        </div>
                       )}
 
-                      <CardContent className="p-4 space-y-3">
+                      <CardContent className="p-6 flex flex-col flex-grow">
+                        {/* Meta Info Top */}
+                        <div className="flex items-center gap-4 mb-3">
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                            <Calendar className="w-3.5 h-3.5" />
+                            {new Date(blog.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </div>
+                        </div>
+
                         {/* Title */}
-                        <h3 className="font-heading font-semibold text-lg line-clamp-2 hover:text-primary transition">
+                        <h3 className="text-xl font-bold text-slate-900 leading-tight mb-3 group-hover:text-red-600 transition-colors">
                           {blog.title}
                         </h3>
 
                         {/* Excerpt */}
-                        <p className="text-sm text-muted-foreground line-clamp-3">
+                        <p className="text-slate-600 line-clamp-3 mb-6 text-sm leading-relaxed flex-grow">
                           {blog.content}
                         </p>
 
-                        {/* Meta Info */}
-                        <div className="pt-2 space-y-2">
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(blog.createdAt).toLocaleDateString()}
-                          </div>
-
-                          {/* Stats */}
+                        {/* Footer (Stats & Read More) */}
+                        <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
                           <div className="flex gap-4">
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Eye className="w-3 h-3" />
+                            <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                              <Eye className="w-3.5 h-3.5" />
                               {blog.views}
                             </div>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <MessageSquare className="w-3 h-3" />
+                            <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                              <MessageSquare className="w-3.5 h-3.5" />
                               {blog.comments?.length || 0}
                             </div>
                           </div>
-
-                          {/* Author */}
-                          <p className="text-xs text-muted-foreground">By {blog.authorName}</p>
+                          
+                          <span className="text-sm font-semibold text-red-600 flex items-center gap-1 group-hover:gap-2 transition-all">
+                            Read Article <ArrowRight className="w-4 h-4" />
+                          </span>
                         </div>
-
-                        {/* Read More Button */}
-                        <Button variant="default" size="sm" className="w-full mt-4">
-                          Read More
-                        </Button>
                       </CardContent>
                     </Card>
                   </Link>

@@ -4,11 +4,8 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
 import { AdaptiveImage } from "@/components/shared/adaptive-image"
-import { ImageLightbox } from "@/components/shared/image-lightbox"
 import { Loader2, Eye, MessageSquare, Calendar, User, Trash2, AlertCircle, ArrowLeft, Heart, MessageCircle, X, Share2, Mail, Facebook, Instagram } from "lucide-react"
 import { useAppSelector } from "@/lib/store/hooks"
 
@@ -71,12 +68,11 @@ export default function BlogDetailPage() {
   const [isSubmittingReply, setIsSubmittingReply] = useState(false)
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set())
   const [likedReplies, setLikedReplies] = useState<Set<string>>(new Set())
-  const [lightboxOpen, setLightboxOpen] = useState(false)
-  const [lightboxIndex, setLightboxIndex] = useState(0)
+
+  // Note: Lightbox state removed for simplicity in minimalist design, images open full-size normally
 
   const { isAuthenticated, token } = useAppSelector((state) => state.auth)
 
-  // Initialize token and userId from localStorage on component mount
   useEffect(() => {
     const storedToken = localStorage.getItem("token")
     const storedUser = localStorage.getItem("user")
@@ -126,7 +122,6 @@ export default function BlogDetailPage() {
 
     if (!isAuthenticated || !userToken) {
       setCommentError("Please login to comment")
-      console.warn("[Blog Comments] User not authenticated or token missing")
       return
     }
 
@@ -135,16 +130,9 @@ export default function BlogDetailPage() {
       return
     }
 
-    if (!userToken) {
-      setCommentError("Authentication token not found. Please refresh and try again.")
-      console.error("[Blog Comments] Token is missing when attempting to post comment")
-      return
-    }
-
     setIsSubmittingComment(true)
 
     try {
-      console.log("[Blog Comments] Posting comment with token", userToken.substring(0, 20) + "...")
       const response = await fetch(`/api/blogs/${blogId}/comments`, {
         method: "POST",
         headers: {
@@ -154,8 +142,6 @@ export default function BlogDetailPage() {
         body: JSON.stringify({ text: commentText }),
       })
 
-      console.log("[Blog Comments] Comment POST response status:", response.status)
-
       if (response.ok) {
         setCommentSuccess("Comment added successfully!")
         setCommentText("")
@@ -163,12 +149,9 @@ export default function BlogDetailPage() {
         setTimeout(() => setCommentSuccess(""), 3000)
       } else {
         const data = await response.json()
-        console.error("[Blog Comments] Comment POST error:", data)
         setCommentError(data.error || "Failed to add comment")
       }
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Unknown error"
-      console.error("[Blog Comments] Exception while posting comment:", errorMsg)
       setCommentError("Error adding comment. Please try again.")
     } finally {
       setIsSubmittingComment(false)
@@ -177,32 +160,18 @@ export default function BlogDetailPage() {
 
   const handleDeleteComment = async (commentId: string) => {
     if (!window.confirm("Delete this comment?")) return
-
-    if (!userToken) {
-      console.error("[Blog Comments] Token missing for delete operation")
-      return
-    }
+    if (!userToken) return
 
     try {
-      console.log("[Blog Comments] Deleting comment with token", userToken.substring(0, 20) + "...")
       const response = await fetch(`/api/blogs/${blogId}/comments/${commentId}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${userToken}`,
-        },
+        headers: { Authorization: `Bearer ${userToken}` },
       })
-
-      console.log("[Blog Comments] Comment DELETE response status:", response.status)
-
       if (response.ok) {
         await fetchBlog()
-      } else {
-        const data = await response.json()
-        console.error("[Blog Comments] Delete comment error:", data)
       }
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Unknown error"
-      console.error("[Blog Comments] Exception while deleting comment:", errorMsg)
+      console.error(err)
     }
   }
 
@@ -223,19 +192,13 @@ export default function BlogDetailPage() {
 
       if (response.ok) {
         const isLiked = likedComments.has(commentId)
-        if (isLiked) {
-          likedComments.delete(commentId)
-        } else {
-          likedComments.add(commentId)
-        }
+        if (isLiked) likedComments.delete(commentId)
+        else likedComments.add(commentId)
         setLikedComments(new Set(likedComments))
         await fetchBlog()
-      } else {
-        const data = await response.json()
-        console.error("[Blog Comments] Like error:", data)
       }
     } catch (err) {
-      console.error("[Blog Comments] Exception while liking comment:", err)
+      console.error(err)
     }
   }
 
@@ -270,12 +233,9 @@ export default function BlogDetailPage() {
         await fetchBlog()
       } else {
         const data = await response.json()
-        console.error("[Blog Comments] Reply error:", data)
         setCommentError(data.error || "Failed to add reply")
       }
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Unknown error"
-      console.error("[Blog Comments] Exception while posting reply:", errorMsg)
       setCommentError("Error adding reply. Please try again.")
     } finally {
       setIsSubmittingReply(false)
@@ -284,29 +244,16 @@ export default function BlogDetailPage() {
 
   const handleDeleteReply = async (commentId: string, replyId: string) => {
     if (!window.confirm("Delete this reply?")) return
-
-    if (!userToken) {
-      console.error("[Blog Comments] Token missing for delete reply operation")
-      return
-    }
+    if (!userToken) return
 
     try {
       const response = await fetch(`/api/blogs/${blogId}/comments/${commentId}/replies/${replyId}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${userToken}`,
-        },
+        headers: { Authorization: `Bearer ${userToken}` },
       })
-
-      if (response.ok) {
-        await fetchBlog()
-      } else {
-        const data = await response.json()
-        console.error("[Blog Comments] Delete reply error:", data)
-      }
+      if (response.ok) await fetchBlog()
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Unknown error"
-      console.error("[Blog Comments] Exception while deleting reply:", errorMsg)
+      console.error(err)
     }
   }
 
@@ -328,19 +275,13 @@ export default function BlogDetailPage() {
       if (response.ok) {
         const likeId = `${commentId}-${replyId}`
         const isLiked = likedReplies.has(likeId)
-        if (isLiked) {
-          likedReplies.delete(likeId)
-        } else {
-          likedReplies.add(likeId)
-        }
+        if (isLiked) likedReplies.delete(likeId)
+        else likedReplies.add(likeId)
         setLikedReplies(new Set(likedReplies))
         await fetchBlog()
-      } else {
-        const data = await response.json()
-        console.error("[Blog Comments] Reply like error:", data)
       }
     } catch (err) {
-      console.error("[Blog Comments] Exception while liking reply:", err)
+      console.error(err)
     }
   }
 
@@ -350,41 +291,27 @@ export default function BlogDetailPage() {
     const text = `${title} - Read on Samarpan`
 
     const shares = {
-      facebook: () => {
-        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(blogUrl)}`, "_blank", "width=600,height=400")
-      },
-      whatsapp: () => {
-        window.open(`https://wa.me/?text=${encodeURIComponent(text + " " + blogUrl)}`, "_blank")
-      },
-      twitter: () => {
-        window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(blogUrl)}&text=${encodeURIComponent(title)}`, "_blank", "width=600,height=400")
-      },
-      mail: () => {
-        window.location.href = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text + "\n\n" + blogUrl)}`
-      },
+      facebook: () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(blogUrl)}`, "_blank", "width=600,height=400"),
+      whatsapp: () => window.open(`https://wa.me/?text=${encodeURIComponent(text + " " + blogUrl)}`, "_blank"),
+      twitter: () => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(blogUrl)}&text=${encodeURIComponent(title)}`, "_blank", "width=600,height=400"),
+      mail: () => { window.location.href = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text + "\n\n" + blogUrl)}` },
       instagram: () => {
-        alert("To share on Instagram, copy the link and paste it in your Instagram story or direct message.")
+        alert("To share on Instagram, copy the link and paste it.")
         navigator.clipboard.writeText(blogUrl)
       },
-      copy: () => {
-        navigator.clipboard.writeText(blogUrl).then(() => {
-          alert("Link copied to clipboard!")
-        })
-      },
+      copy: () => navigator.clipboard.writeText(blogUrl).then(() => alert("Link copied to clipboard!")),
     }
 
     const shareFunc = shares[platform as keyof typeof shares]
-    if (shareFunc) {
-      shareFunc()
-    }
+    if (shareFunc) shareFunc()
   }
 
   if (isLoading) {
     return (
-      <main className="min-h-screen flex items-center justify-center">
+      <main className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-          <p>Loading blog...</p>
+          <Loader2 className="w-8 h-8 animate-spin text-red-600 mx-auto mb-2" />
+          <p className="text-slate-500 font-medium">Loading article...</p>
         </div>
       </main>
     )
@@ -392,431 +319,290 @@ export default function BlogDetailPage() {
 
   if (error || !blog) {
     return (
-      <main className="min-h-screen">
-        <div className="max-w-4xl mx-auto px-4 py-16">
+      <main className="min-h-screen bg-white">
+        <div className="max-w-3xl mx-auto px-4 py-16 text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p className="text-lg font-semibold text-slate-900 mb-6">{error || "Blog not found"}</p>
           <Link href="/blogs">
-            <Button variant="outline" className="gap-2 mb-8">
+            <Button variant="outline" className="gap-2">
               <ArrowLeft className="w-4 h-4" />
-              Back to Blogs
+              Return to Blogs
             </Button>
           </Link>
-          <Card>
-            <CardContent className="p-8 text-center">
-              <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-              <p className="text-lg font-semibold">{error || "Blog not found"}</p>
-            </CardContent>
-          </Card>
         </div>
       </main>
     )
   }
 
   const thumbnailImage = blog.images.find((img) => img.isThumbnail) || blog.images[0]
+  const galleryImages = blog.images.filter(img => !img.isThumbnail)
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Back Button */}
-        <Link href="/blogs">
-          <Button variant="outline" className="gap-2 mb-8">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Blogs
-          </Button>
+    <main className="min-h-screen bg-white pb-24">
+      {/* Top Navigation Row */}
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-12 pb-6">
+        <Link href="/blogs" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-red-600 transition-colors gap-1.5">
+          <ArrowLeft className="w-4 h-4" />
+          Back to Blogs
         </Link>
+      </div>
 
+      <article className="max-w-3xl mx-auto px-4 sm:px-6">
+        
         {/* Article Header */}
-        <article className="space-y-6">
-          {/* Title */}
-          <div>
-            <h1 className="font-heading text-4xl md:text-5xl font-bold mb-4">{blog.title}</h1>
+        <header className="mb-10">
+          <h1 className="text-3xl md:text-5xl font-bold text-slate-900 leading-tight mb-6 tracking-tight">
+            {blog.title}
+          </h1>
 
+          <div className="flex flex-wrap items-center justify-between gap-6 py-4 border-y border-slate-100">
             {/* Meta Info */}
-            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4" />
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm font-medium text-slate-600">
+              <div className="flex items-center gap-1.5">
+                <User className="w-4 h-4 text-slate-400" />
                 {blog.authorName}
               </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                {new Date(blog.createdAt).toLocaleDateString()}
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-slate-400" />
+                {new Date(blog.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </div>
-              <div className="flex items-center gap-2">
-                <Eye className="w-4 h-4" />
+              <div className="flex items-center gap-1.5">
+                <Eye className="w-4 h-4 text-slate-400" />
                 {blog.views} views
               </div>
-              <div className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" />
+              <div className="flex items-center gap-1.5">
+                <MessageSquare className="w-4 h-4 text-slate-400" />
                 {blog.comments.length} comments
               </div>
             </div>
 
-            {/* Social Sharing */}
-            <div className="flex flex-wrap gap-2 items-center pt-4 border-t">
-              <span className="text-sm font-medium text-muted-foreground">Share:</span>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleShareBlog("facebook")}
-                className="gap-2"
-                title="Share on Facebook"
-              >
+            {/* Flat Social Share Icons */}
+            <div className="flex items-center gap-1">
+              <button onClick={() => handleShareBlog("facebook")} className="p-2 text-slate-400 hover:text-slate-900 transition-colors" title="Facebook">
                 <Facebook className="w-4 h-4" />
-                <span className="hidden sm:inline">Facebook</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleShareBlog("whatsapp")}
-                className="gap-2"
-                title="Share on WhatsApp"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a9.87 9.87 0 00-4.73 1.16l-.335.198-3.476.523.529 3.372.38.183c.247.123.486.271.707.445 3.282 2.817 8.125 2.51 11.044-.566 1.231-1.268 2.077-3.016 2.288-4.853.055-.468.034-.933-.017-1.395 0-.036 0-.073-.003-.109-.15-.864-.787-1.618-1.675-1.822-.34-.066-.686-.053-1.024.044-1.297.349-2.572 1.336-3.226 2.565-.224.433-.427.923-.586 1.457-.04.134-.082.269-.124.402z"/>
-                </svg>
-                <span className="hidden sm:inline">WhatsApp</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleShareBlog("twitter")}
-                className="gap-2"
-                title="Share on Twitter"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2s9 5 20 5a9.5 9.5 0 00-9-5.5c4.75 2.25 7-7 7-7-2.25 1.5-2.25 1.5-4.5-.25"/>
-                </svg>
-                <span className="hidden sm:inline">Twitter</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleShareBlog("instagram")}
-                className="gap-2"
-                title="Share on Instagram"
-              >
-                <Instagram className="w-4 h-4" />
-                <span className="hidden sm:inline">Instagram</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleShareBlog("mail")}
-                className="gap-2"
-                title="Share via Email"
-              >
-                <Mail className="w-4 h-4" />
-                <span className="hidden sm:inline">Email</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleShareBlog("copy")}
-                className="gap-2"
-                title="Copy link"
-              >
+              </button>
+              <button onClick={() => handleShareBlog("twitter")} className="p-2 text-slate-400 hover:text-slate-900 transition-colors" title="Twitter">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2s9 5 20 5a9.5 9.5 0 00-9-5.5c4.75 2.25 7-7 7-7-2.25 1.5-2.25 1.5-4.5-.25"/></svg>
+              </button>
+              <button onClick={() => handleShareBlog("whatsapp")} className="p-2 text-slate-400 hover:text-slate-900 transition-colors" title="WhatsApp">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a9.87 9.87 0 00-4.73 1.16l-.335.198-3.476.523.529 3.372.38.183c.247.123.486.271.707.445 3.282 2.817 8.125 2.51 11.044-.566 1.231-1.268 2.077-3.016 2.288-4.853.055-.468.034-.933-.017-1.395 0-.036 0-.073-.003-.109-.15-.864-.787-1.618-1.675-1.822-.34-.066-.686-.053-1.024.044-1.297.349-2.572 1.336-3.226 2.565-.224.433-.427.923-.586 1.457-.04.134-.082.269-.124.402z"/></svg>
+              </button>
+              <button onClick={() => handleShareBlog("copy")} className="p-2 text-slate-400 hover:text-slate-900 transition-colors" title="Copy Link">
                 <Share2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Copy Link</span>
-              </Button>
+              </button>
             </div>
           </div>
+        </header>
 
-          {/* Featured Image */}
-          {thumbnailImage && (
-            <div 
-              className="cursor-pointer"
-              onClick={() => {
-                setLightboxIndex(blog.images.findIndex(img => img.isThumbnail) || 0)
-                setLightboxOpen(true)
-              }}
-            >
-              <AdaptiveImage
-                src={thumbnailImage.url}
-                alt={blog.title}
-                maxHeight={600}
-                showCaption={!!thumbnailImage.caption}
-                caption={thumbnailImage.caption}
-                priority={true}
-                className="rounded-lg hover:shadow-lg transition-shadow duration-300"
-              />
-            </div>
-          )}
+        {/* Featured Image */}
+        {thumbnailImage && (
+          <div className="mb-12">
+            <AdaptiveImage
+              src={thumbnailImage.url}
+              alt={blog.title}
+              maxHeight={500}
+              showCaption={!!thumbnailImage.caption}
+              caption={thumbnailImage.caption}
+              priority={true}
+              className="rounded-xl w-full object-cover"
+            />
+          </div>
+        )}
 
-          {/* Content */}
-          <div className="prose prose-sm md:prose-base max-w-none dark:prose-invert">
-            <div className="whitespace-pre-wrap text-lg leading-relaxed text-foreground">
-              {blog.content}
+        {/* Content Body */}
+        <div className="prose prose-slate prose-lg max-w-none text-slate-800 leading-relaxed mb-16">
+          <div className="whitespace-pre-wrap font-sans">
+            {blog.content}
+          </div>
+        </div>
+
+        {/* Additional Images / Gallery */}
+        {galleryImages && galleryImages.length > 0 && (
+          <div className="mt-16 mb-16 border-t border-slate-100 pt-10">
+            <h3 className="text-xl font-bold text-slate-900 mb-6">Gallery</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {galleryImages.map((image, idx) => (
+                <div key={idx} className="rounded-xl overflow-hidden border border-slate-100 bg-slate-50">
+                  <AdaptiveImage
+                    src={image.url}
+                    alt={`Gallery Image ${idx + 1}`}
+                    maxHeight={300}
+                    showCaption={!!image.caption}
+                    caption={image.caption}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
             </div>
           </div>
+        )}
 
-          {/* Image Gallery */}
-          {blog.images.length > 1 && (
-            <div className="mt-12">
-              <h2 className="font-heading text-2xl font-bold mb-6">Photo Gallery</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {blog.images.map((image, idx) => (
-                  <div key={idx} className="relative group">
-                    <div 
-                      className="cursor-pointer"
-                      onClick={() => {
-                        setLightboxIndex(idx)
-                        setLightboxOpen(true)
-                      }}
-                    >
-                      <AdaptiveImage
-                        src={image.url}
-                        alt={`Gallery ${idx + 1}`}
-                        maxHeight={400}
-                        showCaption={!!image.caption}
-                        caption={image.caption}
-                        className="rounded-lg group-hover:scale-105 transition-transform duration-300 hover:shadow-lg"
-                      />
-                    </div>
-                    {image.isThumbnail && (
-                      <Badge className="absolute top-2 right-2 bg-primary text-primary-foreground">
-                        Featured
-                      </Badge>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+        {/* Comments Section */}
+        <div className="border-t border-slate-200 pt-16">
+          <h3 className="text-2xl font-bold text-slate-900 mb-8">Responses ({blog.comments.length})</h3>
 
-          {/* Comments Section */}
-          <div className="mt-12 pt-12 border-t">
-            <h2 className="font-heading text-2xl font-bold mb-8">Comments</h2>
-
-            {/* Add Comment Form */}
+          {/* Add Comment Input */}
+          <div className="mb-12">
             {isAuthenticated ? (
-              <Card className="mb-8">
-                <CardContent className="p-6">
-                  <form onSubmit={handleAddComment} className="space-y-4">
-                    {commentError && (
-                      <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                        {commentError}
-                      </div>
-                    )}
-
-                    {commentSuccess && (
-                      <div className="p-3 bg-green-100 text-green-800 rounded-md text-sm">
-                        {commentSuccess}
-                      </div>
-                    )}
-
-                    <Textarea
-                      value={commentText}
-                      onChange={(e) => setCommentText(e.target.value)}
-                      placeholder="Share your thoughts about this blog..."
-                      rows={4}
-                    />
-
-                    <Button type="submit" disabled={isSubmittingComment} className="gap-2">
-                      {isSubmittingComment ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Posting...
-                        </>
-                      ) : (
-                        <>
-                          <MessageSquare className="w-4 h-4" />
-                          Post Comment
-                        </>
-                      )}
+              <form onSubmit={handleAddComment}>
+                {commentError && (
+                  <div className="mb-4 text-sm text-red-600 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" /> {commentError}
+                  </div>
+                )}
+                {commentSuccess && (
+                  <div className="mb-4 text-sm text-green-700">{commentSuccess}</div>
+                )}
+                <div className="bg-white border border-slate-200 focus-within:border-slate-800 focus-within:ring-1 focus-within:ring-slate-800 transition-all rounded-xl p-4">
+                  <Textarea
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder="What are your thoughts?"
+                    className="border-0 focus-visible:ring-0 p-0 text-slate-700 resize-none min-h-[80px]"
+                  />
+                  <div className="flex justify-end mt-2 pt-2 border-t border-slate-100">
+                    <Button 
+                      type="submit" 
+                      disabled={isSubmittingComment || !commentText.trim()} 
+                      className="bg-slate-900 hover:bg-slate-800 text-white rounded-full px-6"
+                      size="sm"
+                    >
+                      {isSubmittingComment ? <Loader2 className="w-4 h-4 animate-spin" /> : "Respond"}
                     </Button>
-                  </form>
-                </CardContent>
-              </Card>
+                  </div>
+                </div>
+              </form>
             ) : (
-              <Card className="mb-8">
-                <CardContent className="p-6 text-center">
-                  <p className="text-muted-foreground mb-4">Please login to comment on this blog</p>
-                  <Link href="/login">
-                    <Button>Login</Button>
-                  </Link>
-                </CardContent>
-              </Card>
+              <div className="bg-slate-50 border border-slate-100 rounded-xl p-8 text-center">
+                <p className="text-slate-600 mb-4">You must be logged in to leave a response.</p>
+                <Link href="/login">
+                  <Button variant="outline" className="rounded-full">Log In to Respond</Button>
+                </Link>
+              </div>
             )}
+          </div>
 
-            {/* Comments List */}
-            <div className="space-y-6">
-              {blog.comments.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
-                  No comments yet. Be the first to comment!
-                </p>
-              ) : (
-                blog.comments.map((comment) => (
-                  <div key={comment._id} className="space-y-4">
-                    {/* Main Comment */}
-                    <Card className="border-l-4 border-l-primary">
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start gap-4">
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center gap-2">
-                              <p className="font-semibold text-sm">{comment.userName}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {new Date(comment.createdAt).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <p className="text-foreground whitespace-pre-wrap">{comment.text}</p>
+          {/* Comments List */}
+          <div className="space-y-0">
+            {blog.comments.length === 0 ? (
+              <p className="text-slate-500 py-4 text-center">No responses yet. Be the first to share your thoughts.</p>
+            ) : (
+              blog.comments.map((comment) => (
+                <div key={comment._id} className="py-6 border-b border-slate-100 last:border-0">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 text-slate-500 font-bold">
+                      {comment.userName.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-slate-900">{comment.userName}</span>
+                        <span className="text-xs text-slate-400 font-medium">
+                          {new Date(comment.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
+                      
+                      <p className="text-slate-700 whitespace-pre-wrap leading-relaxed text-sm mb-3">
+                        {comment.text}
+                      </p>
 
-                            {/* Action Buttons */}
-                            <div className="flex gap-3 pt-2 flex-wrap">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleLikeComment(comment._id)}
-                                className="gap-1 h-7 text-xs"
-                              >
-                                <Heart
-                                  className={`w-3.5 h-3.5 ${
-                                    likedComments.has(comment._id) ? "fill-red-500 text-red-500" : ""
-                                  }`}
-                                />
-                                <span>{comment.likes?.length || 0}</span>
-                              </Button>
+                      {/* Comment Actions */}
+                      <div className="flex items-center gap-4">
+                        <button
+                          onClick={() => handleLikeComment(comment._id)}
+                          className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
+                        >
+                          <Heart className={`w-3.5 h-3.5 ${likedComments.has(comment._id) ? "fill-red-500 text-red-500" : ""}`} />
+                          {comment.likes?.length || 0}
+                        </button>
 
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => setReplyingToCommentId(comment._id)}
-                                className="gap-1 h-7 text-xs"
-                              >
-                                <MessageCircle className="w-3.5 h-3.5" />
-                                Reply
-                              </Button>
+                        <button
+                          onClick={() => setReplyingToCommentId(replyingToCommentId === comment._id ? null : comment._id)}
+                          className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          Reply
+                        </button>
 
-                              {isAuthenticated && userId === comment.userId && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleDeleteComment(comment._id)}
-                                  className="gap-1 h-7 text-xs text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  Delete
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        {isAuthenticated && userId === comment.userId && (
+                          <button
+                            onClick={() => handleDeleteComment(comment._id)}
+                            className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-red-600 transition-colors ml-auto"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
 
-                    {/* Reply Form */}
-                    {replyingToCommentId === comment._id && (
-                      <Card className="ml-6 border-l-2 border-l-accent bg-accent/5">
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-center mb-3">
-                            <p className="text-sm font-medium">Reply to {comment.userName}</p>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => setReplyingToCommentId(null)}
-                              className="h-6 w-6 p-0"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </div>
-                          <form onSubmit={(e) => handleAddReply(e, comment._id)} className="space-y-2">
+                      {/* Reply Form */}
+                      {replyingToCommentId === comment._id && (
+                        <form onSubmit={(e) => handleAddReply(e, comment._id)} className="mt-4">
+                          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
                             <Textarea
                               value={replyText}
                               onChange={(e) => setReplyText(e.target.value)}
                               placeholder="Write a reply..."
-                              rows={2}
-                              className="resize-none"
+                              className="border-0 focus-visible:ring-0 p-0 text-slate-700 resize-none min-h-[60px] bg-transparent text-sm"
                             />
-                            <Button
-                              type="submit"
-                              disabled={isSubmittingReply}
-                              size="sm"
-                              className="gap-1"
-                            >
-                              {isSubmittingReply ? (
-                                <>
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                  Posting...
-                                </>
-                              ) : (
-                                <>
-                                  <MessageCircle className="w-3 h-3" />
-                                  Reply
-                                </>
-                              )}
-                            </Button>
-                          </form>
-                        </CardContent>
-                      </Card>
-                    )}
+                            <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-200">
+                              <button type="button" onClick={() => setReplyingToCommentId(null)} className="text-xs text-slate-500 font-medium">Cancel</button>
+                              <Button 
+                                type="submit" 
+                                disabled={isSubmittingReply || !replyText.trim()} 
+                                className="bg-slate-900 hover:bg-slate-800 text-white rounded-full h-7 px-4 text-xs"
+                              >
+                                {isSubmittingReply ? <Loader2 className="w-3 h-3 animate-spin" /> : "Reply"}
+                              </Button>
+                            </div>
+                          </div>
+                        </form>
+                      )}
 
-                    {/* Nested Replies */}
-                    {comment.replies && comment.replies.length > 0 && (
-                      <div className="ml-6 space-y-3 border-l-2 border-l-muted pl-4">
-                        {comment.replies.map((reply) => (
-                          <Card key={reply._id} className="bg-muted/30">
-                            <CardContent className="p-3">
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <p className="font-medium text-sm">{reply.userName}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {new Date(reply.createdAt).toLocaleDateString()}
-                                  </p>
-                                </div>
-                                <p className="text-sm text-foreground whitespace-pre-wrap">
-                                  {reply.text}
-                                </p>
-
-                                {/* Reply Action Buttons */}
-                                <div className="flex gap-3 pt-1 flex-wrap">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => handleLikeReply(comment._id, reply._id)}
-                                    className="gap-1 h-6 text-xs px-2"
-                                  >
-                                    <Heart
-                                      className={`w-3 h-3 ${
-                                        likedReplies.has(`${comment._id}-${reply._id}`)
-                                          ? "fill-red-500 text-red-500"
-                                          : ""
-                                      }`}
-                                    />
-                                    <span className="text-xs">{reply.likes?.length || 0}</span>
-                                  </Button>
-
-                                  {isAuthenticated && userId === reply.userId && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => handleDeleteReply(comment._id, reply._id)}
-                                      className="gap-1 h-6 text-xs px-2 text-destructive hover:text-destructive"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                      Delete
-                                    </Button>
-                                  )}
-                                </div>
+                      {/* Nested Replies */}
+                      {comment.replies && comment.replies.length > 0 && (
+                        <div className="mt-5 pl-4 border-l-2 border-slate-100 space-y-5">
+                          {comment.replies.map((reply) => (
+                            <div key={reply._id}>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-semibold text-sm text-slate-900">{reply.userName}</span>
+                                <span className="text-xs text-slate-400 font-medium">
+                                  {new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                </span>
                               </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </article>
-      </div>
+                              <p className="text-slate-700 whitespace-pre-wrap text-sm mb-2">
+                                {reply.text}
+                              </p>
+                              
+                              <div className="flex items-center gap-4">
+                                <button
+                                  onClick={() => handleLikeReply(comment._id, reply._id)}
+                                  className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900"
+                                >
+                                  <Heart className={`w-3.5 h-3.5 ${likedReplies.has(`${comment._id}-${reply._id}`) ? "fill-red-500 text-red-500" : ""}`} />
+                                  {reply.likes?.length || 0}
+                                </button>
 
-      {/* Image Lightbox */}
-      <ImageLightbox
-        images={blog.images}
-        initialIndex={lightboxIndex}
-        isOpen={lightboxOpen}
-        onClose={() => setLightboxOpen(false)}
-      />
+                                {isAuthenticated && userId === reply.userId && (
+                                  <button
+                                    onClick={() => handleDeleteReply(comment._id, reply._id)}
+                                    className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-red-600 transition-colors ml-auto"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+      </article>
     </main>
   )
 }

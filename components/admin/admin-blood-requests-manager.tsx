@@ -36,6 +36,14 @@ interface BloodRequest {
   verified?: boolean
   isSOS?: boolean
   verificationLevel?: number
+  requesterName?: string
+  requesterPhone?: string
+  hospital?: {
+    name: string
+    city: string
+    district: string
+    address: string
+  }
 }
 
 const URGENCY_COLORS = {
@@ -299,7 +307,9 @@ export function AdminBloodRequestsManager({ token }: AdminBloodRequestsManagerPr
                       <div className="grid gap-3 md:grid-cols-2 mb-3">
                         <div className="p-3 border border-purple-200 bg-purple-50 rounded">
                           <p className="font-semibold text-gray-900 mb-1">Hospital Details</p>
-                          <p className="text-sm text-gray-700">{request.hospitalLocation}</p>
+                          <p className="text-sm text-gray-700">
+                            {request.hospital ? `${request.hospital.name}, ${request.hospital.address}, ${request.hospital.city}` : request.hospitalLocation}
+                          </p>
                         </div>
                         <div className="p-3 border border-amber-200 bg-amber-50 rounded">
                           <p className="font-semibold text-gray-900 mb-1">Request Type</p>
@@ -362,19 +372,21 @@ export function AdminBloodRequestsManager({ token }: AdminBloodRequestsManagerPr
                         <p className="font-semibold text-gray-900 mb-2">Requester Information</p>
                         <div className="space-y-1">
                           <p className="text-sm text-gray-700">
-                            <span className="font-medium">Name:</span> {request.userName}
+                            <span className="font-medium">Name:</span> {request.userName || request.requesterName}
                           </p>
-                          <div className="flex items-center gap-2 text-sm text-gray-700">
-                            <Mail className="w-4 h-4" />
-                            <a href={`mailto:${request.userEmail}`} className="text-blue-600 hover:underline">
-                              {request.userEmail}
-                            </a>
-                          </div>
-                          {request.userPhone && (
+                          {request.userEmail && (
+                            <div className="flex items-center gap-2 text-sm text-gray-700">
+                              <Mail className="w-4 h-4" />
+                              <a href={`mailto:${request.userEmail}`} className="text-blue-600 hover:underline">
+                                {request.userEmail}
+                              </a>
+                            </div>
+                          )}
+                          {(request.userPhone || request.requesterPhone) && (
                             <div className="flex items-center gap-2 text-sm text-gray-700">
                               <Phone className="w-4 h-4" />
-                              <a href={`tel:${request.userPhone}`} className="text-blue-600 hover:underline">
-                                {request.userPhone}
+                              <a href={`tel:${request.userPhone || request.requesterPhone}`} className="text-blue-600 hover:underline">
+                                {request.userPhone || request.requesterPhone}
                               </a>
                             </div>
                           )}

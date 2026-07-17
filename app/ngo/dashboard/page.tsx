@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -220,15 +221,13 @@ export default function NGODashboard() {
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Building className="w-6 h-6 text-white" />
-              </div>
+            <Link href="/" className="flex items-center gap-2 sm:gap-4 hover:opacity-80 transition-opacity">
+              <img src="/samarpan.png" alt="Samarpan Logo" className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg" />
               <div>
-                <h1 className="text-xl font-bold text-gray-900">{ngoData.name}</h1>
-                <p className="text-gray-600 text-sm">{ngoData.location}</p>
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900 line-clamp-1">{ngoData.name}</h1>
+                <p className="text-gray-600 text-xs sm:text-sm line-clamp-1">{ngoData.location}</p>
               </div>
-            </div>
+            </Link>
             <div className="flex items-center gap-3">
               <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                 Verified NGO

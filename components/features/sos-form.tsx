@@ -25,6 +25,9 @@ const BLOOD_COMPONENTS = [
   { value: "packed-rbcs", label: "Packed RBCs" },
 ]
 
+import { HospitalSelectionCard } from "./hospital-selection-card"
+import { HospitalSnapshot } from "@/lib/models/hospital"
+
 type InputMode = "manual" | "voice" | "scan"
 type SubmitStep = "form" | "confirm" | "success"
 
@@ -55,13 +58,21 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
 
   const recognitionRef = useRef<any>(null)
 
-  const [formData, setFormData] = useState<SOSFormData>({
+  const [formData, setFormData] = useState<{
+    requesterName: string
+    requesterPhone: string
+    bloodGroup: string
+    bloodComponent: string
+    quantity: string
+    hospital: HospitalSnapshot | null
+    urgency: string
+  }>({
     requesterName: "",
     requesterPhone: "",
     bloodGroup: "",
     bloodComponent: "whole-blood",
     quantity: "1",
-    hospitalLocation: "",
+    hospital: null,
     urgency: "critical",
   })
 
@@ -74,7 +85,7 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
     }
   }, [])
 
-  const updateField = (field: keyof SOSFormData, value: string) => {
+  const updateField = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -126,11 +137,7 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
         updateField("bloodGroup", raw.replace(/\s+/g, "").replace(/NEGATIVE|MINUS/i, "-"))
       }
     }
-    // Hospital detection (very basic)
-    const hospitalMatch = text.match(/(?:at|in|hospital|clinic)\s+([A-Za-z\s]+)(?:\.|,|$)/i)
-    if (hospitalMatch) {
-      updateField("hospitalLocation", hospitalMatch[1].trim())
-    }
+    // Hospital detection voice disabled because of strict selection requirement
   }
 
   // Document scan — extract text from image
@@ -147,7 +154,7 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
     e?.preventDefault()
     setError("")
 
-    if (!formData.requesterName || !formData.bloodGroup || !formData.hospitalLocation || !formData.quantity) {
+    if (!formData.requesterName || !formData.bloodGroup || !formData.hospital || !formData.quantity) {
       setError("Please fill in your name, blood group, hospital, and quantity needed.")
       return
     }
@@ -164,7 +171,7 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
           bloodGroup: formData.bloodGroup,
           bloodComponent: formData.bloodComponent,
           quantity: parseInt(formData.quantity, 10) || 1,
-          hospitalLocation: formData.hospitalLocation,
+          hospital: formData.hospital,
           urgency: "critical",
         }),
       })
@@ -191,29 +198,29 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
     return (
       <div className="text-center space-y-6 py-8">
         <div className="flex justify-center">
-          <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center animate-bounce">
-            <CheckCircle className="w-10 h-10 text-emerald-600" />
+          <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center border border-green-200">
+            <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-emerald-700 mb-2">SOS Sent!</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">SOS Transmitted</h2>
+          <p className="text-slate-500 font-medium">
             Donors matching your blood group are being notified right now.
           </p>
         </div>
         <VerificationCard level={3} />
-        <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 text-left">
-          <p className="text-sm font-semibold text-blue-900 mb-1">What happens next?</p>
-          <ul className="text-xs text-blue-800 space-y-1">
-            <li>✅ Donors with {formData.bloodGroup} blood group are being contacted</li>
-            <li>✅ Our admin team has been alerted to verify your request</li>
-            <li>⏱️ Expected first response: within 15–30 minutes</li>
-            <li>📞 Donors will call the phone number you provided</li>
+        <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-left">
+          <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">What happens next?</p>
+          <ul className="text-sm font-medium text-slate-600 space-y-2">
+            <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" /> Donors with {formData.bloodGroup} blood group are being contacted</li>
+            <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" /> Our admin team has been alerted to verify your request</li>
+            <li className="flex items-start gap-2"><Clock className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" /> Expected first response: within 15–30 minutes</li>
+            <li className="flex items-start gap-2"><Phone className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" /> Donors will call the phone number you provided</li>
           </ul>
         </div>
         {requestId && (
-          <p className="text-xs text-muted-foreground">
-            Request ID: <code className="font-mono bg-muted px-1 rounded">{requestId}</code>
+          <p className="text-xs font-medium text-slate-400">
+            Request Ref: <code className="font-mono bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">{requestId}</code>
           </p>
         )}
       </div>
@@ -224,22 +231,22 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
   if (step === "confirm") {
     return (
       <div className="space-y-4">
-        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <p className="text-sm font-medium text-amber-900">
-            📄 Document scanned. Please verify the details below before submitting.
+        <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+          <p className="text-sm font-bold text-slate-700">
+            Document scanned successfully. Please verify the extracted details below.
           </p>
           {scannedFile && (
-            <p className="text-xs text-amber-700 mt-1">File: {scannedFile.name}</p>
+            <p className="text-xs font-medium text-slate-500 mt-1">Source: {scannedFile.name}</p>
           )}
         </div>
         {renderFormFields()}
-        <div className="flex gap-3">
+        <div className="flex gap-3 pt-4">
           <Button
             variant="outline"
             onClick={() => setStep("form")}
-            className="flex-1"
+            className="flex-1 border-slate-200 text-slate-700 hover:bg-slate-50"
           >
-            ← Edit
+            Go Back
           </Button>
           <Button
             onClick={() => handleSubmit()}
@@ -248,10 +255,10 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending SOS…
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Transmitting…
               </>
             ) : (
-              "✓ Confirm & Send SOS"
+              "Confirm & Send"
             )}
           </Button>
         </div>
@@ -264,7 +271,7 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
     return (
       <div className="space-y-4">
         {error && (
-          <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm flex items-start gap-2">
+          <div className="p-3 bg-red-50 border border-red-100 text-red-700 rounded-lg text-sm flex items-start gap-2 font-medium">
             <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
             {error}
           </div>
@@ -272,39 +279,39 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-semibold">
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
               Your Name <span className="text-red-500">*</span>
             </label>
             <Input
               placeholder="e.g., Priya Sharma"
               value={formData.requesterName}
               onChange={(e) => updateField("requesterName", e.target.value)}
-              className="h-11"
+              className="h-11 bg-white border-slate-200"
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-semibold flex items-center gap-1">
-              <Phone className="w-3.5 h-3.5" /> Phone Number
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+              <Phone className="w-3.5 h-3.5 text-slate-400" /> Phone Number
             </label>
             <Input
               placeholder="+91 98765 43210"
               value={formData.requesterPhone}
               onChange={(e) => updateField("requesterPhone", e.target.value)}
               type="tel"
-              className="h-11"
+              className="h-11 bg-white border-slate-200"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-semibold">
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
               Blood Group <span className="text-red-500">*</span>
             </label>
             <select
               value={formData.bloodGroup}
               onChange={(e) => updateField("bloodGroup", e.target.value)}
-              className="w-full h-11 px-3 border border-input rounded-md bg-background text-sm font-medium"
+              className="w-full h-11 px-3 border border-slate-200 rounded-md bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-shadow"
             >
               <option value="">Select blood group</option>
               {BLOOD_GROUPS.map((g) => (
@@ -315,11 +322,11 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-semibold">Blood Component</label>
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Blood Component</label>
             <select
               value={formData.bloodComponent}
               onChange={(e) => updateField("bloodComponent", e.target.value)}
-              className="w-full h-11 px-3 border border-input rounded-md bg-background text-sm"
+              className="w-full h-11 px-3 border border-slate-200 rounded-md bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-shadow"
             >
               {BLOOD_COMPONENTS.map((c) => (
                 <option key={c.value} value={c.value}>
@@ -332,7 +339,7 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-semibold">
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
               Units Needed <span className="text-red-500">*</span>
             </label>
             <Input
@@ -341,20 +348,18 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
               max="20"
               value={formData.quantity}
               onChange={(e) => updateField("quantity", e.target.value)}
-              className="h-11"
+              className="h-11 bg-white border-slate-200"
             />
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-sm font-semibold">
-            Hospital Name & Location <span className="text-red-500">*</span>
+          <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+            Hospital Selection <span className="text-red-500">*</span>
           </label>
-          <Input
-            placeholder="e.g., AIIMS Delhi, Emergency Ward"
-            value={formData.hospitalLocation}
-            onChange={(e) => updateField("hospitalLocation", e.target.value)}
-            className="h-11"
+          <HospitalSelectionCard 
+            selectedHospital={formData.hospital} 
+            onSelect={(hospital) => updateField("hospital", hospital)}
           />
         </div>
       </div>
@@ -362,13 +367,13 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Input Mode Tabs */}
-      <div className="flex gap-2 p-1 bg-muted rounded-xl">
+      <div className="flex gap-2 p-1.5 bg-slate-50 border border-slate-200 rounded-lg">
         {[
-          { id: "manual", label: "✍️ Manual" },
-          { id: "voice", label: "🎤 Voice", disabled: !speechSupported },
-          { id: "scan", label: "📄 Scan Doc" },
+          { id: "manual", label: "Manual" },
+          { id: "voice", label: "Voice", disabled: !speechSupported },
+          { id: "scan", label: "Scan Doc" },
         ].map((mode) => (
           <button
             key={mode.id}
@@ -376,47 +381,46 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
             disabled={mode.disabled}
             onClick={() => setInputMode(mode.id as InputMode)}
             className={cn(
-              "flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all",
+              "flex-1 py-2 px-3 rounded-md text-xs font-bold uppercase tracking-wider transition-all",
               inputMode === mode.id
-                ? "bg-white shadow-sm text-foreground"
-                : "text-muted-foreground hover:text-foreground",
+                ? "bg-white shadow-sm text-slate-900 border border-slate-200"
+                : "text-slate-500 hover:text-slate-900 hover:bg-slate-100",
               mode.disabled && "opacity-40 cursor-not-allowed"
             )}
           >
             {mode.label}
-            {mode.disabled && " (N/A)"}
           </button>
         ))}
       </div>
 
       {/* Voice Mode Panel */}
       {inputMode === "voice" && (
-        <Card className="border-2 border-dashed border-primary/30">
-          <CardContent className="pt-4 text-center space-y-3">
+        <Card className="border border-slate-200 bg-slate-50 shadow-none">
+          <CardContent className="pt-6 pb-6 text-center space-y-4">
             <button
               type="button"
               onClick={isListening ? stopListening : startListening}
               className={cn(
-                "w-20 h-20 rounded-full flex items-center justify-center mx-auto transition-all",
+                "w-16 h-16 rounded-full flex items-center justify-center mx-auto transition-all",
                 isListening
-                  ? "bg-red-100 border-2 border-red-400 animate-pulse"
-                  : "bg-primary/10 border-2 border-primary/30 hover:bg-primary/20"
+                  ? "bg-red-50 border border-red-200 animate-pulse"
+                  : "bg-white border border-slate-200 hover:bg-slate-50"
               )}
             >
               {isListening ? (
-                <MicOff className="w-8 h-8 text-red-600" />
+                <MicOff className="w-6 h-6 text-red-600" />
               ) : (
-                <Mic className="w-8 h-8 text-primary" />
+                <Mic className="w-6 h-6 text-slate-700" />
               )}
             </button>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm font-medium text-slate-600">
               {isListening
                 ? "Listening... speak clearly"
-                : "Tap to speak. Say your name, blood group, and hospital."}
+                : "Tap to speak. State your name, blood group, and hospital."}
             </p>
             {voiceTranscript && (
-              <div className="p-2 bg-muted rounded text-xs text-left">
-                <span className="font-medium">Heard: </span>
+              <div className="p-3 bg-white border border-slate-200 rounded-md text-sm font-medium text-left text-slate-700">
+                <span className="text-slate-400 font-bold uppercase text-[10px] tracking-wider block mb-1">Transcript</span>
                 {voiceTranscript}
               </div>
             )}
@@ -426,15 +430,19 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
 
       {/* Scan Mode Panel */}
       {inputMode === "scan" && (
-        <div className="p-4 border-2 border-dashed border-primary/30 rounded-xl bg-primary/5">
-          <label className="cursor-pointer flex flex-col items-center gap-2">
-            <Upload className="w-8 h-8 text-primary" />
-            <span className="text-sm font-medium">
-              Upload hospital prescription or medical document
-            </span>
-            <span className="text-xs text-muted-foreground">
-              JPG, PNG, PDF — max 5MB
-            </span>
+        <div className="p-6 border border-slate-200 rounded-xl bg-slate-50 text-center">
+          <label className="cursor-pointer flex flex-col items-center gap-3">
+            <div className="w-12 h-12 bg-white border border-slate-200 rounded-full flex items-center justify-center">
+              <Upload className="w-5 h-5 text-slate-700" />
+            </div>
+            <div className="space-y-1">
+              <span className="text-sm font-bold text-slate-900 block">
+                Upload medical document
+              </span>
+              <span className="text-xs font-medium text-slate-500 block">
+                JPG, PNG, PDF (Max 5MB)
+              </span>
+            </div>
             <input
               type="file"
               accept="image/*,.pdf"
@@ -443,9 +451,9 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
             />
           </label>
           {scannedFile && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-emerald-700">
-              <FileCheck className="w-4 h-4" />
-              {scannedFile.name} — Please verify details below
+            <div className="mt-4 p-3 bg-white border border-slate-200 rounded-lg flex items-center gap-2 text-sm font-bold text-slate-700 justify-center">
+              <FileCheck className="w-4 h-4 text-green-600" />
+              {scannedFile.name}
             </div>
           )}
         </div>
@@ -458,19 +466,19 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
       <Button
         type="submit"
         disabled={isSubmitting}
-        className="w-full h-14 text-lg font-bold bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-lg shadow-red-200"
+        className="w-full h-12 text-sm uppercase tracking-widest font-bold bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-sm"
       >
         {isSubmitting ? (
           <>
-            <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Sending SOS…
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Transmitting…
           </>
         ) : (
-          "🚨 Send Emergency SOS"
+          "Send Emergency SOS"
         )}
       </Button>
 
-      <p className="text-xs text-muted-foreground text-center">
-        No account needed. Your request will be verified by our admin team.
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">
+        No account required. All requests verified by admin team.
       </p>
     </form>
   )

@@ -17,8 +17,27 @@
 
 ---
 
-i
-## 🆕 Previous Updates (January 2026)
+## 🆕 Recent Updates (July 2026)
+
+### 🏥 **Hospital Directory System - NEW**
+- **✅ Verified Database**: Replaced manual entries with a robust, searchable hospital directory seeded from verified data (OSM/Government datasets).
+- **✅ Precise Geolocation**: Integrated MongoDB GeoJSON indexing (`2dsphere`) to ensure exact map marker plotting using verified coordinates.
+- **✅ SOS Snapshots**: SOS requests now store a static snapshot of hospital data, preserving historical accuracy even if hospital details change.
+
+### 🆘 **SOS Acceptance Flow - ENHANCED**
+- **✅ Professional UI Redesign**: Fully redesigned the `/request/[id]` details page with a clean, centered `max-w-5xl` layout.
+- **✅ Prominent Call-To-Action**: Built a highly visible, responsive "Accept this Request" Card spanning the full width of patient/hospital cards.
+- **✅ Actionable Details**: SOS request details page clearly juxtaposes Patient specifics with Google/OSM map views of the required hospital.
+
+### 🔐 **Universal Authentication Navigation - FIXED**
+- **✅ Smart Navbar Logic**: The navigation bar now dynamically detects both user (`token`) and admin (`adminToken`) auth states simultaneously.
+- **✅ Intelligent Button Hiding**: Automatically hides "Login" and "Sign Up" controls if *any* user is authenticated, reducing UI clutter.
+- **✅ Admin-Aware Dropdown**: Replaces standard user "Profile" links with "Admin Dashboard" routing explicitly when an administrator is logged in.
+- **✅ Clean Logout Routing**: Securely clears respective auth tokens and redirects correctly to the standard login or admin login panel.
+
+---
+
+## 📅 Previous Updates (January 2026)
 
 ### 🔧 **QR Scanner System - FIXED**
 - **✅ Runtime Error Resolution**: Fixed "HTML Element with id=admin-qr-reader not found" error

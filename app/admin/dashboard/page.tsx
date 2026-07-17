@@ -2,6 +2,7 @@
 
 export const dynamic = "force-dynamic"
 
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -248,15 +249,13 @@ export default function AdminDashboard() {
       <main className="min-h-screen bg-background">
         <nav className="bg-card border-b border-border sticky top-0 z-40">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                <LayoutDashboard className="w-6 h-6 text-primary-foreground" />
-              </div>
+            <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+              <img src="/samarpan.png" alt="Samarpan Logo" className="w-10 h-10 rounded-lg" />
               <div>
                 <h1 className="font-heading text-2xl font-bold text-primary">Samarpan Admin</h1>
                 <p className="text-xs text-muted-foreground">Administration Panel</p>
               </div>
-            </div>
+            </Link>
             <div className="flex items-center gap-4">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium">{admin.email}</p>
@@ -296,15 +295,13 @@ export default function AdminDashboard() {
       <nav className="bg-card border-b border-border sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-4">
           <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3 xs:gap-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary rounded-lg flex items-center justify-center">
-                <LayoutDashboard className="w-4 h-4 sm:w-6 sm:h-6 text-primary-foreground" />
-              </div>
+            <Link href="/" className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity">
+              <img src="/samarpan.png" alt="Samarpan Logo" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg" />
               <div>
                 <h1 className="font-heading text-lg sm:text-xl lg:text-2xl font-bold text-primary">Samarpan Admin</h1>
                 <p className="text-xs text-muted-foreground hidden xs:block">Administration Panel</p>
               </div>
-            </div>
+            </Link>
             <div className="flex flex-col xs:flex-row items-start xs:items-center gap-2 xs:gap-3 sm:gap-4">
               <div className="text-left xs:text-right hidden sm:block">
                 <p className="text-xs sm:text-sm font-medium truncate max-w-[200px]">{admin.email}</p>

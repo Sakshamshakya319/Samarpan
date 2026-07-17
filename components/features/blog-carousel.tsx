@@ -11,9 +11,8 @@ import {
 } from "@/components/ui/carousel"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { AdaptiveImage } from "@/components/shared/adaptive-image"
-import { Loader2, Eye, MessageSquare, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
+import { Loader2, Eye, MessageSquare, Calendar } from "lucide-react"
 
 interface Blog {
   _id: string
@@ -63,8 +62,9 @@ export function BlogCarousel() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white border-t border-slate-100">
+        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+        <span className="text-slate-500 font-medium">Loading latest stories...</span>
       </div>
     )
   }
@@ -74,77 +74,74 @@ export function BlogCarousel() {
   }
 
   return (
-    <section className="py-20 md:py-32 bg-secondary/30">
+    <section className="py-24 md:py-32 bg-white border-t border-slate-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="font-heading text-4xl font-bold mb-4">Latest Blog Posts</h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+        <div className="text-center mb-16">
+          <h2 className="font-heading text-3xl md:text-4xl font-bold mb-4 text-slate-900 tracking-tight">Latest Stories</h2>
+          <p className="text-lg text-slate-500 max-w-2xl mx-auto">
             Discover inspiring stories, health tips, and insights from our community about blood donation.
           </p>
         </div>
 
-        <div className="relative">
+        <div className="relative group px-12 md:px-0">
           <Carousel
             opts={{
-              align: "center",
+              align: "start",
               loop: true,
             }}
           >
-            <CarouselContent>
+            <CarouselContent className="-ml-4">
               {blogs.map((blog) => {
                 const thumbnail = getThumbnail(blog.images)
                 return (
-                  <CarouselItem key={blog._id} className="md:basis-1/2 lg:basis-1/3 pl-4">
-                    <Link href={`/blogs/${blog._id}`}>
-                      <Card className="overflow-hidden h-full hover:border-primary/50 transition hover:shadow-xl transform hover:scale-105 transition-all duration-300 cursor-pointer">
+                  <CarouselItem key={blog._id} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                    <Link href={`/blogs/${blog._id}`} className="block h-full">
+                      <Card className="h-full bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden hover:border-slate-300 transition-colors cursor-pointer flex flex-col">
                         {/* Image Container */}
                         {thumbnail && (
-                          <AdaptiveImage
-                            src={thumbnail}
-                            alt={blog.title}
-                            maxHeight={250}
-                            className="rounded-t-lg"
-                          />
+                          <div className="border-b border-slate-100">
+                            <AdaptiveImage
+                              src={thumbnail}
+                              alt={blog.title}
+                              maxHeight={220}
+                              className="rounded-t-xl object-cover w-full h-[220px]"
+                            />
+                          </div>
                         )}
 
-                        <CardContent className="p-4 space-y-3">
+                        <CardContent className="p-6 flex-1 flex flex-col">
                           {/* Title */}
-                          <h3 className="font-heading font-semibold text-lg line-clamp-2 hover:text-primary transition">
+                          <h3 className="font-heading font-semibold text-lg line-clamp-2 text-slate-900 hover:text-slate-600 transition-colors mb-3 leading-snug">
                             {blog.title}
                           </h3>
 
-                          {/* Excerpt - 10 words */}
-                          <p className="text-sm text-muted-foreground line-clamp-2 h-10">
-                            {truncateToWords(blog.content, 10)}
+                          {/* Excerpt */}
+                          <p className="text-sm text-slate-600 line-clamp-2 mb-4 flex-1">
+                            {truncateToWords(blog.content, 12)}
                           </p>
 
                           {/* Meta Info */}
-                          <div className="pt-2 space-y-2">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Calendar className="w-3 h-3" />
-                              {new Date(blog.createdAt).toLocaleDateString()}
+                          <div className="mt-auto space-y-4">
+                            <div className="flex items-center justify-between text-xs font-medium text-slate-400">
+                              <div className="flex items-center gap-1.5">
+                                <Calendar className="w-3.5 h-3.5" />
+                                {new Date(blog.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                              </div>
+                              <span className="text-slate-600 bg-slate-50 px-2.5 py-1 rounded-md">By {blog.authorName}</span>
                             </div>
 
                             {/* Stats */}
-                            <div className="flex gap-4">
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Eye className="w-3 h-3" />
+                            <div className="flex gap-4 pt-4 border-t border-slate-100 text-xs font-medium text-slate-500">
+                              <div className="flex items-center gap-1.5">
+                                <Eye className="w-4 h-4 text-slate-400" />
                                 {blog.views}
                               </div>
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <MessageSquare className="w-3 h-3" />
+                              <div className="flex items-center gap-1.5">
+                                <MessageSquare className="w-4 h-4 text-slate-400" />
                                 {blog.comments?.length || 0}
                               </div>
                             </div>
-
-                            {/* Author */}
-                            <p className="text-xs text-muted-foreground">By {blog.authorName}</p>
                           </div>
-
-                          {/* Read More Button */}
-                          <Button variant="default" size="sm" className="w-full mt-3">
-                            Read More
-                          </Button>
                         </CardContent>
                       </Card>
                     </Link>
@@ -153,16 +150,16 @@ export function BlogCarousel() {
               })}
             </CarouselContent>
 
-            <CarouselPrevious className="absolute -left-12 md:left-0 top-1/3 -translate-y-1/2 hover:bg-primary hover:text-white border-2 border-primary hover:border-primary" />
-            <CarouselNext className="absolute -right-12 md:right-0 top-1/3 -translate-y-1/2 hover:bg-primary hover:text-white border-2 border-primary hover:border-primary" />
+            <CarouselPrevious className="absolute -left-4 md:-left-12 top-1/2 -translate-y-1/2 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 w-10 h-10 shadow-sm transition-all" />
+            <CarouselNext className="absolute -right-4 md:-right-12 top-1/2 -translate-y-1/2 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 w-10 h-10 shadow-sm transition-all" />
           </Carousel>
         </div>
 
         {/* View All Blogs Button */}
-        <div className="text-center mt-12">
+        <div className="text-center mt-16">
           <Link href="/blogs">
-            <Button size="lg" variant="outline">
-              View All Blog Posts
+            <Button size="lg" variant="outline" className="h-12 px-8 font-semibold border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors">
+              View All Stories
             </Button>
           </Link>
         </div>

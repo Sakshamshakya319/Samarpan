@@ -8,12 +8,10 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* Brand */}
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold">S</span>
-              </div>
+            <Link href="/" className="flex items-center gap-2 mb-4 hover:opacity-80 transition-opacity">
+              <img src="/samarpan.png" alt="Samarpan Logo" className="w-8 h-8 rounded" />
               <span className="font-heading font-bold text-lg">Samarpan</span>
-            </div>
+            </Link>
             <p className="text-sm text-muted-foreground">
               Connecting donors and patients to save lives through blood and platelet donations.
             </p>

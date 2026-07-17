@@ -7,12 +7,12 @@ export const metadata = {
 
 export default function RequestBloodPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-background to-muted/50 py-12 px-4">
-      <div className="max-w-2xl mx-auto space-y-4">
-        <div className="text-center space-y-2 mb-8">
-          <h1 className="font-heading text-4xl font-bold">Request Blood Donation</h1>
-          <p className="text-muted-foreground">
-            Need blood? Submit your request and we'll help you find suitable donors in your area.
+    <main className="min-h-screen bg-slate-50 py-12 md:py-20 px-4">
+      <div className="max-w-2xl mx-auto space-y-8">
+        <div className="text-center space-y-4 bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">Request Blood Donation</h1>
+          <p className="text-lg text-slate-500 max-w-xl mx-auto">
+            Need blood? Submit your request and we'll help you find suitable donors in your area as quickly as possible.
           </p>
         </div>
         <BloodRequestForm />

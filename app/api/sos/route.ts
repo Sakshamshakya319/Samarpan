@@ -53,17 +53,14 @@ export async function POST(request: NextRequest) {
       bloodGroup,
       bloodComponent = "whole-blood",
       quantity,
-      hospitalLocation,
-      hospitalLat,
-      hospitalLng,
-      hospitalCity,
+      hospital,
       urgency = "critical",
     } = body
 
     // Validate required fields
-    if (!requesterName || !bloodGroup || !hospitalLocation || !quantity) {
+    if (!requesterName || !bloodGroup || !hospital || !hospital.name || !hospital.latitude || !hospital.longitude || !quantity) {
       return NextResponse.json(
-        { error: "Name, blood group, hospital location, and quantity are required" },
+        { error: "Name, blood group, hospital details, and quantity are required" },
         { status: 400 }
       )
     }
@@ -84,10 +81,7 @@ export async function POST(request: NextRequest) {
       bloodComponent,
       quantity: parseInt(quantity, 10) || 1,
       urgency,
-      hospitalLocation,
-      lat: hospitalLat || null,
-      lng: hospitalLng || null,
-      city: hospitalCity || "",
+      hospital,
       verificationLevel: 3, // User-submitted, awaiting verification
       status: "active",
       verified: false,
@@ -111,14 +105,14 @@ export async function POST(request: NextRequest) {
 
     // Send email notifications asynchronously
     if (matchingUsers.length > 0) {
-      const emailAddresses = matchingUsers.map((u) => u.email).filter(Boolean)
+      const emailAddresses = matchingUsers.map((u: any) => u.email).filter(Boolean)
 
       const emailHTML = generateBloodRequestEmailHTML({
         bloodGroup,
         quantity,
         urgency,
         reason: `🚨 EMERGENCY SOS — Requested by ${requesterName}`,
-        hospitalLocation,
+        hospitalLocation: hospital.name,
         userName: requesterName,
         userPhone: requesterPhone || "Not provided",
         userEmail: "SOS (no login required)",
@@ -126,19 +120,19 @@ export async function POST(request: NextRequest) {
 
       sendEmail({
         to: emailAddresses,
-        subject: `🚨 EMERGENCY SOS — ${bloodGroup} Blood Needed NOW at ${hospitalLocation}`,
+        subject: `🚨 EMERGENCY SOS — ${bloodGroup} Blood Needed NOW at ${hospital.name}`,
         html: emailHTML,
       }).catch((err) => console.error("[SOS] Email error:", err))
 
       // WhatsApp notifications
       const phones = matchingUsers
-        .map((u) => u.phone)
-        .filter((p): p is string => typeof p === "string" && p.trim().length > 0)
+        .map((u: any) => u.phone)
+        .filter((p: any): p is string => typeof p === "string" && p.trim().length > 0)
 
       if (phones.length > 0) {
         const text =
           `🚨 EMERGENCY SOS — ${bloodGroup} Blood Needed\n\n` +
-          `Hospital: ${hospitalLocation}\n` +
+          `Hospital: ${hospital.name}\n` +
           `Units needed: ${quantity}\n` +
           `Component: ${bloodComponent}\n` +
           `Contact: ${requesterPhone || "See Samarpan app"}\n\n` +
@@ -151,10 +145,10 @@ export async function POST(request: NextRequest) {
 
       // Create in-app notifications
       const notificationsCollection = db.collection("notifications")
-      const notifications = matchingUsers.map((u) => ({
+      const notifications = matchingUsers.map((u: any) => ({
         userId: u._id,
         title: `🚨 SOS — ${bloodGroup} Blood Needed`,
-        message: `Emergency blood request at ${hospitalLocation}. ${quantity} unit(s) needed urgently. Contact: ${requesterPhone || "See request"}`,
+        message: `Emergency blood request at ${hospital.name}. ${quantity} unit(s) needed urgently. Contact: ${requesterPhone || "See request"}`,
         type: "sos_blood_request",
         relatedRequestId: result.insertedId,
         read: false,
