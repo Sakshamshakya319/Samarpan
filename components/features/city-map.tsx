@@ -125,8 +125,24 @@ export function CityMap({
         markersRef.current = []
         markerMapRef.current = {}
 
-        // Add markers for requests with coordinates
-        const requestsWithCoords = requests.filter((r) => r.lat && r.lng)
+        // Add markers for requests with coordinates, adding a slight offset for identical locations
+        const locationCounts: Record<string, number> = {};
+        const requestsWithCoords = requests.filter((r) => r.lat && r.lng).map(req => {
+          const key = `${req.lat!.toFixed(4)},${req.lng!.toFixed(4)}`;
+          const count = locationCounts[key] || 0;
+          locationCounts[key] = count + 1;
+          
+          if (count > 0) {
+             const angle = count * (Math.PI / 4);
+             const radius = 0.0005 + (0.0003 * Math.floor(count / 8)); // roughly 50m offset
+             return {
+               ...req,
+               lat: req.lat! + Math.sin(angle) * radius,
+               lng: req.lng! + Math.cos(angle) * radius
+             }
+          }
+          return req;
+        });
 
         requestsWithCoords.forEach((req) => {
           if (!req.lat || !req.lng) return

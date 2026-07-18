@@ -13,16 +13,17 @@ import {
   Loader2,
   CheckCircle,
   Phone,
+  Clock,
 } from "lucide-react"
 import { VerificationCard } from "@/components/shared/verification-badge"
 import { cn } from "@/lib/utils/utils"
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-", "Bombay (Oh)"]
 const BLOOD_COMPONENTS = [
-  { value: "whole-blood", label: "Whole Blood" },
-  { value: "platelets", label: "Platelets" },
-  { value: "plasma", label: "Plasma" },
-  { value: "packed-rbcs", label: "Packed RBCs" },
+  { value: "whole-blood", label: "Whole Blood (Trauma/Surgery)" },
+  { value: "platelets", label: "Platelets (Cancer/Dengue)" },
+  { value: "plasma", label: "Plasma (Burns/Shock)" },
+  { value: "packed-rbcs", label: "Packed RBCs (Anemia/Blood Loss)" },
 ]
 
 import { HospitalSelectionCard } from "./hospital-selection-card"
@@ -52,6 +53,7 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [requestId, setRequestId] = useState("")
+  const [bloodBanks, setBloodBanks] = useState<any[]>([])
   const [scannedFile, setScannedFile] = useState<File | null>(null)
   const [voiceTranscript, setVoiceTranscript] = useState("")
   const [speechSupported, setSpeechSupported] = useState(false)
@@ -184,6 +186,9 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
 
       const data = await resp.json()
       setRequestId(data.requestId)
+      if (data.blood_banks && data.blood_banks.length > 0) {
+        setBloodBanks(data.blood_banks)
+      }
       setStep("success")
       onSuccess?.(data.requestId)
     } catch {
@@ -203,23 +208,49 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
           </div>
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">SOS Transmitted</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">
+            {bloodBanks.length > 0 ? "Blood Stock Found Nearby!" : "SOS Transmitted"}
+          </h2>
           <p className="text-slate-500 font-medium">
-            Donors matching your blood group are being notified right now.
+            {bloodBanks.length > 0 
+              ? "We checked eRaktKosh and found immediate stock availability. Please contact them directly."
+              : "Donors matching your blood group are being notified right now."}
           </p>
         </div>
-        <VerificationCard level={3} />
-        <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-left">
-          <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">What happens next?</p>
-          <ul className="text-sm font-medium text-slate-600 space-y-2">
-            <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" /> Donors with {formData.bloodGroup} blood group are being contacted</li>
-            <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" /> Our admin team has been alerted to verify your request</li>
-            <li className="flex items-start gap-2"><Clock className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" /> Expected first response: within 15–30 minutes</li>
-            <li className="flex items-start gap-2"><Phone className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" /> Donors will call the phone number you provided</li>
-          </ul>
-        </div>
+        
+        {bloodBanks.length > 0 ? (
+          <div className="space-y-3 text-left">
+            {bloodBanks.slice(0, 3).map((bank, idx) => (
+              <div key={idx} className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex justify-between items-start mb-1">
+                  <h4 className="font-bold text-red-900 text-sm">{bank.bank_name}</h4>
+                  <span className="text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full">{bank.units_available}</span>
+                </div>
+                <p className="text-xs text-slate-700 mb-1">{bank.address}</p>
+                <div className="flex justify-between items-center text-xs text-slate-500 font-medium">
+                  <span>{bank.distance_km} km away</span>
+                  <span className="flex items-center gap-1"><Phone className="w-3 h-3"/> {bank.contact}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            <VerificationCard level={3} />
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-left">
+              <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">What happens next?</p>
+              <ul className="text-sm font-medium text-slate-600 space-y-2">
+                <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" /> Donors with {formData.bloodGroup} blood group are being contacted</li>
+                <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" /> Our admin team has been alerted to verify your request</li>
+                <li className="flex items-start gap-2"><Clock className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" /> Expected first response: within 15–30 minutes</li>
+                <li className="flex items-start gap-2"><Phone className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" /> Donors will call the phone number you provided</li>
+              </ul>
+            </div>
+          </>
+        )}
+        
         {requestId && (
-          <p className="text-xs font-medium text-slate-400">
+          <p className="text-xs font-medium text-slate-400 mt-4">
             Request Ref: <code className="font-mono bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">{requestId}</code>
           </p>
         )}

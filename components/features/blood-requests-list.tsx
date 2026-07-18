@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { AlertCircle, Droplet, CheckCircle2, Truck, Loader2 } from "lucide-react"
 import { useAppSelector } from "@/lib/store/hooks"
+import { VerificationBadge } from "@/components/VerificationBadge"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +51,7 @@ interface BloodRequest {
     googleUrl?: string
     osmUrl?: string
   }
+  verificationLevel?: 1 | 2 | 3
 }
 
 interface ValidationWarning {
@@ -419,13 +421,18 @@ export function BloodRequestsList() {
                       <p className="text-sm text-slate-500 mt-0.5">{request.quantity} unit(s) needed</p>
                     </div>
                   </div>
-                  <Badge
-                    className={`px-3 py-1 font-semibold rounded-full uppercase tracking-wider text-[10px] ${
-                      URGENCY_COLORS[request.urgency as keyof typeof URGENCY_COLORS] || "bg-slate-100 text-slate-800 border-slate-200"
-                    }`}
-                  >
-                    {request.urgency}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge
+                      className={`px-3 py-1 font-semibold rounded-full uppercase tracking-wider text-[10px] ${
+                        URGENCY_COLORS[request.urgency as keyof typeof URGENCY_COLORS] || "bg-slate-100 text-slate-800 border-slate-200"
+                      }`}
+                    >
+                      {request.urgency}
+                    </Badge>
+                    {request.isSOS && (
+                      <VerificationBadge level={request.verificationLevel || 3} />
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-3 mb-6">
