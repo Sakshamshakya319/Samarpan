@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/db/mongodb"
 import { ObjectId } from "mongodb"
-import { checkBloodBankInventory } from "@/lib/checkInventory"
 import { sendEmail, generateBloodRequestEmailHTML } from "@/lib/services/email"
 import { sendWhatsAppBulk } from "@/lib/services/whatsapp"
 import { getCompatibleDonors } from "@/lib/domain/rare-blood-registry"
@@ -296,22 +295,34 @@ export async function POST(request: NextRequest) {
       resolution_radius_tier: "unresolved"
     })
 
-    // eRaktKosh Inventory Check
-    const stock = await checkBloodBankInventory(
-      hospital.latitude, 
-      hospital.longitude, 
-      bloodGroup, 
-      bloodComponent, 
-      30
-    );
+    const protocol = request.headers.get("x-forwarded-proto") || "http";
+    const host = request.headers.get("host") || "localhost:3000";
+    const district = hospital.city || 'Jalandhar';
+    const inventoryUrl = `${protocol}://${host}/api/blood-banks/nearby?blood_group=${encodeURIComponent(bloodGroup)}&district=${encodeURIComponent(district)}&component=${encodeURIComponent(bloodComponent)}&lat=${hospital.latitude}&lng=${hospital.longitude}`;
+    
+    let stock = [];
+    try {
+      const inventoryRes = await fetch(inventoryUrl);
+      if (inventoryRes.ok) {
+        const inventory = await inventoryRes.json();
+        stock = inventory.banks || [];
+      }
+    } catch (e) {
+      console.error("[SOS] Error calling nearby blood banks API:", e);
+    }
 
+    // If we have stock, attach to the response so the patient sees it immediately
     if (stock.length > 0) {
-      // Return early with stock results, bypassing immediate donor notification
+      // Create a response object but DON'T return early if we want to also notify donors.
+      // Wait, the prompt says: "only search donors if no stock"
+      // Actually it says: "donor_search_initiated: inventory.banks.length === 0"
       return NextResponse.json(
         {
           message: "SOS request created. Blood bank stock found nearby.",
           requestId,
-          blood_banks: stock
+          verificationLevel: 3,
+          blood_banks: stock,
+          donor_search_initiated: false
         },
         { status: 201 }
       )
@@ -428,6 +439,8 @@ export async function POST(request: NextRequest) {
         requestId,
         verificationLevel: 3,
         notificationsCount: matchingUsers.length,
+        blood_banks: [],
+        donor_search_initiated: true,
       },
       { status: 201 }
     )

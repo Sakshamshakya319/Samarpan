@@ -134,17 +134,19 @@ export function HospitalSelectionCard({ onSelect, selectedHospital }: HospitalSe
   }
 
   const handleSelect = (h: any) => {
-    const osmUrl = `https://www.openstreetmap.org/?mlat=${h.latitude}&mlon=${h.longitude}#map=18/${h.latitude}/${h.longitude}`
-    const googleUrl = `https://www.google.com/maps/search/?api=1&query=${h.latitude},${h.longitude}`
+    const lat = h.lat || h.latitude;
+    const lng = h.lng || h.longitude;
+    const osmUrl = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=18/${lat}/${lng}`
+    const googleUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
 
     const snapshot: HospitalSnapshot = {
-      hospitalId: h.hospitalId,
-      name: h.hospitalName,
+      hospitalId: h._id,
+      name: h.name || h.hospitalName,
       address: h.address,
       city: h.city,
-      district: h.district,
-      latitude: h.latitude,
-      longitude: h.longitude,
+      district: h.district || h.city,
+      latitude: h.lat || h.latitude,
+      longitude: h.lng || h.longitude,
       osmUrl,
       googleUrl
     }
@@ -286,7 +288,7 @@ export function HospitalSelectionCard({ onSelect, selectedHospital }: HospitalSe
             >
               <MapPin className="w-5 h-5 text-muted-foreground mt-0.5 shrink-0" />
               <div>
-                <p className="font-medium text-sm">{h.hospitalName}</p>
+                <p className="font-medium text-sm">{h.name || h.hospitalName}</p>
                 <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{h.address}</p>
                 <div className="flex gap-2 mt-1">
                   <span className="text-[10px] bg-secondary px-2 py-0.5 rounded-full">{h.city}</span>

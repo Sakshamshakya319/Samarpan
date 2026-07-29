@@ -209,35 +209,29 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
         </div>
         <div>
           <h2 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">
-            {bloodBanks.length > 0 ? "Blood Stock Found Nearby!" : "SOS Transmitted"}
+            SOS Transmitted
           </h2>
           <p className="text-slate-500 font-medium">
-            {bloodBanks.length > 0 
-              ? "We checked eRaktKosh and found immediate stock availability. Please contact them directly."
-              : "Donors matching your blood group are being notified right now."}
+            Donors matching your blood group are being notified right now.
           </p>
         </div>
         
-        {bloodBanks.length > 0 ? (
-          <div className="space-y-3 text-left">
-            {bloodBanks.slice(0, 3).map((bank, idx) => (
-              <div key={idx} className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex justify-between items-start mb-1">
-                  <h4 className="font-bold text-red-900 text-sm">{bank.bank_name}</h4>
-                  <span className="text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full">{bank.units_available}</span>
-                </div>
-                <p className="text-xs text-slate-700 mb-1">{bank.address}</p>
-                <div className="flex justify-between items-center text-xs text-slate-500 font-medium">
-                  <span>{bank.distance_km} km away</span>
-                  <span className="flex items-center gap-1"><Phone className="w-3 h-3"/> {bank.contact}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <>
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-left">
+          <p className="font-medium text-blue-800 mb-2">
+            💡 Check blood bank stock directly
+          </p>
+          <p className="text-blue-700">
+            Call your nearest government blood bank to confirm availability
+            before donors arrive. This is often faster than waiting.
+          </p>
+        </div>
+
+        <div className="text-left mt-6">
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600" /> Donors being notified
+          </h3>
             <VerificationCard level={3} />
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-left">
+            <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200 text-left">
               <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">What happens next?</p>
               <ul className="text-sm font-medium text-slate-600 space-y-2">
                 <li className="flex items-start gap-2"><CheckCircle className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" /> Donors with {formData.bloodGroup} blood group are being contacted</li>
@@ -246,8 +240,7 @@ export function SOSForm({ onSuccess }: SOSFormProps) {
                 <li className="flex items-start gap-2"><Phone className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" /> Donors will call the phone number you provided</li>
               </ul>
             </div>
-          </>
-        )}
+          </div>
         
         {requestId && (
           <p className="text-xs font-medium text-slate-400 mt-4">
